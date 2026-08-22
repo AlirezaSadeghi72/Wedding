@@ -156,7 +156,7 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
 
   return typeof document !== 'undefined'
     ? createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{
@@ -167,46 +167,46 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
             }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="relative w-full max-w-sm bg-stone-900 border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden p-5 sm:p-6 text-center select-none"
+            className="relative w-full max-w-sm bg-[#FFFDF7] border border-amber-300/80 rounded-3xl shadow-2xl overflow-hidden p-5 sm:p-6 text-center select-none text-stone-900"
           >
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 left-4 p-2 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors cursor-pointer"
+              className="absolute top-4 left-4 p-2 rounded-full bg-stone-100 hover:bg-amber-100 text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
               title="بستن"
             >
               <X className="w-4 h-4" />
             </button>
 
             {/* Lock Icon Crest */}
-            <div className={`mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-inner transition-colors ${
+            <div className={`mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-3 shadow-sm transition-colors ${
               isSuccess
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
                 : lockout.isLocked
-                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                ? 'bg-rose-100 text-rose-700 border border-rose-300'
+                : 'bg-amber-100 text-amber-800 border border-amber-300'
             }`}>
               {isSuccess ? (
-                <ShieldCheck className="w-7 h-7 text-emerald-400 animate-bounce" />
+                <ShieldCheck className="w-7 h-7 text-emerald-600 animate-bounce" />
               ) : lockout.isLocked ? (
-                <ShieldAlert className="w-7 h-7 text-rose-400 animate-pulse" />
+                <ShieldAlert className="w-7 h-7 text-rose-600 animate-pulse" />
               ) : (
-                <Lock className="w-7 h-7" />
+                <Lock className="w-7 h-7 text-amber-700" />
               )}
             </div>
 
-            <h3 className="text-lg font-bold text-amber-100 font-amiri mb-1">
+            <h3 className="text-lg font-bold text-amber-950 font-amiri mb-1">
               ورود امن به پنل مدیریت کارت
             </h3>
-            <p className="text-xs text-stone-400 mb-4 leading-relaxed">
+            <p className="text-xs text-stone-600 mb-4 leading-relaxed">
               برای دسترسی به تنظیمات اختصاصی، اسامی و ویرایش بخش‌ها، رمز عبور را وارد نمایید:
             </p>
 
             {/* Lockout Warning Banner */}
             {lockout.isLocked && (
-              <div className="mb-4 p-3 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center justify-center gap-2 font-medium">
-                <Clock className="w-4 h-4 text-rose-400 animate-spin" />
+              <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs flex items-center justify-center gap-2 font-medium">
+                <Clock className="w-4 h-4 text-rose-600 animate-spin" />
                 <span>
                   دسترسی موقتاً مسدود شد ({toPersianDigits(lockout.remainingSeconds)} ثانیه تا تلاش مجدد)
                 </span>
@@ -226,17 +226,17 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                 onKeyDown={handleKeyDown}
                 placeholder="رمز عبور مدیریت..."
                 autoFocus
-                className={`w-full px-4 py-3 text-center text-lg tracking-widest rounded-2xl bg-stone-950/90 border focus:outline-none font-mono shadow-inner transition-colors ${
+                className={`w-full px-4 py-3 text-center text-lg tracking-widest rounded-2xl bg-amber-50/50 border focus:outline-none font-mono shadow-inner transition-colors ${
                   lockout.isLocked
-                    ? 'border-rose-500/40 text-stone-500 cursor-not-allowed opacity-60'
-                    : 'border-amber-500/40 focus:border-amber-400 text-amber-100'
+                    ? 'border-rose-300 text-stone-400 cursor-not-allowed opacity-60'
+                    : 'border-amber-300 focus:border-amber-500 text-stone-900 placeholder:text-stone-400'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={lockout.isLocked}
-                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-stone-400 hover:text-amber-300 transition-colors"
+                className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 text-stone-400 hover:text-amber-800 transition-colors"
                 title={showPassword ? 'مخفی کردن' : 'نمایش'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -250,9 +250,9 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="flex items-center justify-center gap-1.5 text-xs text-rose-300 mb-3 bg-rose-950/40 py-1.5 px-3 rounded-xl border border-rose-500/30"
+                  className="flex items-center justify-center gap-1.5 text-xs text-rose-700 mb-3 bg-rose-50 py-1.5 px-3 rounded-xl border border-rose-200 font-medium"
                 >
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
                   <span>{error}</span>
                 </motion.div>
               )}
@@ -261,9 +261,9 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                 <motion.div
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-center gap-1.5 text-xs text-emerald-300 mb-3 bg-emerald-950/50 py-1.5 px-3 rounded-xl border border-emerald-500/40 font-bold"
+                  className="flex items-center justify-center gap-1.5 text-xs text-emerald-800 mb-3 bg-emerald-50 py-1.5 px-3 rounded-xl border border-emerald-300 font-bold"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
                   <span>هویت تایید شد. در حال باز کردن استودیو مدیریت...</span>
                 </motion.div>
               )}
@@ -277,10 +277,10 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                   type="button"
                   disabled={lockout.isLocked || isSubmitting}
                   onClick={() => handleKeypadPress(num)}
-                  className={`py-2.5 rounded-xl text-base font-bold transition-all shadow ${
+                  className={`py-2.5 rounded-xl text-base font-bold transition-all shadow-sm ${
                     lockout.isLocked
-                      ? 'bg-stone-900 text-stone-600 opacity-40 cursor-not-allowed'
-                      : 'bg-stone-800 hover:bg-stone-700 active:bg-amber-500 active:text-stone-950 text-stone-200 cursor-pointer'
+                      ? 'bg-stone-100 text-stone-400 opacity-40 cursor-not-allowed'
+                      : 'bg-white hover:bg-amber-100/80 active:bg-amber-500 active:text-white border border-stone-200 text-stone-800 cursor-pointer'
                   }`}
                 >
                   {toPersianDigits(num)}
@@ -290,10 +290,10 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                 type="button"
                 disabled={lockout.isLocked || isSubmitting}
                 onClick={() => setPinInput('')}
-                className={`py-2.5 rounded-xl text-xs transition-all ${
+                className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   lockout.isLocked
-                    ? 'bg-stone-950/40 text-stone-600 cursor-not-allowed'
-                    : 'bg-stone-950/80 hover:bg-stone-800 text-stone-400 cursor-pointer'
+                    ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-600 cursor-pointer'
                 }`}
               >
                 پاک کردن
@@ -302,10 +302,10 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                 type="button"
                 disabled={lockout.isLocked || isSubmitting}
                 onClick={() => handleKeypadPress('0')}
-                className={`py-2.5 rounded-xl text-base font-bold transition-all shadow ${
+                className={`py-2.5 rounded-xl text-base font-bold transition-all shadow-sm ${
                   lockout.isLocked
-                    ? 'bg-stone-900 text-stone-600 opacity-40 cursor-not-allowed'
-                    : 'bg-stone-800 hover:bg-stone-700 active:bg-amber-500 active:text-stone-950 text-stone-200 cursor-pointer'
+                    ? 'bg-stone-100 text-stone-400 opacity-40 cursor-not-allowed'
+                    : 'bg-white hover:bg-amber-100/80 active:bg-amber-500 active:text-white border border-stone-200 text-stone-800 cursor-pointer'
                 }`}
               >
                 {toPersianDigits('0')}
@@ -314,10 +314,10 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
                 type="button"
                 disabled={lockout.isLocked || isSubmitting}
                 onClick={handleBackspace}
-                className={`py-2.5 rounded-xl text-xs transition-all ${
+                className={`py-2.5 rounded-xl text-xs font-semibold transition-all ${
                   lockout.isLocked
-                    ? 'bg-stone-950/40 text-stone-600 cursor-not-allowed'
-                    : 'bg-stone-950/80 hover:bg-stone-800 text-rose-300 cursor-pointer'
+                    ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                    : 'bg-stone-100 hover:bg-rose-100 text-rose-700 cursor-pointer'
                 }`}
               >
                 حذف ⌫
@@ -329,9 +329,9 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
               type="button"
               disabled={lockout.isLocked || isSubmitting || !pinInput.trim()}
               onClick={handleVerify}
-              className={`w-full py-3 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all ${
+              className={`w-full py-3 rounded-2xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all ${
                 lockout.isLocked || !pinInput.trim()
-                  ? 'bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700'
+                  ? 'bg-stone-200 text-stone-400 cursor-not-allowed border border-stone-300'
                   : 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 shadow-amber-500/20 cursor-pointer hover:scale-[1.02] active:scale-95'
               }`}
             >
@@ -340,8 +340,8 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
             </button>
 
             {/* Secure Note */}
-            <div className="mt-3 text-[11px] text-stone-400 flex items-center justify-center gap-1.5 font-light">
-              <Lock className="w-3 h-3 text-amber-500/80" />
+            <div className="mt-3 text-[11px] text-stone-500 flex items-center justify-center gap-1.5 font-light">
+              <Lock className="w-3 h-3 text-amber-600" />
               <span>پنل مدیریت امن و رمزگذاری شده</span>
             </div>
           </motion.div>

@@ -5,13 +5,14 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Palette, Users, Eye, LogOut } from 'lucide-react';
+import { Palette, Users, Eye, LogOut, Sliders } from 'lucide-react';
 import { WeddingCardData } from './types';
 import { DEFAULT_WEDDING_DATA } from './data/defaultWedding';
 import WeddingEnvelope from './components/WeddingEnvelope';
 import WeddingCardView from './components/WeddingCardView';
 import StudioEditorModal from './components/StudioEditorModal';
 import RSVPManagerModal from './components/RSVPManagerModal';
+import ThemeSelectorModal from './components/ThemeSelectorModal';
 import AudioPlayerFloating from './components/AudioPlayerFloating';
 import AdminLoginModal from './components/AdminLoginModal';
 import { getIsAdminSessionValid, saveAdminSession, clearAdminSession } from './utils/security';
@@ -21,9 +22,7 @@ export default function App() {
     try {
       const saved = localStorage.getItem('wedding_card_data');
       if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure default colorMode is dark if not specified
-        return { ...parsed, colorMode: parsed.colorMode || 'dark' };
+        return JSON.parse(saved);
       }
     } catch {
       // Fallback
@@ -34,28 +33,8 @@ export default function App() {
   const [isOpened, setIsOpened] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [isRsvpManagerOpen, setIsRsvpManagerOpen] = useState(false);
+  const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
-  
-  // Guest color mode preference (Defaults to 'dark')
-  const [guestColorMode, setGuestColorMode] = useState<'dark' | 'light'>(() => {
-    try {
-      const savedMode = localStorage.getItem('wedding_guest_color_mode');
-      if (savedMode === 'dark' || savedMode === 'light') return savedMode;
-    } catch {
-      // ignore
-    }
-    return weddingData.colorMode || 'dark';
-  });
-
-  const handleToggleGuestColorMode = () => {
-    const nextMode = guestColorMode === 'dark' ? 'light' : 'dark';
-    setGuestColorMode(nextMode);
-    try {
-      localStorage.setItem('wedding_guest_color_mode', nextMode);
-    } catch {
-      // ignore
-    }
-  };
   
   // Admin authentication state with secure session validation & expiry
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
@@ -89,6 +68,7 @@ export default function App() {
     setIsAdminAuthenticated(false);
     setIsStudioOpen(false);
     setIsRsvpManagerOpen(false);
+    setIsThemeSelectorOpen(false);
     clearAdminSession();
   };
 
@@ -110,77 +90,73 @@ export default function App() {
   };
 
   const showEnvelope = !isOpened && weddingData.sectionVisibility?.envelope !== false;
-  const effectiveData: WeddingCardData = {
-    ...weddingData,
-    colorMode: guestColorMode
-  };
 
   return (
-    <div className={`relative min-h-screen ${guestColorMode === 'light' ? 'bg-stone-100 text-stone-900' : 'bg-stone-950 text-stone-100'} font-vazir selection:bg-amber-400 selection:text-stone-950 overflow-x-hidden w-full transition-colors duration-500`}>
-      {/* Top Floating Control Ribbon ONLY for Authenticated Admin */}
+    <div className={`relative min-h-screen bg-[#FFFDF7] text-stone-900 font-vazir selection:bg-amber-400 selection:text-stone-950 overflow-x-hidden w-full transition-colors duration-500 ${isAdminAuthenticated ? 'pt-12 sm:pt-14' : ''}`}>
+      {/* Top Fixed Sticky Control Header ONLY for Authenticated Admin */}
       {isAdminAuthenticated && (
-        <header
-          className={`fixed left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-3 pointer-events-none transition-all duration-300 ${
-            weddingData.sectionVisibility?.rsvp !== false && weddingData.rsvpConfig.enabled !== false
-              ? 'top-14 sm:top-16'
-              : 'top-3 sm:top-4'
-          }`}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="pointer-events-auto flex items-center justify-between gap-1.5 p-1.5 rounded-full bg-stone-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs"
-          >
-            <div className="flex items-center gap-1.5 pr-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span className="font-bold text-amber-300 font-amiri hidden sm:inline">
-                پنل مدیریت کارت عروسی
-              </span>
-            </div>
+        <header className="fixed top-0 inset-x-0 z-50 w-full bg-[#FFFDF7]/95 border-b border-amber-300/80 shadow-md backdrop-blur-xl px-2.5 py-2 sm:px-6 sm:py-2.5 flex items-center justify-between text-xs sm:text-sm text-stone-900">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-amber-950 font-amiri text-xs sm:text-sm">
+              پنل مدیریت کارت عروسی
+            </span>
+          </div>
 
-            <div className="flex items-center gap-1">
-              {/* Studio Customize Button */}
-              <button
-                id="studio-editor-toggle-btn"
-                onClick={() => setIsStudioOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-amber-200 border border-amber-500/30 cursor-pointer transition-all text-xs"
-              >
-                <Palette className="w-3.5 h-3.5 text-amber-400" />
-                <span>ویرایش بخش‌ها</span>
-              </button>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Theme Selection Modal Toggle */}
+            <button
+              onClick={() => setIsThemeSelectorOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100/90 hover:bg-amber-200/90 text-amber-950 border border-amber-300 cursor-pointer transition-all text-xs font-bold shadow-sm"
+              title="انتخاب تم و رنگ‌بندی کارت"
+            >
+              <Palette className="w-3.5 h-3.5 text-amber-700" />
+              <span>انتخاب تم</span>
+            </button>
 
-              {/* Guest list & RSVP manager */}
-              <button
-                id="rsvp-manager-toggle-btn"
-                onClick={() => setIsRsvpManagerOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 transition-colors cursor-pointer text-xs"
-              >
-                <Users className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="hidden sm:inline">مهمانان</span>
-                <span>(RSVP)</span>
-              </button>
+            {/* Studio Customize Button */}
+            <button
+              id="studio-editor-toggle-btn"
+              onClick={() => setIsStudioOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-stone-800 border border-amber-200 cursor-pointer transition-all text-xs shadow-sm"
+              title="ویرایش متون، عکس‌ها و تنظیمات کارت"
+            >
+              <Sliders className="w-3.5 h-3.5 text-amber-600" />
+              <span className="hidden sm:inline">استودیو ویرایش</span>
+              <span className="sm:hidden">ویرایش</span>
+            </button>
 
-              {/* Toggle Envelope / Card view */}
-              {isOpened && weddingData.sectionVisibility?.envelope !== false && (
-                <button
-                  onClick={() => setIsOpened(false)}
-                  className="p-1.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors cursor-pointer"
-                  title="مشاهده نمای پاکت"
-                >
-                  <Eye className="w-3.5 h-3.5 text-amber-400" />
-                </button>
-              )}
+            {/* Guest list & RSVP manager */}
+            <button
+              id="rsvp-manager-toggle-btn"
+              onClick={() => setIsRsvpManagerOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-stone-800 border border-emerald-300/80 transition-colors cursor-pointer text-xs shadow-sm"
+              title="مدیریت لیست مهمانان و تایید حضورها"
+            >
+              <Users className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">لیست مهمانان (RSVP)</span>
+              <span className="sm:hidden">مهمانان</span>
+            </button>
 
-              {/* Logout Button */}
-              <button
-                onClick={handleAdminLogout}
-                className="p-1.5 rounded-full bg-stone-800 hover:bg-rose-950 text-stone-400 hover:text-rose-400 border border-stone-700 transition-colors cursor-pointer"
-                title="خروج از پنل مدیریت"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </motion.div>
+            {/* Toggle Envelope / Card view */}
+            <button
+              onClick={() => setIsOpened(!isOpened)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 transition-colors cursor-pointer text-xs shadow-sm"
+              title={isOpened ? 'مشاهده پاکت نامه' : 'مشاهده کارت دعوت'}
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-600" />
+              <span className="hidden md:inline">{isOpened ? 'نمای پاکت' : 'نمای کارت'}</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleAdminLogout}
+              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-sm"
+              title="خروج از پنل مدیریت"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </header>
       )}
 
@@ -196,11 +172,9 @@ export default function App() {
               transition={{ duration: 0.6 }}
             >
               <WeddingEnvelope
-                data={effectiveData}
+                data={weddingData}
                 onOpen={() => setIsOpened(true)}
                 isOpened={isOpened}
-                guestColorMode={guestColorMode}
-                onToggleColorMode={handleToggleGuestColorMode}
               />
             </motion.div>
           ) : (
@@ -212,13 +186,11 @@ export default function App() {
               transition={{ duration: 0.6 }}
             >
               <WeddingCardView
-                data={effectiveData}
+                data={weddingData}
                 onOpenStudio={handleOpenStudio}
                 onReopenEnvelope={weddingData.sectionVisibility?.envelope !== false ? () => setIsOpened(false) : undefined}
                 onOpenAdminLogin={() => setIsAdminLoginOpen(true)}
                 isAdminAuthenticated={isAdminAuthenticated}
-                guestColorMode={guestColorMode}
-                onToggleColorMode={handleToggleGuestColorMode}
               />
             </motion.div>
           )}
@@ -228,9 +200,9 @@ export default function App() {
       {/* Permanent Bottom Footer Music Player - Always Present for Guests */}
       {weddingData.sectionVisibility?.musicPlayer !== false && weddingData.music.enabled && (
         <AudioPlayerFloating
-          data={effectiveData}
-          guestColorMode={guestColorMode}
-          onToggleColorMode={handleToggleGuestColorMode}
+          data={weddingData}
+          onOpenStudio={handleOpenStudio}
+          isAdminAuthenticated={isAdminAuthenticated}
         />
       )}
 
@@ -254,6 +226,19 @@ export default function App() {
       <RSVPManagerModal
         isOpen={isRsvpManagerOpen}
         onClose={() => setIsRsvpManagerOpen(false)}
+      />
+
+      {/* Theme Selector Modal */}
+      <ThemeSelectorModal
+        isOpen={isThemeSelectorOpen}
+        onClose={() => setIsThemeSelectorOpen(false)}
+        currentThemeId={weddingData.themeId}
+        onSelectTheme={(themeId) => {
+          handleSaveData({
+            ...weddingData,
+            themeId
+          });
+        }}
       />
     </div>
   );

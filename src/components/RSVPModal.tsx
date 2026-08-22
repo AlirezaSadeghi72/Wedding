@@ -11,9 +11,10 @@ interface Props {
   onClose: () => void;
   data: WeddingCardData;
   initialGuestName?: string;
+  isLight?: boolean;
 }
 
-export default function RSVPModal({ isOpen, onClose, data, initialGuestName = '' }: Props) {
+export default function RSVPModal({ isOpen, onClose, data, initialGuestName = '', isLight = true }: Props) {
   const [guestName, setGuestName] = useState(initialGuestName);
   const [phone, setPhone] = useState('');
   const [attending, setAttending] = useState<'yes' | 'no'>('yes');
@@ -111,33 +112,45 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
   return typeof document !== 'undefined'
     ? createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            className="relative w-full max-w-lg rounded-3xl bg-stone-900 border border-amber-500/40 p-5 sm:p-7 md:p-8 text-stone-100 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar my-auto"
+            className={`relative w-full max-w-lg rounded-3xl ${
+              isLight
+                ? 'bg-[#FFFDF7] border border-amber-300/80 text-stone-900'
+                : 'bg-stone-900 border border-amber-500/40 text-stone-100'
+            } p-5 sm:p-7 md:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar my-auto`}
           >
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 left-4 sm:top-5 sm:left-5 p-2 rounded-full bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white transition-colors cursor-pointer"
+              className={`absolute top-4 left-4 sm:top-5 sm:left-5 p-2 rounded-full ${
+                isLight
+                  ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
+                  : 'bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white'
+              } transition-colors cursor-pointer`}
             >
               <X className="w-5 h-5" />
             </button>
 
         {isSuccess ? (
           <div className="py-8 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-emerald-950 border-2 border-emerald-400 flex items-center justify-center mb-4 text-emerald-400 shadow-lg shadow-emerald-900/50">
+            <div className={`w-16 h-16 rounded-full ${
+              isLight
+                ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700 shadow-md'
+                : 'bg-emerald-950 border-2 border-emerald-400 text-emerald-400 shadow-lg shadow-emerald-900/50'
+            } flex items-center justify-center mb-4`}>
               <Check className="w-8 h-8" />
             </div>
 
-            <h3 className="text-2xl font-bold font-amiri text-amber-200 mb-2">
+            <h3 className={`text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-200'} mb-2`}>
               {attending === 'yes' ? 'با سپاس، حضور شما با موفقیت ثبت شد!' : 'پیام شما با موفقیت ثبت گردید'}
             </h3>
 
-            <p className="text-stone-300 text-sm max-w-md leading-relaxed mb-6">
+            <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-sm max-w-md leading-relaxed mb-6`}>
               {attending === 'yes'
                 ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${guestCount > 1 ? `به همراه ${toPersianDigits(guestCount - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
                 : `با سپاس از اطلاع‌رسانی شما (${guestName}). دلتنگ حضورتان خواهیم بود و آرزوی سلامتی و بهترین‌ها را برایتان داریم.`}
@@ -153,13 +166,13 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
         ) : (
           <div>
             <div className="text-center mb-6">
-              <span className="text-xs uppercase tracking-widest text-amber-400 block mb-1">
+              <span className={`text-xs uppercase tracking-widest ${isLight ? 'text-amber-700 font-bold' : 'text-amber-400'} block mb-1`}>
                 تایید حضور آنلاین (RSVP)
               </span>
-              <h2 className="text-2xl font-bold font-amiri text-amber-100">
+              <h2 className={`text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'}`}>
                 اعلام حضور در جشن عروسی
               </h2>
-              <p className="text-xs text-stone-400 mt-1">
+              <p className={`text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-1`}>
                 مهلت تایید حضور: {data.rsvpConfig.deadlineDate}
               </p>
             </div>
@@ -174,7 +187,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
             <form onSubmit={handleSubmit} className="space-y-4 text-sm">
               {/* Attendance Choice */}
               <div>
-                <label className="block text-xs text-amber-300/90 mb-1.5 font-medium">
+                <label className={`block text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/90'} mb-1.5 font-medium`}>
                   آیا افتخار میزبانی شما را خواهیم داشت؟
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -183,11 +196,15 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     onClick={() => setAttending('yes')}
                     className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 font-medium transition-all cursor-pointer text-xs ${
                       attending === 'yes'
-                        ? 'bg-emerald-950 border-emerald-400 text-emerald-200 shadow-md shadow-emerald-950'
+                        ? isLight
+                          ? 'bg-emerald-100 border-emerald-500 text-emerald-950 font-bold shadow-sm'
+                          : 'bg-emerald-950 border-emerald-400 text-emerald-200 shadow-md shadow-emerald-950'
+                        : isLight
+                        ? 'bg-white border-stone-300 text-stone-700 hover:border-amber-400'
                         : 'bg-stone-800/60 border-stone-700 text-stone-400 hover:border-stone-600'
                     }`}
                   >
-                    <Check className="w-4 h-4 shrink-0" />
+                    <Check className="w-4 h-4 shrink-0 text-emerald-600" />
                     <span>با کمال میل حضور خواهم داشت</span>
                   </button>
 
@@ -196,11 +213,15 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     onClick={() => setAttending('no')}
                     className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 font-medium transition-all cursor-pointer text-xs ${
                       attending === 'no'
-                        ? 'bg-rose-950 border-rose-400 text-rose-200 shadow-md shadow-rose-950'
+                        ? isLight
+                          ? 'bg-rose-100 border-rose-500 text-rose-950 font-bold shadow-sm'
+                          : 'bg-rose-950 border-rose-400 text-rose-200 shadow-md shadow-rose-950'
+                        : isLight
+                        ? 'bg-white border-stone-300 text-stone-700 hover:border-amber-400'
                         : 'bg-stone-800/60 border-stone-700 text-stone-400 hover:border-stone-600'
                     }`}
                   >
-                    <X className="w-4 h-4 shrink-0" />
+                    <X className="w-4 h-4 shrink-0 text-rose-600" />
                     <span>متاسفانه امکان حضور ندارم</span>
                   </button>
                 </div>
@@ -208,29 +229,33 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
               {/* Guest Name */}
               <div>
-                <label className="block text-xs text-stone-300 mb-1 font-medium">
-                  نام و نام خانوادگی <span className="text-rose-400">*</span>
+                <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
+                  نام و نام خانوادگی <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <User className={`w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 ${isLight ? 'text-stone-500' : 'text-stone-400'}`} />
                   <input
                     type="text"
                     required
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
                     placeholder="مثلاً: دکتر علی صادقی و بانو"
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-stone-800/80 border border-stone-700 focus:border-amber-400 focus:outline-none text-stone-100 placeholder:text-stone-500"
+                    className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
+                      isLight
+                        ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
+                        : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
+                    } border focus:outline-none`}
                   />
                 </div>
               </div>
 
               {/* Phone Number */}
               <div>
-                <label className="block text-xs text-stone-300 mb-1 font-medium">
-                  شماره تماس {data.rsvpConfig.requirePhone ? <span className="text-rose-400">* (الزامی)</span> : '(اختیاری جهت هماهنگی)'}
+                <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
+                  شماره تماس {data.rsvpConfig.requirePhone ? <span className="text-rose-500">* (الزامی)</span> : '(اختیاری جهت هماهنگی)'}
                 </label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <Phone className={`w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 ${isLight ? 'text-stone-500' : 'text-stone-400'}`} />
                   <input
                     type="tel"
                     dir="ltr"
@@ -238,20 +263,24 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="0912..."
-                    className="w-full pr-10 pl-4 py-2.5 rounded-xl bg-stone-800/80 border border-stone-700 focus:border-amber-400 focus:outline-none text-stone-100 placeholder:text-stone-500 text-right"
+                    className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
+                      isLight
+                        ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
+                        : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
+                    } border focus:outline-none text-right`}
                   />
                 </div>
               </div>
 
               {/* Guest Count (if attending) */}
               {attending === 'yes' && (
-                <div className="p-3.5 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
+                <div className={`p-3.5 rounded-2xl ${isLight ? 'bg-amber-50/80 border-amber-300/60' : 'bg-stone-950/60 border-stone-800'} border space-y-3`}>
                   <div className="flex items-center justify-between">
-                    <label className="text-xs text-stone-300 font-medium flex items-center gap-1.5">
-                      <Users className="w-4 h-4 text-amber-400" />
+                    <label className={`text-xs ${isLight ? 'text-stone-800 font-semibold' : 'text-stone-300 font-medium'} flex items-center gap-1.5`}>
+                      <Users className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                       <span>تعداد کل حاضرین (به همراه خودتان):</span>
                     </label>
-                    <span className="text-amber-400 font-bold font-cinzel text-sm">
+                    <span className={`${isLight ? 'text-amber-800 font-black' : 'text-amber-400 font-bold'} font-cinzel text-sm`}>
                       {toPersianDigits(guestCount)} نفر
                     </span>
                   </div>
@@ -268,6 +297,8 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                           className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-amber-500 border-amber-400 text-stone-950 shadow-md shadow-amber-500/20'
+                              : isLight
+                              ? 'bg-white border-stone-300 text-stone-800 hover:border-amber-500'
                               : 'bg-stone-900 border-stone-700 text-stone-300 hover:border-amber-400/50'
                           }`}
                         >
@@ -288,7 +319,9 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                         }}
                         className={`flex-1 py-1.5 px-3 rounded-xl border text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
                           isCustomCountMode || guestCount > 6
-                            ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold'
+                            ? 'bg-amber-500/20 border-amber-400 text-amber-800 font-bold'
+                            : isLight
+                            ? 'bg-white border-stone-300 text-stone-700 hover:text-stone-900'
                             : 'bg-stone-900 border-stone-800 text-stone-400 hover:text-stone-200'
                         }`}
                       >
@@ -299,12 +332,12 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
                     {/* Numeric Stepper and Direct Input when custom mode is on or count > 6 */}
                     {(isCustomCountMode || guestCount > 6) && (
-                      <div className="mt-2.5 p-2.5 rounded-xl bg-stone-900 border border-amber-500/30 flex items-center justify-between gap-3">
+                      <div className={`mt-2.5 p-2.5 rounded-xl ${isLight ? 'bg-white border-amber-400/50' : 'bg-stone-900 border-amber-500/30'} border flex items-center justify-between gap-3`}>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
-                            className="w-8 h-8 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 flex items-center justify-center cursor-pointer font-bold"
+                            className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Minus className="w-4 h-4" />
                           </button>
@@ -314,17 +347,17 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                             max={50}
                             value={guestCount}
                             onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
-                            className="w-16 py-1 px-2 text-center rounded-lg bg-stone-950 border border-stone-700 text-amber-300 font-bold text-sm font-mono"
+                            className={`w-16 py-1 px-2 text-center rounded-lg ${isLight ? 'bg-stone-100 border-stone-300 text-amber-900' : 'bg-stone-950 border-stone-700 text-amber-300'} border font-bold text-sm font-mono`}
                           />
                           <button
                             type="button"
                             onClick={() => setGuestCount(guestCount + 1)}
-                            className="w-8 h-8 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 flex items-center justify-center cursor-pointer font-bold"
+                            className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Plus className="w-4 h-4" />
                           </button>
                         </div>
-                        <span className="text-xs text-stone-400">
+                        <span className={`text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'}`}>
                           نفر مهمان گرامی
                         </span>
                       </div>
@@ -336,7 +369,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               {/* Dietary note if enabled & attending */}
               {attending === 'yes' && data.rsvpConfig.showDietaryOptions && (
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1 font-medium">
+                  <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
                     رژیم غذایی خاص یا حساسیت غذایی (اختیاری)
                   </label>
                   <input
@@ -344,7 +377,11 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     value={dietaryNotes}
                     onChange={(e) => setDietaryNotes(e.target.value)}
                     placeholder="مثلاً: رژیم گیاه‌خواری، وگان یا بدون گلوتن"
-                    className="w-full px-4 py-2.5 rounded-xl bg-stone-800/80 border border-stone-700 focus:border-amber-400 focus:outline-none text-stone-100 placeholder:text-stone-500 text-xs"
+                    className={`w-full px-4 py-2.5 rounded-xl ${
+                      isLight
+                        ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
+                        : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
+                    } border focus:outline-none text-xs`}
                   />
                 </div>
               )}
@@ -352,9 +389,9 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               {/* Song request for DJ if attending and enabled */}
               {attending === 'yes' && (data.rsvpConfig.allowSongRequest ?? true) && (
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1 font-medium flex items-center justify-between">
+                  <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1 flex items-center justify-between`}>
                     <span>پیشنهاد آهنگ به دی‌جی برای رقص و پایکوبی (اختیاری)</span>
-                    <Music className="w-3.5 h-3.5 text-amber-400" />
+                    <Music className={`w-3.5 h-3.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                   </label>
                   <div className="relative">
                     <input
@@ -362,7 +399,11 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       value={songRequest}
                       onChange={(e) => setSongRequest(e.target.value)}
                       placeholder="نام قطعه موسیقی یا خواننده مورد علاقه شما برای جشن..."
-                      className="w-full px-4 py-2.5 rounded-xl bg-stone-800/80 border border-stone-700 focus:border-amber-400 focus:outline-none text-stone-100 placeholder:text-stone-500 text-xs"
+                      className={`w-full px-4 py-2.5 rounded-xl ${
+                        isLight
+                          ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
+                          : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
+                      } border focus:outline-none text-xs`}
                     />
                   </div>
                 </div>
@@ -370,17 +411,21 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
               {/* Message / Warm Wish */}
               <div>
-                <label className="block text-xs text-stone-300 mb-1 font-medium">
+                <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
                   پیام تبریک یا یادداشت اختصاصی برای عروس و داماد
                 </label>
                 <div className="relative">
-                  <MessageSquare className="w-4 h-4 absolute right-3.5 top-3 text-stone-400" />
+                  <MessageSquare className={`w-4 h-4 absolute right-3.5 top-3 ${isLight ? 'text-stone-500' : 'text-stone-400'}`} />
                   <textarea
                     rows={2}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="شادباش، دعای خیر یا توضیحات بیشتر..."
-                    className="w-full pr-10 pl-4 py-2 rounded-xl bg-stone-800/80 border border-stone-700 focus:border-amber-400 focus:outline-none text-stone-100 placeholder:text-stone-500 text-xs leading-relaxed"
+                    className={`w-full pr-10 pl-4 py-2 rounded-xl ${
+                      isLight
+                        ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
+                        : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
+                    } border focus:outline-none text-xs leading-relaxed`}
                   />
                 </div>
               </div>

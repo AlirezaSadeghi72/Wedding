@@ -1,4 +1,4 @@
-import { useState, useEffect, MouseEvent } from 'react';
+import { useState, useEffect, useCallback, MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -14,7 +14,9 @@ import {
   X,
   Sliders,
   Radio,
-  Headphones
+  Headphones,
+  Settings,
+  Check
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 import { WeddingCardData, MusicTrack } from '../types';
@@ -22,69 +24,93 @@ import { toPersianDigits } from '../utils/dateUtils';
 
 interface Props {
   data: WeddingCardData;
-  guestColorMode?: 'dark' | 'light';
-  onToggleColorMode?: () => void;
+  onOpenStudio?: () => void;
+  isAdminAuthenticated?: boolean;
 }
 
-export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
+export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthenticated }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState<number>(() => {
+    return data.music?.volume ? Math.round(data.music.volume * 100) : 80;
+  });
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [autoNext, setAutoNext] = useState(true);
 
-  const effectiveColorMode = guestColorMode || data.colorMode || 'dark';
-  const isLight = effectiveColorMode === 'light';
+  const isLight = true;
 
-  // Build combined playlist with default romantic classical & Iranian traditional presets
-  const defaultTracks: MusicTrack[] = [
-    {
-      id: 'default-1',
-      title: data.music?.title || 'پیانوی رمانتیک و دلنشین',
-      artist: data.music?.artist || 'نوای آرامش‌بخش پیانو',
-      synthPreset: data.music?.synthPreset || 'romantic_piano',
-      isPreset: !data.music?.audioUrl,
-      url: data.music?.audioUrl
-    },
-    {
-      id: 'default-2',
-      title: 'نوای سنتور و عود سنتی ایرانی',
-      artist: 'دستگاه اصفهان و شور اصیل',
-      synthPreset: 'traditional_oud',
-      isPreset: true
-    },
-    {
-      id: 'default-3',
-      title: 'چنگ و هارپ آسمانی و رویایی',
-      artist: 'نوای ملایم پیوند فرخنده',
-      synthPreset: 'celestial_harp',
-      isPreset: true
-    },
-    {
-      id: 'default-4',
-      title: 'گیتار آکوستیک ملایم و عاشقانه',
-      artist: 'ملودی دلنواز و آرام',
-      synthPreset: 'gentle_acoustic',
-      isPreset: true
+  // Build combined playlist strictly synchronized with data.music settings
+  const buildPlaylist = useCallback((): MusicTrack[] => {
+    const musicConfig = data.music;
+    if (!musicConfig) return [];
+
+    const customTracks = musicConfig.playlist && musicConfig.playlist.length > 0
+      ? musicConfig.playlist
+      : musicConfig.tracks && musicConfig.tracks.length > 0
+      ? musicConfig.tracks
+      : [];
+
+    if (customTracks.length > 0) {
+      return customTracks;
     }
-  ];
 
-  const playlist: MusicTrack[] =
-    data.music?.playlist && data.music.playlist.length > 0
-      ? data.music.playlist
-      : defaultTracks;
+    // Default built-in presets fallback using configured main track info
+    return [
+      {
+        id: 'main-track',
+        title: musicConfig.title || 'پیانوی رمانتیک و دلنشین',
+        artist: musicConfig.artist || 'نوای آرامش‌بخش پیانو',
+        synthPreset: musicConfig.synthPreset || 'romantic_piano',
+        isPreset: !musicConfig.audioUrl,
+        url: musicConfig.audioUrl
+      },
+      {
+        id: 'preset-oud',
+        title: 'نوای سنتور و عود سنتی ایرانی',
+        artist: 'دستگاه اصفهان و شور اصیل',
+        synthPreset: 'traditional_oud',
+        isPreset: true
+      },
+      {
+        id: 'preset-harp',
+        title: 'چنگ و هارپ آسمانی و رویایی',
+        artist: 'نوای ملایم پیوند فرخنده',
+        synthPreset: 'celestial_harp',
+        isPreset: true
+      },
+      {
+        id: 'preset-guitar',
+        title: 'گیتار آکوستیک ملایم و عاشقانه',
+        artist: 'ملودی دلنواز و آرام',
+        synthPreset: 'gentle_acoustic',
+        isPreset: true
+      }
+    ];
+  }, [data.music]);
 
-  const currentTrack = playlist[currentTrackIndex] || playlist[0];
+  const playlist = buildPlaylist();
+  const safeIndex = Math.min(Math.max(0, currentTrackIndex), Math.max(0, playlist.length - 1));
+  const currentTrack = playlist[safeIndex] || playlist[0];
 
-  // Sync isPlaying state with audio utility
+  // Sync volume with data.music when settings are saved
+  useEffect(() => {
+    if (data.music?.volume !== undefined) {
+      const volPercent = Math.round(data.music.volume * 100);
+      setVolume(volPercent);
+      weddingAudio.setVolume(data.music.volume);
+    }
+  }, [data.music?.volume]);
+
+  // Keep player playback status in sync with weddingAudio engine
   useEffect(() => {
     const interval = setInterval(() => {
-      setIsPlaying(weddingAudio.getIsPlaying());
-    }, 500);
+      const active = weddingAudio.getIsPlaying();
+      setIsPlaying(active);
+    }, 400);
     return () => clearInterval(interval);
   }, []);
 
-  // Lock body scroll when modal is open
+  // Lock body scroll and keydown listener for modal
   useEffect(() => {
     if (!isOpenModal) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -96,7 +122,8 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpenModal]);
 
-  const playTrackAtIndex = (index: number) => {
+  const playTrackAtIndex = useCallback((index: number) => {
+    if (!playlist || playlist.length === 0) return;
     const nextIdx = (index + playlist.length) % playlist.length;
     setCurrentTrackIndex(nextIdx);
     const track = playlist[nextIdx];
@@ -107,68 +134,85 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
     const onTrackEnd = () => {
       if (autoNext) {
         playTrackAtIndex(nextIdx + 1);
+      } else {
+        setIsPlaying(false);
       }
     };
 
     weddingAudio.playTrack(track, onTrackEnd);
     setIsPlaying(true);
-  };
+  }, [playlist, volume, autoNext]);
+
+  // React to updates in data.music settings (if currently playing, re-apply track changes)
+  useEffect(() => {
+    if (isPlaying) {
+      const runningTrack = weddingAudio.getCurrentTrack();
+      if (runningTrack && currentTrack) {
+        // If the URL or synthPreset or title changed in settings, refresh current playing track
+        const currentUrl = currentTrack.url || currentTrack.audioUrl;
+        const runningUrl = runningTrack.url || runningTrack.audioUrl;
+        if (currentUrl !== runningUrl || currentTrack.synthPreset !== runningTrack.synthPreset) {
+          playTrackAtIndex(safeIndex);
+        }
+      }
+    }
+  }, [data.music?.audioUrl, data.music?.synthPreset, data.music?.title, safeIndex, isPlaying, currentTrack, playTrackAtIndex]);
 
   const togglePlay = () => {
     if (isPlaying) {
       weddingAudio.stop();
       setIsPlaying(false);
     } else {
-      playTrackAtIndex(currentTrackIndex);
+      playTrackAtIndex(safeIndex);
     }
   };
 
   const handleNext = (e?: MouseEvent) => {
     e?.stopPropagation();
-    playTrackAtIndex(currentTrackIndex + 1);
+    playTrackAtIndex(safeIndex + 1);
   };
 
   const handlePrev = (e?: MouseEvent) => {
     e?.stopPropagation();
-    playTrackAtIndex(currentTrackIndex - 1);
+    playTrackAtIndex(safeIndex - 1);
   };
 
-  const handleVolumeChange = (newVol: number) => {
-    setVolume(newVol);
-    weddingAudio.setVolume(newVol / 100);
+  const handleVolumeChange = (newVolPercent: number) => {
+    const clamped = Math.max(0, Math.min(100, newVolPercent));
+    setVolume(clamped);
+    weddingAudio.setVolume(clamped / 100);
   };
+
+  if (!data.music?.enabled) {
+    return null;
+  }
 
   return (
     <>
-      {/* Permanent Fixed Bottom Footer Music Player */}
+      {/* Fixed Bottom Footer Music Bar */}
       <footer
         id="permanent-music-footer"
-        className={`fixed bottom-0 inset-x-0 z-40 w-full transition-all duration-300 select-none ${
-          isLight
-            ? 'bg-white/95 text-stone-900 border-t border-amber-600/30 shadow-[0_-8px_30px_rgba(0,0,0,0.08)]'
-            : 'bg-stone-950/95 text-stone-100 border-t border-amber-500/30 shadow-[0_-8px_35px_rgba(0,0,0,0.6)]'
-        } backdrop-blur-xl`}
+        className="fixed bottom-0 inset-x-0 z-40 w-full bg-white/95 text-stone-900 border-t border-amber-300 shadow-[0_-8px_30px_rgba(217,119,6,0.12)] backdrop-blur-xl transition-all duration-300 select-none"
       >
         <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+          
           {/* Section 1 (Right in RTL): Track Info & Spinning Vinyl Disc */}
           <div
             onClick={() => setIsOpenModal(true)}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0 max-w-[40%] sm:max-w-[32%]"
-            title="کلیک کنید برای تنظیمات و انتخاب موسیقی"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-w-0 max-w-[42%] sm:max-w-[35%]"
+            title="کلیک کنید برای تنظیمات و انتخاب لیست موسیقی"
           >
             {/* Spinning Vinyl Disc */}
             <div className="relative flex items-center justify-center shrink-0">
               <div
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border transition-transform ${
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border transition-transform ${
                   isPlaying
-                    ? 'bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 border-amber-300 shadow-md animate-spin'
-                    : isLight
-                    ? 'bg-amber-100 text-amber-800 border-amber-300'
-                    : 'bg-stone-900 text-stone-400 border-stone-700'
+                    ? 'bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 border-amber-400 shadow-md animate-spin'
+                    : 'bg-amber-100 text-amber-900 border-amber-300'
                 }`}
                 style={{ animationDuration: '3.5s' }}
               >
-                <Disc className={`w-5 h-5 ${isPlaying ? 'text-stone-950' : ''}`} />
+                <Disc className={`w-5 h-5 sm:w-6 sm:h-6 ${isPlaying ? 'text-stone-950' : 'text-amber-800'}`} />
               </div>
               {isPlaying && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping ring-2 ring-emerald-400" />
@@ -178,17 +222,13 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
             {/* Track Title and Subtitle */}
             <div className="flex flex-col min-w-0 text-right">
               <div className="flex items-center gap-1">
-                <span className={`text-xs sm:text-sm font-bold font-amiri truncate group-hover:text-amber-500 transition-colors ${
-                  isLight ? 'text-emerald-950' : 'text-amber-100'
-                }`}>
-                  {currentTrack.title}
+                <span className="text-xs sm:text-sm font-bold font-amiri text-emerald-950 truncate group-hover:text-amber-700 transition-colors">
+                  {currentTrack ? currentTrack.title : 'موزیک جشن عروسی'}
                 </span>
-                <Sparkles className="w-3 h-3 text-amber-400 shrink-0 hidden sm:inline" />
+                <Sparkles className="w-3 h-3 text-amber-500 shrink-0 hidden sm:inline" />
               </div>
-              <span className={`text-[10px] sm:text-[11px] truncate font-light ${
-                isLight ? 'text-stone-500' : 'text-stone-400'
-              }`}>
-                {currentTrack.artist || 'نوای دلنشین جشن'}
+              <span className="text-[10px] sm:text-[11px] text-stone-500 truncate font-light">
+                {currentTrack?.artist || 'ملودی عاشقانه و دلنشین'}
               </span>
             </div>
           </div>
@@ -199,11 +239,7 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
             <button
               type="button"
               onClick={handlePrev}
-              className={`p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
-                isLight
-                  ? 'hover:bg-amber-50 text-stone-600 hover:text-amber-900'
-                  : 'hover:bg-stone-800 text-stone-400 hover:text-amber-300'
-              }`}
+              className="p-2 sm:p-2.5 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
               title="قطعه قبلی"
             >
               <SkipBack className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -214,13 +250,13 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
               type="button"
               id="permanent-footer-play-btn"
               onClick={togglePlay}
-              className="p-2.5 sm:p-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-stone-950 font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center ring-2 ring-amber-300/40"
+              className="p-2.5 sm:p-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-stone-950 font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center ring-2 ring-amber-300/60"
               title={isPlaying ? 'توقف موسیقی' : 'پخش موسیقی'}
             >
               {isPlaying ? (
-                <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-stone-950" />
+                <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-stone-950 text-stone-950" />
               ) : (
-                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-stone-950 ml-0.5" />
+                <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-stone-950 text-stone-950 ml-0.5" />
               )}
             </button>
 
@@ -228,30 +264,24 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
             <button
               type="button"
               onClick={handleNext}
-              className={`p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
-                isLight
-                  ? 'hover:bg-amber-50 text-stone-600 hover:text-amber-900'
-                  : 'hover:bg-stone-800 text-stone-400 hover:text-amber-300'
-              }`}
+              className="p-2 sm:p-2.5 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
               title="قطعه بعدی"
             >
               <SkipForward className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
 
-          {/* Section 3 (Left in RTL): Volume & Open Settings Modal */}
+          {/* Section 3 (Left in RTL): Volume & Open Settings Popup */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-3 shrink-0">
-            {/* Quick Volume Slider on desktop */}
+            {/* Volume slider on desktop */}
             <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => handleVolumeChange(volume === 0 ? 80 : 0)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isLight ? 'text-stone-600 hover:text-amber-700' : 'text-stone-400 hover:text-amber-300'
-                }`}
+                className="p-1.5 rounded-lg text-stone-600 hover:text-amber-800 transition-colors"
                 title={volume === 0 ? 'با صدا' : 'بی‌صدا'}
               >
-                {volume === 0 ? <VolumeX className="w-4 h-4 text-rose-500" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
+                {volume === 0 ? <VolumeX className="w-4 h-4 text-rose-600" /> : <Volume2 className="w-4 h-4 text-amber-700" />}
               </button>
               <input
                 type="range"
@@ -259,81 +289,69 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                 max="100"
                 value={volume}
                 onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                className="w-16 lg:w-20 h-1.5 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                className="w-16 lg:w-22 h-1.5 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
               />
-              <span className={`text-[10px] font-mono w-7 text-left ${isLight ? 'text-stone-500' : 'text-stone-400'}`}>
+              <span className="text-[10px] font-mono font-bold w-7 text-left text-stone-600">
                 {toPersianDigits(volume)}٪
               </span>
             </div>
 
-            {/* Open Full Music Panel Modal Button */}
+            {/* Open Settings Modal Button */}
             <button
               type="button"
               id="open-music-settings-popup"
               onClick={() => setIsOpenModal(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full border text-xs font-bold transition-all cursor-pointer shadow-sm ${
-                isLight
-                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-stone-900 hover:bg-stone-800 text-amber-300 border-amber-500/40'
-              }`}
-              title="باز کردن پنل تنظیمات و لیست سازها"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-amber-100/80 hover:bg-amber-200 text-amber-950 border border-amber-300/80 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              title="باز کردن پنل تنظیمات و لیست قطعات"
             >
-              <Sliders className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">تنظیمات موسیقی</span>
-              <span className="sm:hidden">سازها</span>
+              <Sliders className="w-3.5 h-3.5 text-amber-700" />
+              <span className="hidden sm:inline">لیست موزیک‌ها</span>
+              <span className="sm:hidden">تنظیمات</span>
             </button>
           </div>
         </div>
       </footer>
 
-      {/* Guest Music Control Popup / Modal rendered via Portal */}
+      {/* Music Selection & Control Modal via Portal */}
       {typeof document !== 'undefined' &&
         createPortal(
           <AnimatePresence>
             {isOpenModal && (
               <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 select-none">
-                {/* Backdrop with Blur */}
+                {/* Backdrop */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   onClick={() => setIsOpenModal(false)}
-                  className="fixed inset-0 bg-stone-950/80 backdrop-blur-md cursor-pointer"
+                  className="fixed inset-0 bg-stone-900/60 backdrop-blur-md cursor-pointer"
                 />
 
                 {/* Modal Container */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  initial={{ opacity: 0, scale: 0.92, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 20 }}
                   transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                   onClick={(e) => e.stopPropagation()}
-                  className={`relative w-full max-w-lg max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl border flex flex-col z-10 ${
-                    isLight
-                      ? 'bg-gradient-to-b from-[#fcfbf9] via-[#f7f3eb] to-[#f4eee3] border-amber-600/30 text-stone-900'
-                      : 'bg-gradient-to-b from-stone-950 via-[#101413] to-stone-950 border-amber-500/40 text-stone-100 shadow-amber-950/50'
-                  }`}
+                  className="relative w-full max-w-lg max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl border flex flex-col z-10 bg-[#FFFDF7] border-amber-300 text-stone-900"
                 >
-                  {/* Decorative Glowing Backdrop Orbs */}
-                  <div className="absolute top-0 right-1/4 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                  <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                  {/* Glowing Ambient Backdrop Orbs */}
+                  <div className="absolute top-0 right-1/4 w-48 h-48 bg-amber-300/20 rounded-full blur-3xl pointer-events-none" />
+                  <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-emerald-300/20 rounded-full blur-3xl pointer-events-none" />
 
                   {/* Header */}
-                  <div className={`p-4 sm:p-5 border-b flex items-center justify-between relative z-10 ${
-                    isLight ? 'border-stone-200 bg-white/70' : 'border-stone-800/80 bg-stone-950/70'
-                  } backdrop-blur-md`}>
+                  <div className="p-4 sm:p-5 border-b border-stone-200 bg-white/80 backdrop-blur-md flex items-center justify-between relative z-10">
                     <div className="flex items-center gap-2.5">
-                      <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
-                        isLight ? 'bg-amber-100 text-amber-800' : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-                      }`}>
+                      <div className="w-9 h-9 rounded-2xl bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center shadow-sm">
                         <Music className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className={`text-base sm:text-lg font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'}`}>
-                          تنظیمات و پخش موسیقی مهمانان
+                        <h3 className="text-base sm:text-lg font-bold font-amiri text-emerald-950">
+                          تنظیمات و پخش موسیقی جشن
                         </h3>
-                        <p className={`text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} font-light`}>
-                          نوای دلخواه خود را برای همراهی در کارت جشن انتخاب کنید
+                        <p className="text-[11px] text-stone-600 font-light">
+                          انتخاب و مدیریت موزیک‌های همراه دعوت‌نامه
                         </p>
                       </div>
                     </div>
@@ -341,33 +359,29 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                     <button
                       type="button"
                       onClick={() => setIsOpenModal(false)}
-                      className={`p-2 rounded-full transition-colors cursor-pointer ${
-                        isLight
-                          ? 'bg-stone-200/80 hover:bg-stone-300 text-stone-700'
-                          : 'bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-white'
-                      }`}
-                      title="بستن پنجره"
+                      className="p-2 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors cursor-pointer"
+                      title="بستن"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                  {/* Scrollable Content Body */}
+                  {/* Scrollable Modal Body */}
                   <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 relative z-10 custom-scrollbar">
-                    {/* Vinyl Turntable & Live Visualizer Card */}
-                    <div className={`p-4 sm:p-5 rounded-2xl border relative overflow-hidden text-center ${
-                      isLight
-                        ? 'bg-gradient-to-br from-white via-amber-50/60 to-emerald-50/40 border-amber-400/40 shadow-sm'
-                        : 'bg-gradient-to-br from-stone-900/90 via-stone-950 to-stone-900/90 border-amber-500/30 shadow-inner'
-                    }`}>
+                    
+                    {/* Vinyl Turntable Display Card */}
+                    <div className="p-4 sm:p-5 rounded-2xl border border-amber-300/80 bg-gradient-to-br from-white via-amber-50/70 to-emerald-50/50 shadow-sm text-center relative overflow-hidden">
                       {/* Rotating Vinyl Record Disk */}
                       <div className="relative inline-flex items-center justify-center my-2">
-                        <div className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 shadow-2xl flex items-center justify-center relative ${
-                          isLight ? 'border-amber-300 bg-stone-900' : 'border-amber-400/40 bg-stone-950'
-                        } ${isPlaying ? 'animate-spin' : ''}`} style={{ animationDuration: '5s' }}>
+                        <div
+                          className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-amber-300 bg-stone-900 shadow-xl flex items-center justify-center relative ${
+                            isPlaying ? 'animate-spin' : ''
+                          }`}
+                          style={{ animationDuration: '4.5s' }}
+                        >
                           {/* Vinyl Groove Rings */}
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-stone-700/50 flex items-center justify-center">
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-stone-600/40 flex items-center justify-center">
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-stone-700/60 flex items-center justify-center">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-stone-600/50 flex items-center justify-center">
                               {/* Center Label */}
                               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-amber-600 to-amber-300 flex items-center justify-center shadow-md">
                                 <Disc className="w-5 h-5 text-stone-950" />
@@ -376,33 +390,29 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                           </div>
                         </div>
 
-                        {/* Tone arm needle effect badge */}
+                        {/* Status Badge */}
                         <div className="absolute -top-2 -right-2 px-2.5 py-1 rounded-full bg-amber-500 text-stone-950 text-[10px] font-bold shadow-md flex items-center gap-1">
                           <Radio className="w-3 h-3" />
                           <span>{isPlaying ? 'در حال پخش زنده' : 'آماده پخش'}</span>
                         </div>
                       </div>
 
-                      {/* Current Track Details */}
+                      {/* Track Info */}
                       <div className="mt-2">
-                        <h4 className={`text-base sm:text-lg font-bold font-amiri truncate ${
-                          isLight ? 'text-emerald-950' : 'text-amber-200'
-                        }`}>
-                          {currentTrack.title}
+                        <h4 className="text-base sm:text-lg font-bold font-amiri text-emerald-950 truncate">
+                          {currentTrack ? currentTrack.title : 'موزیک جشن'}
                         </h4>
-                        <p className={`text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} font-light truncate mt-0.5`}>
-                          {currentTrack.artist || 'نوای رمانتیک و دلنشین'}
+                        <p className="text-xs text-stone-600 font-light truncate mt-0.5">
+                          {currentTrack?.artist || 'نوای آرامش‌بخش جشن'}
                         </p>
                       </div>
 
-                      {/* Equalizer Dynamic Dancing Bars */}
+                      {/* Equalizer Frequency Bars */}
                       <div className="flex items-center justify-center gap-1.5 h-6 mt-3">
                         {[40, 75, 55, 90, 60, 85, 45].map((height, i) => (
                           <span
                             key={i}
-                            className={`w-1 rounded-full transition-all duration-300 ${
-                              isLight ? 'bg-amber-600' : 'bg-amber-400'
-                            } ${
+                            className={`w-1 rounded-full transition-all duration-300 bg-amber-600 ${
                               isPlaying ? 'animate-pulse' : 'opacity-30 h-1.5'
                             }`}
                             style={{
@@ -420,11 +430,7 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                       <button
                         type="button"
                         onClick={handlePrev}
-                        className={`p-3 rounded-full border transition-all cursor-pointer ${
-                          isLight
-                            ? 'bg-white hover:bg-amber-100 text-stone-700 hover:text-amber-900 border-stone-300 shadow-sm'
-                            : 'bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-300 border-stone-800 shadow-lg'
-                        }`}
+                        className="p-3 rounded-full border border-stone-300 bg-white hover:bg-amber-100 text-stone-800 transition-all cursor-pointer shadow-sm"
                         title="قطعه قبلی"
                       >
                         <SkipBack className="w-5 h-5" />
@@ -433,7 +439,7 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                       <button
                         type="button"
                         onClick={togglePlay}
-                        className="px-6 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-stone-950 font-bold text-sm sm:text-base shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+                        className="px-6 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-stone-950 font-bold text-sm sm:text-base shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
                       >
                         {isPlaying ? (
                           <>
@@ -451,43 +457,33 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                       <button
                         type="button"
                         onClick={handleNext}
-                        className={`p-3 rounded-full border transition-all cursor-pointer ${
-                          isLight
-                            ? 'bg-white hover:bg-amber-100 text-stone-700 hover:text-amber-900 border-stone-300 shadow-sm'
-                            : 'bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-300 border-stone-800 shadow-lg'
-                        }`}
+                        className="p-3 rounded-full border border-stone-300 bg-white hover:bg-amber-100 text-stone-800 transition-all cursor-pointer shadow-sm"
                         title="قطعه بعدی"
                       >
                         <SkipForward className="w-5 h-5" />
                       </button>
                     </div>
 
-                    {/* Master Volume Controller & Quick Buttons */}
-                    <div className={`p-4 rounded-2xl border space-y-3 ${
-                      isLight
-                        ? 'bg-white/90 border-stone-200 shadow-sm'
-                        : 'bg-stone-950/70 border-stone-800/80 shadow-md'
-                    }`}>
+                    {/* Volume Controls & Quick Presets */}
+                    <div className="p-4 rounded-2xl border border-stone-200 bg-white shadow-sm space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Volume2 className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
-                          <span className={`text-xs font-bold ${isLight ? 'text-stone-800' : 'text-stone-200'}`}>
+                          <Volume2 className="w-4 h-4 text-amber-700" />
+                          <span className="text-xs font-bold text-stone-800">
                             تنظیم میزان صدا:
                           </span>
                         </div>
-                        <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-full ${
-                          isLight ? 'bg-amber-100 text-amber-900' : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                        }`}>
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
                           {toPersianDigits(volume)}٪
                         </span>
                       </div>
 
-                      {/* Slider */}
+                      {/* Volume Slider */}
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => handleVolumeChange(0)}
-                          className="text-stone-400 hover:text-amber-400 transition-colors"
+                          className="text-stone-400 hover:text-amber-700 transition-colors"
                           title="بی‌صدا"
                         >
                           <VolumeX className="w-4 h-4" />
@@ -498,79 +494,72 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                           max="100"
                           value={volume}
                           onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                          className="flex-1 h-2 bg-stone-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                          className="flex-1 h-2 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
                         />
                         <button
                           type="button"
                           onClick={() => handleVolumeChange(100)}
-                          className="text-stone-400 hover:text-amber-400 transition-colors"
+                          className="text-stone-400 hover:text-amber-700 transition-colors"
                           title="حداکثر صدا"
                         >
                           <Volume2 className="w-4 h-4" />
                         </button>
                       </div>
 
-                      {/* Quick Volume Preset Buttons */}
-                      <div className="grid grid-cols-3 gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => handleVolumeChange(0)}
-                          className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
-                            volume === 0
-                              ? 'bg-amber-500 text-stone-950 border-amber-400 font-bold'
-                              : isLight
-                              ? 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
-                              : 'bg-stone-900 text-stone-300 border-stone-800 hover:bg-stone-800'
-                          }`}
-                        >
-                          بی‌صدا (۰٪)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleVolumeChange(50)}
-                          className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
-                            volume === 50
-                              ? 'bg-amber-500 text-stone-950 border-amber-400 font-bold'
-                              : isLight
-                              ? 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
-                              : 'bg-stone-900 text-stone-300 border-stone-800 hover:bg-stone-800'
-                          }`}
-                        >
-                          ملایم (۵۰٪)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleVolumeChange(90)}
-                          className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
-                            volume >= 90
-                              ? 'bg-amber-500 text-stone-950 border-amber-400 font-bold'
-                              : isLight
-                              ? 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
-                              : 'bg-stone-900 text-stone-300 border-stone-800 hover:bg-stone-800'
-                          }`}
-                        >
-                          کامل (۹۰٪)
-                        </button>
+                      {/* Quick Presets */}
+                      <div className="grid grid-cols-4 gap-2 pt-1">
+                        {[0, 30, 60, 100].map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => handleVolumeChange(v)}
+                            className={`py-1.5 px-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                              volume === v
+                                ? 'bg-amber-500 text-stone-950 border-amber-400 font-bold shadow-sm'
+                                : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
+                            }`}
+                          >
+                            {v === 0 ? 'بی‌صدا' : `${toPersianDigits(v)}٪`}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Playlist Selection & Melodies List */}
+                    {/* Admin Direct Shortcut to Studio Music Settings */}
+                    {isAdminAuthenticated && onOpenStudio && (
+                      <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-amber-950">
+                          <Settings className="w-4 h-4 text-amber-700" />
+                          <span>تغییر فایل‌های صوتی یا لینک موسیقی؟</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOpenModal(false);
+                            onOpenStudio();
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm cursor-pointer transition-colors"
+                        >
+                          استودیو ویرایش
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Playlist Selection */}
                     <div>
                       <div className="flex items-center justify-between mb-2 px-1">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
-                          <Headphones className="w-3.5 h-3.5 text-amber-400" />
-                          <span className={isLight ? 'text-stone-800' : 'text-amber-200'}>
-                            انتخاب قطعه یا ساز موسیقی دلخواه:
-                          </span>
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800">
+                          <Headphones className="w-3.5 h-3.5 text-amber-700" />
+                          <span>انتخاب قطعه یا ساز موسیقی:</span>
                         </div>
-                        <span className={`text-[11px] ${isLight ? 'text-stone-500' : 'text-stone-400'}`}>
-                          {toPersianDigits(playlist.length)} ملودی
+                        <span className="text-[11px] text-stone-500 font-medium">
+                          {toPersianDigits(playlist.length)} قطعه موجود
                         </span>
                       </div>
 
                       <div className="space-y-2">
                         {playlist.map((track, idx) => {
-                          const isSelected = idx === currentTrackIndex;
+                          const isSelected = idx === safeIndex;
                           return (
                             <button
                               key={track.id || idx}
@@ -578,47 +567,40 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                               onClick={() => playTrackAtIndex(idx)}
                               className={`w-full text-right p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
                                 isSelected
-                                  ? isLight
-                                    ? 'bg-amber-100/90 border-amber-500 shadow-sm text-emerald-950'
-                                    : 'bg-amber-500/15 border-amber-400 shadow-lg text-amber-100'
-                                  : isLight
-                                  ? 'bg-white/80 border-stone-200 hover:bg-amber-50/50 text-stone-700'
-                                  : 'bg-stone-950/60 border-stone-800/80 hover:bg-stone-900 text-stone-300'
+                                  ? 'bg-amber-100/90 border-amber-500 shadow-sm text-emerald-950'
+                                  : 'bg-white border-stone-200 hover:bg-amber-50/50 text-stone-700'
                               }`}
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                                   isSelected
                                     ? 'bg-amber-500 text-stone-950 font-bold'
-                                    : isLight
-                                    ? 'bg-stone-100 text-stone-500'
-                                    : 'bg-stone-900 text-stone-400'
+                                    : 'bg-stone-100 text-stone-500'
                                 }`}>
                                   {isSelected && isPlaying ? (
                                     <Disc className="w-4 h-4 animate-spin text-stone-950" />
                                   ) : (
-                                    <span className="font-mono text-xs">{idx + 1}</span>
+                                    <span className="font-mono text-xs">{toPersianDigits(idx + 1)}</span>
                                   )}
                                 </div>
 
                                 <div className="min-w-0 text-right">
                                   <div className={`text-xs sm:text-sm font-amiri font-bold truncate ${
-                                    isSelected ? (isLight ? 'text-emerald-950' : 'text-amber-200') : ''
+                                    isSelected ? 'text-emerald-950' : 'text-stone-900'
                                   }`}>
                                     {track.title}
                                   </div>
-                                  <div className={`text-[11px] truncate ${isLight ? 'text-stone-500' : 'text-stone-400'}`}>
-                                    {track.artist || 'نوای آرامش‌بخش پیوند'}
+                                  <div className="text-[11px] text-stone-500 truncate">
+                                    {track.artist || 'نوای دلنشین و آرام‌بخش'}
                                   </div>
                                 </div>
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
                                 {isSelected && (
-                                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                    isLight ? 'bg-amber-200 text-amber-900' : 'bg-amber-500/20 text-amber-300'
-                                  }`}>
-                                    {isPlaying ? 'در حال اجرا' : 'انتخاب شده'}
+                                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 flex items-center gap-1">
+                                    <Check className="w-3 h-3 text-amber-800" />
+                                    <span>{isPlaying ? 'در حال اجرا' : 'انتخاب شده'}</span>
                                   </span>
                                 )}
                               </div>
@@ -627,20 +609,19 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                         })}
                       </div>
                     </div>
+
                   </div>
 
                   {/* Footer */}
-                  <div className={`p-4 border-t flex items-center justify-between ${
-                    isLight ? 'border-stone-200 bg-stone-100/90' : 'border-stone-800/80 bg-stone-950'
-                  }`}>
+                  <div className="p-4 border-t border-stone-200 bg-stone-100/90 flex items-center justify-between">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={autoNext}
                         onChange={(e) => setAutoNext(e.target.checked)}
-                        className="rounded accent-amber-500 cursor-pointer"
+                        className="rounded accent-amber-600 cursor-pointer"
                       />
-                      <span className={`text-xs ${isLight ? 'text-stone-700' : 'text-stone-300'}`}>
+                      <span className="text-xs text-stone-700 font-medium">
                         پخش پیوسته و خودکار قطعات بعدی
                       </span>
                     </label>
@@ -648,7 +629,7 @@ export default function AudioPlayerFloating({ data, guestColorMode }: Props) {
                     <button
                       type="button"
                       onClick={() => setIsOpenModal(false)}
-                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-md cursor-pointer transition-colors"
+                      className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-sm cursor-pointer transition-colors"
                     >
                       تایید و بستن
                     </button>

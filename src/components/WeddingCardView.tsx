@@ -36,8 +36,6 @@ interface Props {
   onReopenEnvelope?: () => void;
   onOpenAdminLogin?: () => void;
   isAdminAuthenticated?: boolean;
-  guestColorMode?: 'dark' | 'light';
-  onToggleColorMode?: () => void;
 }
 
 export default function WeddingCardView({
@@ -46,17 +44,14 @@ export default function WeddingCardView({
   onReopenEnvelope,
   onOpenAdminLogin,
   isAdminAuthenticated,
-  guestColorMode = 'dark',
-  onToggleColorMode
 }: Props) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft(data.gregorianDate));
   const [isRsvpOpen, setIsRsvpOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const colorMode = guestColorMode || data.colorMode || 'dark';
-  const isLight = colorMode === 'light';
-  const currentTheme = getTheme(data.themeId, colorMode);
+  const isLight = true;
+  const currentTheme = getTheme(data.themeId);
   const overallStyle = data.overallStyle || {
     borderStyle: 'persian_arabesque',
     fontPairing: 'classic_amiri',
@@ -151,15 +146,17 @@ export default function WeddingCardView({
 
   return (
     <div id="wedding-card-root" className={`min-h-screen pt-6 sm:pt-10 md:pt-16 pb-32 sm:pb-28 px-2.5 sm:px-4 bg-gradient-to-b ${currentTheme.primaryBg} ${isLight ? 'text-stone-800' : 'text-stone-100'} flex flex-col items-center justify-start relative overflow-x-hidden w-full transition-colors duration-500`}>
-      {/* Fixed Sticky Top Bar for RSVP & Guest Dark/Light Mode Switcher */}
+      {/* Fixed Sticky Top Bar for RSVP & Reopen Envelope */}
       <motion.div
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5, ease: 'easeOut' }}
-        className="fixed top-3 sm:top-4 z-40 inset-x-0 flex items-center justify-between pointer-events-none px-3 max-w-2xl mx-auto"
+        className={`fixed ${
+          isAdminAuthenticated ? 'top-14 sm:top-16' : 'top-3 sm:top-4'
+        } z-40 inset-x-0 flex items-center justify-center gap-2 pointer-events-none px-3 max-w-2xl mx-auto transition-all duration-300`}
       >
         {/* RSVP Shortcut Button */}
-        {data.sectionVisibility?.rsvp !== false && data.rsvpConfig.enabled !== false ? (
+        {data.sectionVisibility?.rsvp !== false && data.rsvpConfig.enabled !== false && (
           <button
             type="button"
             onClick={() => {
@@ -169,46 +166,31 @@ export default function WeddingCardView({
                 el.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
             }}
-            className={`pointer-events-auto group px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full ${
-              isLight
-                ? 'bg-white/95 hover:bg-emerald-50 border border-amber-500/80 text-emerald-950 shadow-xl shadow-amber-900/10'
-                : 'bg-stone-950/90 hover:bg-stone-900 border border-amber-400/70 text-amber-100 shadow-2xl shadow-black/80'
-            } backdrop-blur-xl flex items-center gap-2 sm:gap-3 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-amber-500/20`}
+            className="pointer-events-auto group px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-500/80 text-amber-950 shadow-xl shadow-amber-900/10 backdrop-blur-xl flex items-center gap-2 sm:gap-2.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-amber-500/20"
           >
             <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
             </span>
-            <CheckCircle2 className={`w-4 h-4 ${isLight ? 'text-amber-600 group-hover:text-amber-700' : 'text-amber-400 group-hover:text-amber-300'} shrink-0`} />
-            <span className={`text-xs sm:text-sm font-bold font-amiri ${isLight ? 'text-emerald-950' : 'text-amber-100 group-hover:text-white'}`}>
+            <CheckCircle2 className="w-4 h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
+            <span className="text-xs sm:text-sm font-bold font-amiri text-amber-950">
               تایید حضور (ثبت RSVP)
             </span>
           </button>
-        ) : <div />}
+        )}
 
-        {/* Guest Dark/Light Mode Switcher */}
-        {onToggleColorMode && (
+        {/* Reopen Envelope Shortcut Button */}
+        {onReopenEnvelope && (
           <button
             type="button"
-            onClick={onToggleColorMode}
-            className={`pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-full font-bold shadow-xl backdrop-blur-xl cursor-pointer transition-all transform hover:scale-105 active:scale-95 text-xs border ${
-              isLight
-                ? 'bg-white/95 hover:bg-stone-100 text-stone-800 border-stone-300'
-                : 'bg-stone-950/90 hover:bg-stone-900 text-amber-300 border-amber-500/40'
-            }`}
-            title="تغییر تم صفحه بین دارک و لایت"
+            onClick={onReopenEnvelope}
+            className="pointer-events-auto group px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-300 text-stone-900 shadow-xl shadow-amber-900/10 backdrop-blur-xl flex items-center gap-1.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer text-xs sm:text-sm font-bold font-amiri ring-2 ring-amber-500/20"
+            title="مشاهده مجدد پاکت نامه و انیمیشن مهر و موم"
           >
-            {isLight ? (
-              <>
-                <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">حالت شب</span>
-              </>
-            ) : (
-              <>
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">حالت روز</span>
-              </>
-            )}
+            <Eye className="w-4 h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
+            <span className="text-xs sm:text-sm font-bold font-amiri text-amber-950">
+              مشاهده مجدد پاکت
+            </span>
           </button>
         )}
       </motion.div>
@@ -652,16 +634,30 @@ export default function WeddingCardView({
               لطفاً جهت برنامه‌ریزی بهتر و تدارک پذیرایی شایسته، حضور خود را تا تاریخ {data.rsvpConfig.deadlineDate} اعلام فرمایید.
             </p>
 
-            <motion.button
-              id="rsvp-open-btn"
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsRsvpOpen(true)}
-              className="px-8 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-sm shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 mx-auto cursor-pointer"
-            >
-              <CheckCircle2 className="w-5 h-5 text-stone-950" />
-              <span>ثبت و اعلام تایید حضور</span>
-            </motion.button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <motion.button
+                id="rsvp-open-btn"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsRsvpOpen(true)}
+                className="px-7 py-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-sm shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-5 h-5 text-stone-950" />
+                <span>ثبت و اعلام تایید حضور</span>
+              </motion.button>
+
+              {onReopenEnvelope && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={onReopenEnvelope}
+                  className="px-6 py-3.5 rounded-full bg-white hover:bg-amber-50 text-amber-950 font-bold text-sm border border-amber-300/90 shadow-md flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                >
+                  <Eye className="w-4 h-4 text-amber-600" />
+                  <span>مشاهده مجدد پاکت</span>
+                </motion.button>
+              )}
+            </div>
           </div>
         )}
 
@@ -779,6 +775,7 @@ export default function WeddingCardView({
         isOpen={isRsvpOpen}
         onClose={() => setIsRsvpOpen(false)}
         data={data}
+        isLight={isLight}
       />
     </div>
   );

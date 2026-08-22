@@ -1,4 +1,10 @@
 export type ThemeId =
+  | 'sunlight_blossom'
+  | 'sunflower_lavender'
+  | 'honey_citrus'
+  | 'golden_forest'
+  | 'indigo_sun'
+  | 'plum_honey'
   | 'emerald'
   | 'gold'
   | 'rosegold'
@@ -132,6 +138,7 @@ export interface MusicTrack {
   title: string;
   artist?: string;
   url?: string;
+  audioUrl?: string;
   isPreset?: boolean;
   synthPreset?: 'romantic_piano' | 'traditional_oud' | 'gentle_acoustic' | 'celestial_harp';
 }
@@ -141,8 +148,11 @@ export interface MusicConfig {
   title: string;
   artist?: string;
   audioUrl?: string;
+  autoPlay?: boolean;
+  volume?: number;
   synthPreset: 'romantic_piano' | 'traditional_oud' | 'gentle_acoustic' | 'celestial_harp';
   playlist?: MusicTrack[];
+  tracks?: MusicTrack[];
 }
 
 export interface WeddingCardData {

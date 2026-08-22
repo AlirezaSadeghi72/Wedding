@@ -24,8 +24,9 @@ class WeddingAudioPlayer {
     this.currentTrack = track;
     this.onEndedCallback = onEnded || null;
 
-    if (track.url && track.url.trim().length > 0) {
-      this.playCustomAudio(track.url, onEnded);
+    const audioUrl = track.url || track.audioUrl;
+    if (audioUrl && audioUrl.trim().length > 0) {
+      this.playCustomAudio(audioUrl, onEnded);
     } else {
       const preset = track.synthPreset || 'romantic_piano';
       this.playPreset(preset);

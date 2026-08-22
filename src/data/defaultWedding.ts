@@ -6,7 +6,7 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
   groomName: 'پارسا',
   brideFamily: 'صادقی و اسفندیاری',
   groomFamily: 'رحیمی و کاظمی',
-  themeId: 'emerald',
+  themeId: 'sunlight_blossom',
   overallStyle: {
     borderStyle: 'persian_arabesque',
     fontPairing: 'classic_amiri',
@@ -92,10 +92,10 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
   waxSeal: {
     color: 'gold',
     monogram: 'P & N',
-    iconType: 'monogram'
+    iconType: 'rings'
   },
   adminPin: '1404',
-  colorMode: 'dark',
+  colorMode: 'light',
   music: {
     enabled: true,
     title: 'نغمه پیوند (پیانوی آرامش‌بخش)',

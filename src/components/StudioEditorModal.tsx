@@ -40,8 +40,16 @@ import {
   AlertCircle,
   EyeOff,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Disc,
+  VolumeX,
+  Radio
 } from 'lucide-react';
+import { weddingAudio } from '../utils/audioSynth';
 import { normalizeDigits, verifyPasswordSecurely } from '../utils/security';
 import {
   WeddingCardData,
@@ -64,6 +72,11 @@ import {
   AMBIENT_EFFECT_STYLES
 } from '../data/themes';
 import { SAMPLE_POEMS, DEFAULT_WEDDING_DATA } from '../data/defaultWedding';
+
+const toPersianDigits = (num: number | string): string => {
+  const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  return num.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x)]);
+};
 
 interface Props {
   isOpen: boolean;
@@ -112,6 +125,22 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
+
+  // Live audio player state inside settings modal
+  const [isPlayingInSettings, setIsPlayingInSettings] = useState(false);
+  const [activeTrackIdInSettings, setActiveTrackIdInSettings] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const interval = setInterval(() => {
+      setIsPlayingInSettings(weddingAudio.getIsPlaying());
+      const cur = weddingAudio.getCurrentTrack();
+      if (cur) {
+        setActiveTrackIdInSettings(cur.id);
+      }
+    }, 400);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   // Scroll active tab into view whenever activeTab changes
   useEffect(() => {
@@ -407,61 +436,152 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     }
   };
 
-  // Music Playlist Handlers
-  const handleAddMusicTrack = () => {
+  // Music Playlist Handlers & Settings Player Helpers
+  const defaultPresetTracks: MusicTrack[] = [
+    {
+      id: 'track-1',
+      title: formData.music?.title || 'پیانوی رمانتیک و دلنشین',
+      artist: formData.music?.artist || 'نوای پیانو و سنتور',
+      synthPreset: formData.music?.synthPreset || 'romantic_piano',
+      isPreset: !formData.music?.audioUrl,
+      audioUrl: formData.music?.audioUrl || '',
+      url: formData.music?.audioUrl || ''
+    },
+    {
+      id: 'track-2',
+      title: 'نوای سنتور و عود سنتی ایرانی',
+      artist: 'دستگاه اصفهان و شور اصیل',
+      synthPreset: 'traditional_oud',
+      isPreset: true
+    },
+    {
+      id: 'track-3',
+      title: 'چنگ و هارپ آسمانی و رویایی',
+      artist: 'ملودی ملایم پیوند فرخنده',
+      synthPreset: 'celestial_harp',
+      isPreset: true
+    },
+    {
+      id: 'track-4',
+      title: 'گیتار آکوستیک ملایم و عاشقانه',
+      artist: 'ملودی دلنواز و آرام',
+      synthPreset: 'gentle_acoustic',
+      isPreset: true
+    }
+  ];
+
+  const getEffectiveTracks = (): MusicTrack[] => {
+    if (formData.music?.playlist && formData.music.playlist.length > 0) {
+      return formData.music.playlist;
+    }
+    if (formData.music?.tracks && formData.music.tracks.length > 0) {
+      return formData.music.tracks;
+    }
+    return defaultPresetTracks;
+  };
+
+  const updateTracksState = (newTracks: MusicTrack[]) => {
+    const firstTrack = newTracks[0] || defaultPresetTracks[0];
+    setFormData((prev) => ({
+      ...prev,
+      music: {
+        ...prev.music,
+        title: firstTrack.title,
+        artist: firstTrack.artist || 'موزیک عروسی',
+        audioUrl: firstTrack.audioUrl || firstTrack.url || '',
+        synthPreset: firstTrack.synthPreset || 'romantic_piano',
+        playlist: newTracks,
+        tracks: newTracks
+      }
+    }));
+  };
+
+  const handleUpdateTrackItem = (idx: number, fields: Partial<MusicTrack>) => {
+    const current = getEffectiveTracks();
+    const updated = [...current];
+    if (updated[idx]) {
+      updated[idx] = { ...updated[idx], ...fields };
+    }
+    updateTracksState(updated);
+  };
+
+  const handleAddNewTrack = () => {
+    const current = getEffectiveTracks();
     const newTrack: MusicTrack = {
       id: `track-${Date.now()}`,
-      title: 'قطعه جدید پیانو و ساز',
-      artist: 'نوای اختصاصی جشن',
-      synthPreset: 'romantic_piano'
+      title: `موزیک شماره ${current.length + 1}`,
+      artist: 'هنرمند یا نوازنده دلخواه',
+      synthPreset: 'romantic_piano',
+      isPreset: true
     };
-    const currentTracks = formData.music.tracks || [
-      {
-        id: 'default-1',
-        title: formData.music.title || 'نوای پیانو و ملودی عشق',
-        artist: 'پیانو و سینت اختصاصی',
-        synthPreset: formData.music.synthPreset || 'romantic_piano',
-        audioUrl: formData.music.audioUrl
-      }
-    ];
-    setFormData((prev) => ({
-      ...prev,
-      music: {
-        ...prev.music,
-        tracks: [...currentTracks, newTrack]
-      }
-    }));
+    updateTracksState([...current, newTrack]);
   };
 
-  const handleRemoveMusicTrack = (id: string) => {
-    const currentTracks = formData.music.tracks || [];
-    const updated = currentTracks.filter((t) => t.id !== id);
-    setFormData((prev) => ({
-      ...prev,
-      music: {
-        ...prev.music,
-        tracks: updated
-      }
-    }));
+  const handleRemoveTrackItem = (id: string) => {
+    const current = getEffectiveTracks();
+    if (current.length <= 1) {
+      alert('حداقل یک موزیک در لیست پخش باید باقی بماند.');
+      return;
+    }
+    const updated = current.filter((t) => t.id !== id);
+    updateTracksState(updated);
   };
 
-  const handleUploadAudioForTrack = async (idx: number, e: ChangeEvent<HTMLInputElement>) => {
+  const handlePlayTrackInModal = (track: MusicTrack, idx: number) => {
+    const isThisTrackPlaying = isPlayingInSettings && activeTrackIdInSettings === track.id;
+    if (isThisTrackPlaying) {
+      weddingAudio.stop();
+      setIsPlayingInSettings(false);
+    } else {
+      weddingAudio.stop();
+      weddingAudio.setVolume(formData.music.volume ?? 0.8);
+
+      const tracks = getEffectiveTracks();
+      const onEnded = () => {
+        const nextIdx = (idx + 1) % tracks.length;
+        handlePlayTrackInModal(tracks[nextIdx], nextIdx);
+      };
+
+      weddingAudio.playTrack(track, onEnded);
+      setActiveTrackIdInSettings(track.id);
+      setIsPlayingInSettings(true);
+    }
+  };
+
+  const handleNextTrackInModal = () => {
+    const tracks = getEffectiveTracks();
+    let currentIdx = tracks.findIndex((t) => t.id === activeTrackIdInSettings);
+    if (currentIdx === -1) currentIdx = 0;
+    const nextIdx = (currentIdx + 1) % tracks.length;
+    handlePlayTrackInModal(tracks[nextIdx], nextIdx);
+  };
+
+  const handlePrevTrackInModal = () => {
+    const tracks = getEffectiveTracks();
+    let currentIdx = tracks.findIndex((t) => t.id === activeTrackIdInSettings);
+    if (currentIdx === -1) currentIdx = 0;
+    const prevIdx = (currentIdx - 1 + tracks.length) % tracks.length;
+    handlePlayTrackInModal(tracks[prevIdx], prevIdx);
+  };
+
+  const handleUploadAudioForPlaylistTrack = async (idx: number, e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = await handleUploadFile(file);
     if (url) {
-      const currentTracks = [...(formData.music.tracks || [])];
-      if (currentTracks[idx]) {
-        currentTracks[idx].audioUrl = url;
-        currentTracks[idx].title = file.name.replace(/\.[^/.]+$/, '');
+      const fileName = file.name.replace(/\.[^/.]+$/, '');
+      const current = getEffectiveTracks();
+      const updated = [...current];
+      if (updated[idx]) {
+        updated[idx] = {
+          ...updated[idx],
+          title: updated[idx].title && updated[idx].title !== 'موزیک شماره ' + (idx + 1) ? updated[idx].title : fileName,
+          audioUrl: url,
+          url: url,
+          isPreset: false
+        };
       }
-      setFormData((prev) => ({
-        ...prev,
-        music: {
-          ...prev.music,
-          tracks: currentTracks
-        }
-      }));
+      updateTracksState(updated);
     }
   };
 
@@ -685,24 +805,24 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
   return typeof document !== 'undefined'
     ? createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-stone-900/60 backdrop-blur-md overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl bg-stone-900 border border-amber-500/40 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh]"
+            className="relative w-full max-w-4xl bg-[#FFFDF7] border border-amber-300/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto max-h-[92vh] text-stone-900"
           >
             {/* Modal Top Header */}
-            <div className="p-4 sm:p-5 border-b border-stone-800 bg-stone-950/80 flex items-center justify-between">
+            <div className="p-4 sm:p-5 border-b border-amber-200/80 bg-[#FAF6ED] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  <Sliders className="w-5 h-5 text-amber-400" />
+                <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-800 border border-amber-300">
+                  <Sliders className="w-5 h-5 text-amber-700" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-amber-100 font-amiri">
+                  <h2 className="text-base sm:text-lg font-bold text-amber-950 font-amiri">
                     استودیو مدیریت و شخصی‌سازی کارت عروسی
                   </h2>
-                  <p className="text-xs text-stone-400">
+                  <p className="text-xs text-stone-600">
                     شخصی‌سازی اشعار، تم، استایل کلی، پلی‌لیست، گالری، اسنپ و فرم تایید حضور
                   </p>
                 </div>
@@ -711,19 +831,19 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white cursor-pointer transition-colors"
+                className="p-2 rounded-xl bg-stone-100 hover:bg-amber-100 text-stone-600 hover:text-stone-900 cursor-pointer transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Navigation Tabs with Smooth Horizontal Scrolling & Controls */}
-            <div className="relative border-b border-stone-800 bg-stone-950/60 flex items-center px-1">
+            <div className="relative border-b border-amber-200/80 bg-[#FAF6ED]/70 flex items-center px-1">
               {/* Scroll Right Button (RTL Prev) */}
               <button
                 type="button"
                 onClick={() => handleScrollTabs('right')}
-                className="p-2 text-stone-400 hover:text-amber-300 hover:bg-stone-800/80 rounded-xl transition-colors cursor-pointer shrink-0 hidden sm:flex items-center justify-center"
+                className="p-2 text-stone-500 hover:text-amber-900 hover:bg-amber-100/80 rounded-xl transition-colors cursor-pointer shrink-0 hidden sm:flex items-center justify-center"
                 title="اسکرول به راست"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -742,7 +862,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
                     activeTab === 'sections'
                       ? 'bg-amber-500 text-stone-950 font-bold shadow-md'
-                      : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                      : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
@@ -754,7 +874,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="basics"
                   onClick={() => setActiveTab('basics')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'basics' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'basics' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Calendar className="w-3.5 h-3.5" />
@@ -766,7 +886,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="text_ai"
                   onClick={() => setActiveTab('text_ai')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'text_ai' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'text_ai' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Wand2 className="w-3.5 h-3.5" />
@@ -778,7 +898,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="story"
                   onClick={() => setActiveTab('story')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'story' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'story' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Heart className="w-3.5 h-3.5" />
@@ -790,7 +910,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="gallery"
                   onClick={() => setActiveTab('gallery')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'gallery' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'gallery' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <ImageIcon className="w-3.5 h-3.5" />
@@ -802,7 +922,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="timeline"
                   onClick={() => setActiveTab('timeline')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'timeline' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'timeline' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Clock className="w-3.5 h-3.5" />
@@ -814,7 +934,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="venue"
                   onClick={() => setActiveTab('venue')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'venue' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'venue' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <MapPin className="w-3.5 h-3.5" />
@@ -826,7 +946,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="gift_faq"
                   onClick={() => setActiveTab('gift_faq')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'gift_faq' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'gift_faq' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Gift className="w-3.5 h-3.5" />
@@ -838,7 +958,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="music_rsvp"
                   onClick={() => setActiveTab('music_rsvp')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'music_rsvp' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'music_rsvp' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Music className="w-3.5 h-3.5" />
@@ -850,10 +970,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="security"
                   onClick={() => setActiveTab('security')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'security' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'security' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-700" />
                   <span>امنیت و رمز عبور</span>
                 </button>
 
@@ -862,7 +982,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   data-tab="backup"
                   onClick={() => setActiveTab('backup')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
-                    activeTab === 'backup' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-300 hover:bg-stone-800 hover:text-white'
+                    activeTab === 'backup' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
                   }`}
                 >
                   <Settings className="w-3.5 h-3.5" />
@@ -874,7 +994,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               <button
                 type="button"
                 onClick={() => handleScrollTabs('left')}
-                className="p-2 text-stone-400 hover:text-amber-300 hover:bg-stone-800/80 rounded-xl transition-colors cursor-pointer shrink-0 hidden sm:flex items-center justify-center"
+                className="p-2 text-stone-500 hover:text-amber-900 hover:bg-amber-100/80 rounded-xl transition-colors cursor-pointer shrink-0 hidden sm:flex items-center justify-center"
                 title="اسکرول به چپ"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -888,13 +1008,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {activeTab === 'sections' && (
             <div className="space-y-6">
               {/* Header and Quick Actions */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-sm font-bold text-amber-200 font-amiri flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-bold text-amber-950 font-amiri flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-amber-700" />
                     مدیریت و سوئیچ بخش‌های کارت دعوت
                   </h3>
-                  <p className="text-xs text-stone-400 mt-0.5">
+                  <p className="text-xs text-stone-600 mt-0.5">
                     هر بخشی که تمایل دارید در کارت به مهمانان نمایش داده شود را روشن و در غیر این‌صورت خاموش نمایید.
                   </p>
                 </div>
@@ -903,14 +1023,14 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   <button
                     type="button"
                     onClick={() => handleToggleAllSections(true)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 text-xs font-bold cursor-pointer transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-900 text-xs font-bold cursor-pointer transition-colors"
                   >
                     فعال‌سازی همه
                   </button>
                   <button
                     type="button"
                     onClick={() => handleToggleAllSections(false)}
-                    className="px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs cursor-pointer transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 text-xs cursor-pointer transition-colors"
                   >
                     غیرفعال‌سازی همه
                   </button>
@@ -927,34 +1047,34 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       key={item.key}
                       className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                         isEnabled
-                          ? 'bg-stone-950/70 border-amber-500/40 shadow-sm'
-                          : 'bg-stone-950/30 border-stone-800/80 opacity-60'
+                          ? 'bg-amber-50/50 border-amber-300 shadow-sm'
+                          : 'bg-stone-50/80 border-stone-200 opacity-60'
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <div
                           className={`p-2 rounded-xl border mt-0.5 shrink-0 ${
                             isEnabled
-                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                              : 'bg-stone-850 text-stone-500 border-stone-700'
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : 'bg-stone-100 text-stone-400 border-stone-300'
                           }`}
                         >
                           <Icon className="w-4 h-4" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-stone-100">{item.title}</span>
+                            <span className="font-bold text-xs text-stone-900">{item.title}</span>
                             <span
                               className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
                                 isEnabled
-                                  ? 'bg-emerald-500/20 text-emerald-400'
-                                  : 'bg-stone-800 text-stone-400'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-stone-200 text-stone-600'
                               }`}
                             >
                               {isEnabled ? 'فعال' : 'غیرفعال'}
                             </span>
                           </div>
-                          <p className="text-[11px] text-stone-400 mt-0.5">{item.desc}</p>
+                          <p className="text-[11px] text-stone-600 mt-0.5">{item.desc}</p>
                         </div>
                       </div>
 
@@ -962,7 +1082,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         <button
                           type="button"
                           onClick={() => setActiveTab(item.targetTab)}
-                          className="px-2 py-1 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-300 hover:text-amber-300 text-[11px] cursor-pointer transition-colors"
+                          className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 text-[11px] cursor-pointer transition-colors border border-stone-200"
                           title="ویرایش مستقیم این بخش"
                         >
                           ویرایش
@@ -973,14 +1093,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           type="button"
                           onClick={() => handleToggleSection(item.key)}
                           className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
-                            isEnabled ? 'bg-amber-500 justify-end' : 'bg-stone-800 justify-start'
+                            isEnabled ? 'bg-amber-500 justify-end' : 'bg-stone-300 justify-start'
                           }`}
                         >
                           <motion.div
                             layout
-                            className={`w-4 h-4 rounded-full shadow-md ${
-                              isEnabled ? 'bg-stone-950' : 'bg-stone-400'
-                            }`}
+                            className="w-4 h-4 rounded-full shadow-md bg-white"
                           />
                         </button>
                       </div>
@@ -997,48 +1115,48 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Bride Name */}
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام عروس خانم:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام عروس خانم:</label>
                   <input
                     type="text"
                     value={formData.brideName}
                     onChange={(e) => setFormData({ ...formData, brideName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-sm focus:border-amber-400 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-sm focus:border-amber-500 focus:outline-none"
                     placeholder="نگار"
                   />
                 </div>
 
                 {/* Groom Name */}
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام آقا داماد:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام آقا داماد:</label>
                   <input
                     type="text"
                     value={formData.groomName}
                     onChange={(e) => setFormData({ ...formData, groomName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-sm focus:border-amber-400 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-sm focus:border-amber-500 focus:outline-none"
                     placeholder="پارسا"
                   />
                 </div>
 
                 {/* Bride Family */}
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام خانواده عروس:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام خانواده عروس:</label>
                   <input
                     type="text"
                     value={formData.brideFamily}
                     onChange={(e) => setFormData({ ...formData, brideFamily: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-sm focus:border-amber-400 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-sm focus:border-amber-500 focus:outline-none"
                     placeholder="صادقی و اسفندیاری"
                   />
                 </div>
 
                 {/* Groom Family */}
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام خانواده داماد:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام خانواده داماد:</label>
                   <input
                     type="text"
                     value={formData.groomFamily}
                     onChange={(e) => setFormData({ ...formData, groomFamily: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-sm focus:border-amber-400 focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-sm focus:border-amber-500 focus:outline-none"
                     placeholder="رحیمی و کاظمی"
                   />
                 </div>
@@ -1046,23 +1164,23 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
               {/* Title statement */}
               <div>
-                <label className="block text-xs text-stone-300 mb-1">عنوان سربرگ دعوت‌نامه:</label>
+                <label className="block text-xs text-stone-700 font-semibold mb-1">عنوان سربرگ دعوت‌نامه:</label>
                 <input
                   type="text"
                   value={formData.invitationTitle}
                   onChange={(e) => setFormData({ ...formData, invitationTitle: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-sm focus:border-amber-400 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-sm focus:border-amber-500 focus:outline-none"
                   placeholder="به نام پیوند دهنده جان‌ها و دل‌ها"
                 />
               </div>
 
               {/* Solar Persian Date Details */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
-                <span className="text-xs text-amber-300 font-bold block">تاریخ و زمان برگزاری جشن</span>
+              <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-300 space-y-3">
+                <span className="text-xs text-amber-950 font-bold block">تاریخ و زمان برگزاری جشن</span>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">روز هفته:</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">روز هفته:</label>
                     <input
                       type="text"
                       value={formData.solarDate.dayOfWeek}
@@ -1072,12 +1190,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           solarDate: { ...formData.solarDate, dayOfWeek: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">روز ماه:</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">روز ماه:</label>
                     <input
                       type="text"
                       value={formData.solarDate.day}
@@ -1087,12 +1205,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           solarDate: { ...formData.solarDate, day: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">ماه:</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">ماه:</label>
                     <input
                       type="text"
                       value={formData.solarDate.month}
@@ -1102,12 +1220,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           solarDate: { ...formData.solarDate, month: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">سال خورشیدی:</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">سال خورشیدی:</label>
                     <input
                       type="text"
                       value={formData.solarDate.year}
@@ -1117,47 +1235,47 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           solarDate: { ...formData.solarDate, year: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">ساعت برگزاری (نمایش متنی):</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">ساعت برگزاری (نمایش متنی):</label>
                     <input
                       type="text"
                       value={formData.eventTime}
                       onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
                       placeholder="۱۹:۰۰ الی ۲۴:۰۰"
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">تاریخ میلادی دقیق (برای تایمر معکوس):</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">تاریخ میلادی دقیق (برای تایمر معکوس):</label>
                     <input
                       type="datetime-local"
                       value={formData.gregorianDate.slice(0, 16)}
                       onChange={(e) => setFormData({ ...formData, gregorianDate: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Admin Security PIN Notice */}
-              <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-3">
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 space-y-3">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
-                    <Lock className="w-4 h-4 text-amber-400" />
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-xs">
+                    <Lock className="w-4 h-4 text-amber-700" />
                     <span>امنیت و رمز عبور پنل مدیریت (Admin PIN)</span>
                   </div>
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 font-medium">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-bold">
                     متمرکز شده در زبانه امنیت
                   </span>
                 </div>
-                <p className="text-xs text-stone-400 leading-relaxed">
+                <p className="text-xs text-stone-600 leading-relaxed">
                   تغییر رمز عبور مدیریت برای ارتقای امنیت و تایید رمز فعلی، به صورت متمرکز در زبانه «امنیت و رمز عبور» انجام می‌شود.
                 </p>
                 <button
@@ -1176,19 +1294,19 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {activeTab === 'text_ai' && (
             <div className="space-y-6">
               {/* AI Generator Panel */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border border-amber-500/30 space-y-3">
-                <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                  <Wand2 className="w-4 h-4 text-amber-400" />
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 space-y-3">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase">
+                  <Wand2 className="w-4 h-4 text-amber-700" />
                   <span>دستیار هوشمند سرایش شعر و متن دعوت (Gemini AI)</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">لحن متن و شعر:</label>
+                    <label className="block text-[11px] text-stone-700 mb-1 font-semibold">لحن متن و شعر:</label>
                     <select
                       value={aiTone}
                       onChange={(e) => setAiTone(e.target.value as any)}
-                      className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
                     >
                       <option value="romantic">عاشقانه و احساسی (Romantic)</option>
                       <option value="classic">کلاسیک و کهن فاخر (Classic Persian)</option>
@@ -1199,13 +1317,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">یادداشت اختصاصی (اختیاری):</label>
+                    <label className="block text-[11px] text-stone-700 mb-1 font-semibold">یادداشت اختصاصی (اختیاری):</label>
                     <input
                       type="text"
                       value={aiCustomPrompt}
                       onChange={(e) => setAiCustomPrompt(e.target.value)}
                       placeholder="مثلاً: اشاره به فصل بهار و آشنایی در پاییز..."
-                      className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-amber-500"
                     />
                   </div>
                 </div>
@@ -1220,12 +1338,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   <span>{isGeneratingAi ? 'در حال سرایش متن هوشمند...' : 'سرایش متن و شعر جدید با هوش مصنوعی'}</span>
                 </button>
 
-                {aiError && <p className="text-[11px] text-rose-400">{aiError}</p>}
+                {aiError && <p className="text-[11px] text-rose-600">{aiError}</p>}
               </div>
 
               {/* Classic Persian Sample Poems Archive */}
               <div className="space-y-2">
-                <span className="text-xs text-amber-300 font-bold block font-amiri">
+                <span className="text-xs text-amber-900 font-bold block font-amiri">
                   انتخاب سریع از گنجینه اشعار پارسی (حافظ، سعدی، مولانا، سهراب):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1234,22 +1352,22 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       key={p.id}
                       type="button"
                       onClick={() => handleApplySamplePoem(p)}
-                      className="p-3 rounded-xl bg-stone-950/60 border border-stone-800 hover:border-amber-500/40 text-right cursor-pointer transition-all"
+                      className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 hover:border-amber-400 text-right cursor-pointer transition-all"
                     >
-                      <div className="flex items-center justify-between text-[11px] text-amber-400/80 mb-1">
+                      <div className="flex items-center justify-between text-[11px] text-amber-800 font-bold mb-1">
                         <span>{p.category}</span>
                         <span>{p.poet}</span>
                       </div>
-                      <p className="text-xs text-stone-200 font-amiri leading-relaxed">{p.verse1}</p>
-                      <p className="text-xs text-stone-200 font-amiri leading-relaxed">{p.verse2}</p>
+                      <p className="text-xs text-stone-900 font-amiri leading-relaxed">{p.verse1}</p>
+                      <p className="text-xs text-stone-900 font-amiri leading-relaxed">{p.verse2}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Current Poem Inputs */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
-                <span className="text-xs text-amber-300 font-bold block">ویرایش مستقیم شعر انتخابی</span>
+              <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-300 space-y-3">
+                <span className="text-xs text-amber-950 font-bold block">ویرایش مستقیم شعر انتخابی</span>
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -1261,7 +1379,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       })
                     }
                     placeholder="مصرع اول..."
-                    className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100 font-amiri"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900 font-amiri"
                   />
                   <input
                     type="text"
@@ -1273,7 +1391,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       })
                     }
                     placeholder="مصرع دوم..."
-                    className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100 font-amiri"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900 font-amiri"
                   />
                   <input
                     type="text"
@@ -1285,19 +1403,19 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       })
                     }
                     placeholder="نام شاعر (مثلاً: مولانا)"
-                    className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-amber-300"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-amber-900 font-bold"
                   />
                 </div>
               </div>
 
               {/* Invitation Body Statement */}
               <div>
-                <label className="block text-xs text-stone-300 mb-1">متن اصلی دعوت‌نامه:</label>
+                <label className="block text-xs text-stone-700 font-semibold mb-1">متن اصلی دعوت‌نامه:</label>
                 <textarea
                   rows={4}
                   value={formData.invitationBody}
                   onChange={(e) => setFormData({ ...formData, invitationBody: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-700 text-stone-100 text-xs leading-relaxed focus:border-amber-400 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-amber-300 text-stone-900 text-xs leading-relaxed focus:border-amber-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -1308,13 +1426,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-amber-300 font-amiri">خط زمانی داستان عشق (Love Story)</h3>
-                  <p className="text-xs text-stone-400">رویدادهای به‌یادماندنی آشنایی، خواستگاری، نامزدی و وصال.</p>
+                  <h3 className="text-sm font-bold text-amber-950 font-amiri">خط زمانی داستان عشق (Love Story)</h3>
+                  <p className="text-xs text-stone-600">رویدادهای به‌یادماندنی آشنایی، خواستگاری، نامزدی و وصال.</p>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddMilestone}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-sm transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>افزودن خاطره</span>
@@ -1323,13 +1441,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
               <div className="space-y-4">
                 {(formData.loveStory || []).map((m, idx) => (
-                  <div key={m.id || idx} className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
+                  <div key={m.id || idx} className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-amber-300">مرحله {idx + 1}</span>
+                      <span className="text-xs font-bold text-amber-900">مرحله {idx + 1}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveMilestone(m.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-950 text-stone-400 hover:text-red-400 cursor-pointer"
+                        className="p-1.5 rounded-lg hover:bg-red-100 text-stone-500 hover:text-red-600 cursor-pointer transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1337,7 +1455,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-[11px] text-stone-400 mb-1">سال / برچسب:</label>
+                        <label className="block text-[11px] text-stone-600 font-medium mb-1">سال / برچسب:</label>
                         <input
                           type="text"
                           value={m.year}
@@ -1346,11 +1464,11 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             updated[idx].year = e.target.value;
                             setFormData({ ...formData, loveStory: updated });
                           }}
-                          className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] text-stone-400 mb-1">تاریخ دقیق:</label>
+                        <label className="block text-[11px] text-stone-600 font-medium mb-1">تاریخ دقیق:</label>
                         <input
                           type="text"
                           value={m.date}
@@ -1359,11 +1477,11 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             updated[idx].date = e.target.value;
                             setFormData({ ...formData, loveStory: updated });
                           }}
-                          className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] text-stone-400 mb-1">عنوان رویداد:</label>
+                        <label className="block text-[11px] text-stone-600 font-medium mb-1">عنوان رویداد:</label>
                         <input
                           type="text"
                           value={m.title}
@@ -1372,13 +1490,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             updated[idx].title = e.target.value;
                             setFormData({ ...formData, loveStory: updated });
                           }}
-                          className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100 font-bold"
+                          className="w-full px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-xs text-stone-900 font-bold"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">شرح خاطره:</label>
+                      <label className="block text-[11px] text-stone-600 font-medium mb-1">شرح خاطره:</label>
                       <textarea
                         rows={2}
                         value={m.description}
@@ -1387,15 +1505,15 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           updated[idx].description = e.target.value;
                           setFormData({ ...formData, loveStory: updated });
                         }}
-                        className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-200 leading-relaxed mb-3"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white border border-amber-200 text-xs text-stone-900 leading-relaxed mb-3"
                       />
                     </div>
 
                     {/* Image Selection / Upload Section for Love Story Milestone */}
-                    <div className="pt-2 border-t border-stone-800/80 space-y-2">
+                    <div className="pt-2 border-t border-amber-200 space-y-2">
                       <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
-                          <Camera className="w-3.5 h-3.5 text-amber-400" />
+                        <label className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5 text-amber-700" />
                           <span>تصویر یادگاری این مرحله:</span>
                         </label>
                         <div className="flex items-center gap-2">
@@ -1419,7 +1537,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                                 updated[idx].image = '';
                                 setFormData({ ...formData, loveStory: updated });
                               }}
-                              className="px-2 py-1 rounded-lg bg-red-950/80 hover:bg-red-900 text-red-300 text-[11px] cursor-pointer transition-colors"
+                              className="px-2 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 text-[11px] cursor-pointer transition-colors font-medium"
                             >
                               حذف عکس
                             </button>
@@ -1428,9 +1546,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       </div>
 
                       {/* Image Preview & URL Input */}
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-stone-900/80 p-2.5 rounded-xl border border-stone-800">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 bg-white p-2.5 rounded-xl border border-amber-200">
                         {(m.imageUrl || m.image) ? (
-                          <div className="w-20 h-14 rounded-lg overflow-hidden bg-black shrink-0 border border-amber-500/40 relative group">
+                          <div className="w-20 h-14 rounded-lg overflow-hidden bg-stone-100 shrink-0 border border-amber-300 relative group">
                             <img
                               src={m.imageUrl || m.image}
                               alt={m.title}
@@ -1438,7 +1556,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             />
                           </div>
                         ) : (
-                          <div className="w-20 h-14 rounded-lg bg-stone-950 border border-dashed border-stone-700 flex items-center justify-center shrink-0 text-stone-500 text-[10px]">
+                          <div className="w-20 h-14 rounded-lg bg-stone-50 border border-dashed border-stone-300 flex items-center justify-center shrink-0 text-stone-400 text-[10px]">
                             بدون عکس
                           </div>
                         )}
@@ -1455,7 +1573,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                               updated[idx].image = e.target.value;
                               setFormData({ ...formData, loveStory: updated });
                             }}
-                            className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-amber-200 font-mono focus:border-amber-400 focus:outline-none"
+                            className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900 font-mono focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1471,8 +1589,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-bold text-amber-300 font-amiri">گالری و آلبوم عکس‌های عروس و داماد</h3>
-                  <p className="text-xs text-stone-400">امکان درج لینک اینترنتی یا آپلود مستقیم عکس از روی دستگاه شما.</p>
+                  <h3 className="text-sm font-bold text-amber-950 font-amiri">گالری و آلبوم عکس‌های عروس و داماد</h3>
+                  <p className="text-xs text-stone-600">امکان درج لینک اینترنتی یا آپلود مستقیم عکس از روی دستگاه شما.</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer transition-colors shadow-md">
@@ -1490,7 +1608,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   <button
                     type="button"
                     onClick={handleAddGalleryPhoto}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs cursor-pointer transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-xs cursor-pointer transition-colors font-medium"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>افزودن با لینک</span>
@@ -1500,20 +1618,20 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(formData.gallery || []).map((photo, idx) => (
-                  <div key={photo.id || idx} className="p-3.5 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
-                    <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-900 border border-stone-800">
+                  <div key={photo.id || idx} className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-100 border border-amber-300">
                       <img src={photo.url} alt={photo.caption || ''} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemoveGalleryPhoto(photo.id)}
-                        className="absolute top-2 left-2 p-1.5 rounded-lg bg-black/70 hover:bg-red-950 text-stone-300 hover:text-red-400 cursor-pointer"
+                        className="absolute top-2 left-2 p-1.5 rounded-lg bg-white/90 hover:bg-rose-100 text-rose-700 cursor-pointer shadow-sm transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
 
                       {/* Replace image file button */}
-                      <label className="absolute bottom-2 left-2 p-1.5 rounded-lg bg-stone-950/80 hover:bg-amber-500 text-stone-200 hover:text-stone-950 text-[10px] cursor-pointer flex items-center gap-1">
-                        <Upload className="w-3 h-3" />
+                      <label className="absolute bottom-2 left-2 p-1.5 rounded-lg bg-white/90 hover:bg-amber-100 text-stone-800 hover:text-amber-900 text-[10px] cursor-pointer flex items-center gap-1 shadow-sm font-bold border border-amber-200">
+                        <Upload className="w-3 h-3 text-amber-600" />
                         <span>تعویض فایل</span>
                         <input
                           type="file"
@@ -1525,7 +1643,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">آدرس اینترنتی یا مسیر فایل (URL):</label>
+                      <label className="block text-[11px] text-stone-600 font-medium mb-1">آدرس اینترنتی یا مسیر فایل (URL):</label>
                       <input
                         type="text"
                         dir="ltr"
@@ -1535,12 +1653,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           updated[idx].url = e.target.value;
                           setFormData({ ...formData, gallery: updated });
                         }}
-                        className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100 font-mono"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">کپشن / عنوان عکس:</label>
+                      <label className="block text-[11px] text-stone-600 font-medium mb-1">کپشن / عنوان عکس:</label>
                       <input
                         type="text"
                         value={photo.caption || ''}
@@ -1550,7 +1668,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           setFormData({ ...formData, gallery: updated });
                         }}
                         placeholder="ثبت نگاه‌های عاشقانه..."
-                        className="w-full px-3 py-1.5 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                       />
                     </div>
                   </div>
@@ -1564,13 +1682,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-amber-300 font-amiri">کنداکتور و برنامه زمان‌بندی روز جشن</h3>
-                  <p className="text-xs text-stone-400">ساعات دقیق ورود مهمانان، مراسم عقد، شام و برش کیک.</p>
+                  <h3 className="text-sm font-bold text-amber-950 font-amiri">کنداکتور و برنامه زمان‌بندی روز جشن</h3>
+                  <p className="text-xs text-stone-600">ساعات دقیق ورود مهمانان، مراسم عقد، شام و برش کیک.</p>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddTimelineItem}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-sm transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>افزودن آیتم</span>
@@ -1579,9 +1697,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
               <div className="space-y-3">
                 {formData.timeline.map((item, idx) => (
-                  <div key={item.id || idx} className="p-3.5 rounded-2xl bg-stone-950/60 border border-stone-800 flex items-start gap-3">
+                  <div key={item.id || idx} className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-300 flex items-start gap-3">
                     <div className="w-24 shrink-0">
-                      <label className="block text-[10px] text-stone-400 mb-1">ساعت:</label>
+                      <label className="block text-[10px] text-stone-600 font-medium mb-1">ساعت:</label>
                       <input
                         type="text"
                         value={item.time}
@@ -1590,13 +1708,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           updated[idx].time = e.target.value;
                           setFormData({ ...formData, timeline: updated });
                         }}
-                        className="w-full px-2 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-amber-300 text-center font-bold"
+                        className="w-full px-2 py-1.5 rounded-lg bg-white border border-amber-300 text-xs text-amber-900 text-center font-bold"
                       />
                     </div>
 
                     <div className="flex-1 space-y-2">
                       <div>
-                        <label className="block text-[10px] text-stone-400 mb-1">عنوان برنامه:</label>
+                        <label className="block text-[10px] text-stone-600 font-medium mb-1">عنوان برنامه:</label>
                         <input
                           type="text"
                           value={item.title}
@@ -1605,11 +1723,11 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             updated[idx].title = e.target.value;
                             setFormData({ ...formData, timeline: updated });
                           }}
-                          className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-100 font-bold"
+                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900 font-bold"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-stone-400 mb-1">توضیحات کوتاه:</label>
+                        <label className="block text-[10px] text-stone-600 font-medium mb-1">توضیحات کوتاه:</label>
                         <input
                           type="text"
                           value={item.description || ''}
@@ -1618,7 +1736,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             updated[idx].description = e.target.value;
                             setFormData({ ...formData, timeline: updated });
                           }}
-                          className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-300"
+                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-800"
                         />
                       </div>
                     </div>
@@ -1626,7 +1744,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <button
                       type="button"
                       onClick={() => handleRemoveTimelineItem(item.id)}
-                      className="p-2 rounded-lg hover:bg-red-950 text-stone-400 hover:text-red-400 cursor-pointer mt-5"
+                      className="p-2 rounded-lg hover:bg-rose-100 text-stone-400 hover:text-rose-600 cursor-pointer mt-5 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1641,7 +1759,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام باغ تالار / عمارت:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام باغ تالار / عمارت:</label>
                   <input
                     type="text"
                     value={formData.venue.name}
@@ -1651,12 +1769,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         venue: { ...formData.venue, name: e.target.value }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">نام سالن یا بخش اختصاصی:</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">نام سالن یا بخش اختصاصی:</label>
                   <input
                     type="text"
                     value={formData.venue.hall || ''}
@@ -1667,13 +1785,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       })
                     }
                     placeholder="سالن رویال و باغ اختصاصی"
-                    className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-stone-300 mb-1">آدرس کامل متنی تالار:</label>
+                <label className="block text-xs text-stone-700 font-semibold mb-1">آدرس کامل متنی تالار:</label>
                 <textarea
                   rows={2}
                   value={formData.venue.address}
@@ -1683,13 +1801,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       venue: { ...formData.venue, address: e.target.value }
                     })
                   }
-                  className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">عرض جغرافیایی (Latitude):</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">عرض جغرافیایی (Latitude):</label>
                   <input
                     type="number"
                     step="0.0001"
@@ -1700,12 +1818,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         venue: { ...formData.venue, lat: parseFloat(e.target.value) || 0 }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-stone-300 mb-1">طول جغرافیایی (Longitude):</label>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">طول جغرافیایی (Longitude):</label>
                   <input
                     type="number"
                     step="0.0001"
@@ -1716,21 +1834,21 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         venue: { ...formData.venue, lng: parseFloat(e.target.value) || 0 }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                   />
                 </div>
               </div>
 
               {/* Navigation Links with Snapp Feature */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-3">
-                <span className="text-xs text-amber-300 font-bold block flex items-center gap-1.5">
-                  <Car className="w-4 h-4 text-emerald-400" />
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-3">
+                <span className="text-xs text-amber-950 font-bold block flex items-center gap-1.5">
+                  <Car className="w-4 h-4 text-emerald-600" />
                   لینک مستقیم اپلیکیشن‌های مسیریابی و درخواست خودرو اسنپ (Snapp)
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] text-emerald-300 mb-1 font-bold">
+                    <label className="block text-[11px] text-emerald-900 mb-1 font-bold">
                       لینک درخواست اسنپ (Snapp Deep Link / Web App):
                     </label>
                     <input
@@ -1744,12 +1862,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="https://app.snapp.taxi or https://snapp.ir"
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-emerald-500/40 text-xs text-emerald-200 font-mono"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-emerald-300 text-xs text-emerald-900 font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">لینک ویز (Waze):</label>
+                    <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک ویز (Waze):</label>
                     <input
                       type="text"
                       dir="ltr"
@@ -1760,12 +1878,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, wazeUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-200"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">لینک گوگل مپ (Google Maps):</label>
+                    <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک گوگل مپ (Google Maps):</label>
                     <input
                       type="text"
                       dir="ltr"
@@ -1776,12 +1894,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, googleMapsUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-200"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">لینک نشان (Neshan):</label>
+                    <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک نشان (Neshan):</label>
                     <input
                       type="text"
                       dir="ltr"
@@ -1792,12 +1910,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, neshanUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-200"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">لینک بلد (Balad):</label>
+                    <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک بلد (Balad):</label>
                     <input
                       type="text"
                       dir="ltr"
@@ -1808,7 +1926,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, baladUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-stone-900 border border-stone-700 text-xs text-stone-200"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
                 </div>
@@ -1820,10 +1938,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {activeTab === 'gift_faq' && (
             <div className="space-y-6">
               {/* Gift Registry / Card details */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                    <Gift className="w-4 h-4 text-amber-400" />
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-xs uppercase">
+                    <Gift className="w-4 h-4 text-amber-600" />
                     <span>کارت هدیه و شادباش عروس و داماد</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1837,9 +1955,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           giftRegistry: { ...(formData.giftRegistry || { title: '' }), enabled: e.target.checked }
                         })
                       }
-                      className="w-4 h-4 accent-amber-500 rounded"
+                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                     />
-                    <label htmlFor="registryEnabled" className="text-xs text-stone-300 cursor-pointer">
+                    <label htmlFor="registryEnabled" className="text-xs text-stone-800 font-semibold cursor-pointer">
                       فعال بودن بخش هدیه
                     </label>
                   </div>
@@ -1848,7 +1966,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 {formData.giftRegistry?.enabled && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">شماره کارت بانکی (۱۶ رقمی):</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">شماره کارت بانکی (۱۶ رقمی):</label>
                       <input
                         type="text"
                         dir="ltr"
@@ -1860,12 +1978,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="6037-9975-..."
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-amber-300 font-mono text-center font-bold"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-mono text-center font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">شماره شبا (با IR یا بدون IR):</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">شماره شبا (با IR یا بدون IR):</label>
                       <input
                         type="text"
                         dir="ltr"
@@ -1877,12 +1995,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="IR000000000000000000000000"
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-200 font-mono text-center"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono text-center"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">نام صاحب حساب:</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">نام صاحب حساب:</label>
                       <input
                         type="text"
                         value={formData.giftRegistry.holderName || formData.giftRegistry.cardHolder || ''}
@@ -1896,12 +2014,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             }
                           })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">نام بانک:</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">نام بانک:</label>
                       <input
                         type="text"
                         value={formData.giftRegistry.bankName || ''}
@@ -1911,7 +2029,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             giftRegistry: { ...formData.giftRegistry, bankName: e.target.value }
                           })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                       />
                     </div>
                   </div>
@@ -1919,15 +2037,15 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               </div>
 
               {/* Weather Forecast Settings */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
-                <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                  <Sun className="w-4 h-4 text-amber-400" />
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
+                <div className="flex items-center gap-2 text-amber-950 font-bold text-xs uppercase">
+                  <Sun className="w-4 h-4 text-amber-600" />
                   <span>پیش‌بینی آب و هوای روز جشن</span>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">وضعیت جوی:</label>
+                    <label className="block text-[11px] text-stone-700 font-medium mb-1">وضعیت جوی:</label>
                     <input
                       type="text"
                       value={formData.weather?.condition || ''}
@@ -1942,12 +2060,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="صاف و بهاری"
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">دمای تخمینی:</label>
+                    <label className="block text-[11px] text-stone-700 font-medium mb-1">دمای تخمینی:</label>
                     <input
                       type="text"
                       value={formData.weather?.temp || formData.weather?.temperature || ''}
@@ -1963,12 +2081,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="۲۴°C"
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-400 mb-1">غروب آفتاب / عکاسی طلایی:</label>
+                    <label className="block text-[11px] text-stone-700 font-medium mb-1">غروب آفتاب / عکاسی طلایی:</label>
                     <input
                       type="text"
                       value={formData.weather?.goldenHour || ''}
@@ -1983,23 +2101,23 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="۱۸:۴۵"
-                      className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                     />
                   </div>
                 </div>
               </div>
 
               {/* FAQs */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                    <HelpCircle className="w-4 h-4 text-amber-400" />
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-xs uppercase">
+                    <HelpCircle className="w-4 h-4 text-amber-600" />
                     <span>پرسش‌های متداول و راهنمای مهمانان</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleAddFAQ}
-                    className="flex items-center gap-1 px-3 py-1 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs cursor-pointer"
+                    className="flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer transition-colors shadow-sm"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>افزودن پرسش</span>
@@ -2008,7 +2126,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
                 <div className="space-y-3">
                   {(formData.faqs || []).map((faq, idx) => (
-                    <div key={faq.id || idx} className="p-3 rounded-xl bg-stone-900 border border-stone-700 space-y-2">
+                    <div key={faq.id || idx} className="p-3 rounded-xl bg-white border border-amber-200 space-y-2">
                       <div className="flex items-center gap-2">
                         <input
                           type="text"
@@ -2019,12 +2137,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             setFormData({ ...formData, faqs: updated });
                           }}
                           placeholder="سوال مهمان"
-                          className="flex-1 px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-amber-200"
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-amber-50/50 border border-amber-200 text-xs text-amber-950 font-bold"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveFAQ(faq.id)}
-                          className="p-1.5 rounded-lg hover:bg-red-950 text-stone-400 hover:text-red-400 cursor-pointer"
+                          className="p-1.5 rounded-lg hover:bg-rose-100 text-stone-400 hover:text-rose-600 cursor-pointer transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -2038,7 +2156,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           setFormData({ ...formData, faqs: updated });
                         }}
                         placeholder="پاسخ"
-                        className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-200"
+                        className="w-full px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 text-xs text-stone-900"
                       />
                     </div>
                   ))}
@@ -2047,15 +2165,15 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             </div>
           )}
 
-          {/* TAB 9: MUSIC PLAYLIST & RSVP CONFIG */}
+          {/* TAB 9: MUSIC & RSVP CONFIG */}
           {activeTab === 'music_rsvp' && (
             <div className="space-y-6">
               {/* Music Player & Playlist Config */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                    <Music className="w-4 h-4 text-amber-400" />
-                    <span>پلی‌لیست و پخش‌کننده موسیقی عروسی</span>
+              <div className="p-5 rounded-2xl bg-amber-50/90 border border-amber-200/90 shadow-sm space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-amber-200/80">
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+                    <Music className="w-5 h-5 text-amber-600" />
+                    <span>تنظیمات و لیست پخش موزیک پس‌زمینه کارت (Multi-Track Playlist)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <input
@@ -2068,219 +2186,324 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           music: { ...formData.music, enabled: e.target.checked }
                         })
                       }
-                      className="w-4 h-4 accent-amber-500 rounded"
+                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                     />
-                    <label htmlFor="musicEnabled" className="text-xs text-stone-300 cursor-pointer">
-                      فعال بودن پخش موزیک
+                    <label htmlFor="musicEnabled" className="text-xs font-bold text-amber-950 cursor-pointer">
+                      فعال‌سازی پخش موزیک
                     </label>
                   </div>
                 </div>
 
                 {formData.music.enabled && (
-                  <div className="space-y-4 pt-2">
-                    {/* General Audio Controls */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-stone-900 rounded-xl">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="autoPlayToggle"
-                          checked={formData.music.autoPlay ?? true}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              music: { ...formData.music, autoPlay: e.target.checked }
-                            })
-                          }
-                          className="w-4 h-4 accent-amber-500 rounded"
-                        />
-                        <label htmlFor="autoPlayToggle" className="text-xs text-stone-300 cursor-pointer">
-                          پخش خودکار پس از باز کردن پاکت
-                        </label>
-                      </div>
+                  <div className="space-y-6">
+                    {/* EMBEDDED INTERACTIVE LIVE AUDIO PLAYER IN SETTINGS */}
+                    {(() => {
+                      const effectiveTracks = getEffectiveTracks();
+                      const playingTrack = effectiveTracks.find((t) => t.id === activeTrackIdInSettings) || effectiveTracks[0];
+                      const playingTrackIdx = effectiveTracks.findIndex((t) => t.id === (playingTrack?.id || ''));
 
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="loopToggle"
-                          checked={formData.music.loop ?? true}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              music: { ...formData.music, loop: e.target.checked }
-                            })
-                          }
-                          className="w-4 h-4 accent-amber-500 rounded"
-                        />
-                        <label htmlFor="loopToggle" className="text-xs text-stone-300 cursor-pointer">
-                          تکرار مداوم (Loop)
-                        </label>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
-                        <label className="text-xs text-stone-300 whitespace-nowrap">ولوم صدا:</label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="1"
-                          step="0.05"
-                          value={formData.music.volume ?? 0.7}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              music: { ...formData.music, volume: parseFloat(e.target.value) }
-                            })
-                          }
-                          className="w-full accent-amber-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Playlist Track Management */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-amber-300">لیست آهنگ‌ها و قطعات موسیقی:</span>
-                        <button
-                          type="button"
-                          onClick={handleAddMusicTrack}
-                          className="flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>افزودن آهنگ جدید</span>
-                        </button>
-                      </div>
-
-                      {(formData.music.tracks || [
-                        {
-                          id: 'default-1',
-                          title: formData.music.title || 'نوای پیانو و ملودی عشق',
-                          artist: 'پیانو و سنتور اختصاصی',
-                          synthPreset: formData.music.synthPreset || 'romantic_piano',
-                          audioUrl: formData.music.audioUrl
-                        }
-                      ]).map((track, idx) => (
-                        <div key={track.id || idx} className="p-3.5 rounded-2xl bg-stone-900 border border-stone-700 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-amber-400 font-cinzel">آهنگ {idx + 1}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveMusicTrack(track.id)}
-                              className="p-1 rounded-lg hover:bg-red-950 text-stone-400 hover:text-red-400 cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                      return (
+                        <div className="p-4 rounded-2xl bg-amber-100/80 border border-amber-300 text-stone-900 shadow-sm space-y-3">
+                          <div className="flex items-center justify-between text-xs text-amber-950 font-bold border-b border-amber-300/80 pb-2">
+                            <div className="flex items-center gap-2">
+                              <Radio className={`w-4 h-4 ${isPlayingInSettings ? 'text-emerald-600 animate-pulse' : 'text-amber-700'}`} />
+                              <span>پلیر زنده تنظیمات (تست و پیش‌نمایش لحظه‌ای)</span>
+                            </div>
+                            <span className="text-[11px] text-stone-600">
+                              قطعه {toPersianDigits(playingTrackIdx + 1)} از {toPersianDigits(effectiveTracks.length)}
+                            </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] text-stone-400 mb-1">عنوان قطعه:</label>
-                              <input
-                                type="text"
-                                value={track.title}
-                                onChange={(e) => {
-                                  const currentTracks = [...(formData.music.tracks || [])];
-                                  if (currentTracks[idx]) {
-                                    currentTracks[idx].title = e.target.value;
-                                  }
-                                  setFormData({
-                                    ...formData,
-                                    music: { ...formData.music, tracks: currentTracks }
-                                  });
-                                }}
-                                className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-100 font-bold"
-                              />
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-1">
+                            {/* Spinning Disc & Track Info */}
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                              <div className="relative flex items-center justify-center shrink-0">
+                                <Disc className={`w-10 h-10 text-amber-700 ${isPlayingInSettings ? 'animate-spin' : ''}`} style={{ animationDuration: '4s' }} />
+                                {isPlayingInSettings && (
+                                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                  </span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-sm text-stone-900 truncate">
+                                  {playingTrack?.title || 'موزیک انتخاب شده'}
+                                </h4>
+                                <p className="text-xs text-amber-900/80 truncate font-medium">
+                                  {playingTrack?.artist || 'هنرمند و نوازنده'}
+                                </p>
+                              </div>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] text-stone-400 mb-1">نام خواننده یا سبک:</label>
-                              <input
-                                type="text"
-                                value={track.artist || ''}
-                                onChange={(e) => {
-                                  const currentTracks = [...(formData.music.tracks || [])];
-                                  if (currentTracks[idx]) {
-                                    currentTracks[idx].artist = e.target.value;
-                                  }
-                                  setFormData({
-                                    ...formData,
-                                    music: { ...formData.music, tracks: currentTracks }
-                                  });
-                                }}
-                                className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-100"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-[10px] text-stone-400 mb-1">نوع سینت پیش‌فرض (در صورت نبود فایل صوتی):</label>
-                              <select
-                                value={track.synthPreset || 'romantic_piano'}
-                                onChange={(e) => {
-                                  const currentTracks = [...(formData.music.tracks || [])];
-                                  if (currentTracks[idx]) {
-                                    currentTracks[idx].synthPreset = e.target.value as any;
-                                  }
-                                  setFormData({
-                                    ...formData,
-                                    music: { ...formData.music, tracks: currentTracks }
-                                  });
-                                }}
-                                className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-stone-100"
+                            {/* Player Controls */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={handlePrevTrackInModal}
+                                className="p-2 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-amber-200 transition-colors cursor-pointer shadow-sm"
+                                title="موزیک قبلی"
                               >
-                                <option value="romantic_piano">پیانوی رمانتیک (Romantic Piano)</option>
-                                <option value="traditional_oud">نوای سنتور و عود سنتی (Persian Santur/Oud)</option>
-                                <option value="gentle_acoustic">گیتار آکوستیک ملایم (Gentle Acoustic)</option>
-                                <option value="celestial_harp">چنگ و هارپ آسمانی (Celestial Harp)</option>
-                              </select>
-                            </div>
+                                <SkipBack className="w-4 h-4" />
+                              </button>
 
-                            <div>
-                              <label className="block text-[10px] text-stone-400 mb-1">آپلود فایل صوتی مستقیم (MP3 / WAV):</label>
-                              <label className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-amber-500 hover:text-stone-950 text-stone-300 text-xs cursor-pointer transition-colors border border-stone-700">
-                                <Upload className="w-3.5 h-3.5" />
-                                <span>{isUploading ? 'در حال آپلود...' : 'انتخاب و آپلود فایل صوتی'}</span>
-                                <input
-                                  type="file"
-                                  accept="audio/*"
-                                  onChange={(e) => handleUploadAudioForTrack(idx, e)}
-                                  disabled={isUploading}
-                                  className="hidden"
-                                />
+                              <button
+                                type="button"
+                                onClick={() => playingTrack && handlePlayTrackInModal(playingTrack, playingTrackIdx >= 0 ? playingTrackIdx : 0)}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer shadow-md transition-all"
+                              >
+                                {isPlayingInSettings ? (
+                                  <>
+                                    <Pause className="w-4 h-4 fill-stone-950" />
+                                    <span>توقف</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-4 h-4 fill-stone-950" />
+                                    <span>پخش موزیک</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={handleNextTrackInModal}
+                                className="p-2 rounded-xl bg-white hover:bg-stone-50 text-stone-800 border border-amber-200 transition-colors cursor-pointer shadow-sm"
+                                title="موزیک بعدی"
+                              >
+                                <SkipForward className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Volume & AutoPlay Bar */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-300/80 text-xs text-stone-700">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="autoPlayToggleSettings"
+                                checked={formData.music.autoPlay ?? true}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    music: { ...formData.music, autoPlay: e.target.checked }
+                                  })
+                                }
+                                className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                              />
+                              <label htmlFor="autoPlayToggleSettings" className="cursor-pointer text-stone-800 font-semibold">
+                                پخش خودکار هنگام باز شدن کارت
                               </label>
                             </div>
 
-                            <div className="sm:col-span-2">
-                              <label className="block text-[10px] text-stone-400 mb-1">یا لینک اینترنتی مستقیم فایل صوتی (URL):</label>
+                            <div className="flex items-center gap-2">
+                              <Volume2 className="w-4 h-4 text-amber-700 shrink-0" />
+                              <span className="text-stone-800 font-semibold">حجم صدا:</span>
                               <input
-                                type="text"
-                                dir="ltr"
-                                value={track.audioUrl || ''}
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={formData.music.volume ?? 0.8}
                                 onChange={(e) => {
-                                  const currentTracks = [...(formData.music.tracks || [])];
-                                  if (currentTracks[idx]) {
-                                    currentTracks[idx].audioUrl = e.target.value;
-                                  }
+                                  const vol = parseFloat(e.target.value);
+                                  weddingAudio.setVolume(vol);
                                   setFormData({
                                     ...formData,
-                                    music: { ...formData.music, tracks: currentTracks }
+                                    music: { ...formData.music, volume: vol }
                                   });
                                 }}
-                                placeholder="https://example.com/audio.mp3 یا /uploads/..."
-                                className="w-full px-3 py-1.5 rounded-lg bg-stone-950 border border-stone-700 text-xs text-amber-300 font-mono"
+                                className="w-24 accent-amber-600 cursor-pointer"
                               />
                             </div>
                           </div>
                         </div>
-                      ))}
+                      );
+                    })()}
+
+                    {/* PLAYLIST MANAGER SECTION */}
+                    <div className="space-y-4 pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-stone-900 font-bold text-xs">
+                          <Sliders className="w-4 h-4 text-amber-600" />
+                          <span>مدیریت قطعات لیست پخش (تعداد: {toPersianDigits(getEffectiveTracks().length)})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddNewTrack}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-sm transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>افزودن موزیک جدید</span>
+                        </button>
+                      </div>
+
+                      {/* TRACK CARDS */}
+                      <div className="space-y-3.5">
+                        {getEffectiveTracks().map((track, idx) => {
+                          const isThisPlaying = isPlayingInSettings && activeTrackIdInSettings === track.id;
+
+                          return (
+                            <div
+                              key={track.id || idx}
+                              className={`p-4 rounded-xl border transition-all space-y-3.5 ${
+                                isThisPlaying
+                                  ? 'bg-amber-100/90 border-amber-500 shadow-md ring-2 ring-amber-400/50'
+                                  : 'bg-white/90 border-stone-200'
+                              }`}
+                            >
+                              {/* Track Header & Play Button */}
+                              <div className="flex items-center justify-between gap-2 border-b border-stone-200 pb-2.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-6 h-6 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                                    {toPersianDigits(idx + 1)}
+                                  </span>
+                                  <span className="font-bold text-xs text-stone-900">
+                                    {track.title || `موزیک ${toPersianDigits(idx + 1)}`}
+                                  </span>
+                                  {isThisPlaying && (
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold animate-pulse">
+                                      در حال پخش...
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {/* Play/Pause Button on each track */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePlayTrackInModal(track, idx)}
+                                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                                      isThisPlaying
+                                        ? 'bg-amber-500 text-stone-950 hover:bg-amber-400'
+                                        : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300'
+                                    }`}
+                                  >
+                                    {isThisPlaying ? (
+                                      <>
+                                        <Pause className="w-3.5 h-3.5 fill-stone-950" />
+                                        <span>توقف</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Play className="w-3.5 h-3.5 fill-amber-800 text-amber-800" />
+                                        <span>تست و پخش</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {/* Remove Track */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTrackItem(track.id)}
+                                    className="p-1.5 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 transition-colors cursor-pointer"
+                                    title="حذف موزیک"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Inputs: Title & Artist */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                                    عنوان موزیک:
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={track.title || ''}
+                                    onChange={(e) => handleUpdateTrackItem(idx, { title: e.target.value })}
+                                    placeholder="مثلاً: آهنگ عاشقانه بی کلام"
+                                    className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-stone-900 font-bold text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                                    خواننده / نوازنده:
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={track.artist || ''}
+                                    onChange={(e) => handleUpdateTrackItem(idx, { artist: e.target.value })}
+                                    placeholder="مثلاً: همایون شجریان / پیانوی استاد"
+                                    className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-stone-900 text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Source Option Selection */}
+                              <div className="space-y-2 pt-1">
+                                <label className="block text-[11px] font-bold text-stone-800">
+                                  منبع فایل صوتی / ملودی:
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  {/* Option 1: File Upload */}
+                                  <label className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-stone-100 hover:bg-amber-100 text-stone-800 font-bold text-[11px] border border-stone-300 cursor-pointer transition-all">
+                                    <Upload className="w-3.5 h-3.5 text-amber-600" />
+                                    <span>{isUploading ? 'بارگذاری...' : 'آپلود فایل (MP3)'}</span>
+                                    <input
+                                      type="file"
+                                      accept="audio/*"
+                                      onChange={(e) => handleUploadAudioForPlaylistTrack(idx, e)}
+                                      disabled={isUploading}
+                                      className="hidden"
+                                    />
+                                  </label>
+
+                                  {/* Option 2: Synth Preset Dropdown */}
+                                  <div className="sm:col-span-2">
+                                    <select
+                                      value={track.synthPreset || 'romantic_piano'}
+                                      onChange={(e) =>
+                                        handleUpdateTrackItem(idx, {
+                                          synthPreset: e.target.value as any,
+                                          isPreset: !track.audioUrl && !track.url
+                                        })
+                                      }
+                                      className="w-full px-3 py-2 rounded-lg bg-white border border-stone-300 text-stone-800 text-xs font-bold focus:ring-2 focus:ring-amber-500 outline-none"
+                                    >
+                                      <option value="romantic_piano">🎹 ملودی سنتز: پیانوی رمانتیک و دلنشین</option>
+                                      <option value="traditional_oud">🪕 ملودی سنتز: سنتور و عود سنتی ایرانی</option>
+                                      <option value="celestial_harp">🪘 ملودی سنتز: چنگ و هارپ رویایی</option>
+                                      <option value="gentle_acoustic">🎸 ملودی سنتز: گیتار آکوستیک ملایم</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                {/* Custom Audio URL field */}
+                                <div>
+                                  <input
+                                    type="text"
+                                    dir="ltr"
+                                    value={track.audioUrl || track.url || ''}
+                                    onChange={(e) =>
+                                      handleUpdateTrackItem(idx, {
+                                        audioUrl: e.target.value,
+                                        url: e.target.value,
+                                        isPreset: !e.target.value
+                                      })
+                                    }
+                                    placeholder="یا لینک مستقیم فایل صوتی: https://example.com/song.mp3"
+                                    className="w-full px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-300 text-stone-800 font-mono text-[11px] focus:ring-2 focus:ring-amber-500 outline-none"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* RSVP Form Config */}
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                  <div className="flex items-center gap-2 text-amber-950 font-bold text-xs uppercase">
+                    <CheckCircle2 className="w-4 h-4 text-amber-600" />
                     <span>تنظیمات فرم تایید حضور (RSVP)</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2294,9 +2517,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           rsvpConfig: { ...formData.rsvpConfig, enabled: e.target.checked }
                         })
                       }
-                      className="w-4 h-4 accent-amber-500 rounded"
+                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                     />
-                    <label htmlFor="rsvpConfigEnabled" className="text-xs text-stone-300 cursor-pointer">
+                    <label htmlFor="rsvpConfigEnabled" className="text-xs text-stone-800 font-semibold cursor-pointer">
                       فعال بودن سیستم اعلام حضور
                     </label>
                   </div>
@@ -2305,7 +2528,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 {formData.rsvpConfig.enabled && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">مهلت اعلام حضور (نمایش متنی):</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">مهلت اعلام حضور (نمایش متنی):</label>
                       <input
                         type="text"
                         value={formData.rsvpConfig.deadlineDate}
@@ -2316,12 +2539,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="تا ۲۰ شهریور ۱۴۰۴"
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-bold"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] text-stone-400 mb-1">حداکثر تعداد همراهان هر کارت:</label>
+                      <label className="block text-[11px] text-stone-700 font-medium mb-1">حداکثر تعداد همراهان هر کارت:</label>
                       <input
                         type="number"
                         min={1}
@@ -2333,7 +2556,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             rsvpConfig: { ...formData.rsvpConfig, maxGuestsPerParty: parseInt(e.target.value) || 1 }
                           })
                         }
-                        className="w-full px-3 py-2 rounded-xl bg-stone-900 border border-stone-700 text-xs text-stone-100 font-bold"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-bold"
                       />
                     </div>
 
@@ -2348,9 +2571,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             rsvpConfig: { ...formData.rsvpConfig, requirePhone: e.target.checked }
                           })
                         }
-                        className="w-4 h-4 accent-amber-500 rounded"
+                        className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                       />
-                      <label htmlFor="phoneToggle" className="text-xs text-stone-300 cursor-pointer">
+                      <label htmlFor="phoneToggle" className="text-xs text-stone-800 font-medium cursor-pointer">
                         الزامی بودن شماره موبایل مهمان
                       </label>
                     </div>
@@ -2366,9 +2589,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             rsvpConfig: { ...formData.rsvpConfig, showDietaryOptions: e.target.checked }
                           })
                         }
-                        className="w-4 h-4 accent-amber-500 rounded"
+                        className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                       />
-                      <label htmlFor="dietaryToggle" className="text-xs text-stone-300 cursor-pointer">
+                      <label htmlFor="dietaryToggle" className="text-xs text-stone-800 font-medium cursor-pointer">
                         پرسش درباره رژیم غذایی / گیاه‌خواری مهمانان
                       </label>
                     </div>
@@ -2384,9 +2607,9 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             rsvpConfig: { ...formData.rsvpConfig, allowSongRequest: e.target.checked }
                           })
                         }
-                        className="w-4 h-4 accent-amber-500 rounded"
+                        className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                       />
-                      <label htmlFor="songToggle" className="text-xs text-stone-300 cursor-pointer">
+                      <label htmlFor="songToggle" className="text-xs text-stone-800 font-medium cursor-pointer">
                         امکان پیشنهاد آهنگ درخواستی برای دی‌جی (Song Request)
                       </label>
                     </div>
@@ -2400,16 +2623,16 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {activeTab === 'security' && (
             <div className="space-y-6">
               {/* Change Password Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-stone-950/70 border border-amber-500/30 space-y-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/80 border border-amber-300 space-y-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <div className="p-2 rounded-xl bg-amber-200/80 text-amber-900 border border-amber-300">
                     <KeyRound className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-amber-200 font-amiri">
+                    <h3 className="text-sm font-bold text-amber-950 font-amiri">
                       تغییر رمز عبور ورود به پنل مدیریت
                     </h3>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-stone-600">
                       رمز جدید را تعیین کنید تا افراد غیرمجاز امکان دسترسی یا ویرایش کارت را نداشته باشند.
                     </p>
                   </div>
@@ -2418,7 +2641,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 <form onSubmit={handleChangeAdminPassword} className="space-y-4 pt-2">
                   {/* Current Password */}
                   <div>
-                    <label className="block text-xs text-stone-300 mb-1.5 font-medium">
+                    <label className="block text-xs text-stone-700 mb-1.5 font-medium">
                       رمز عبور فعلی مدیریت:
                     </label>
                     <div className="relative max-w-md">
@@ -2427,12 +2650,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         value={currentPasswordInput}
                         onChange={(e) => setCurrentPasswordInput(e.target.value)}
                         placeholder="رمز عبور فعلی..."
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:border-amber-400 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={() => setShowCurrentPass(!showCurrentPass)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-300 p-1"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-800 p-1"
                       >
                         {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -2442,7 +2665,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   {/* New Password & Confirm */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
                     <div>
-                      <label className="block text-xs text-stone-300 mb-1.5 font-medium">
+                      <label className="block text-xs text-stone-700 mb-1.5 font-medium">
                         رمز عبور جدید (حداقل ۴ کاراکتر یا عدد):
                       </label>
                       <div className="relative">
@@ -2451,12 +2674,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           value={newPasswordInput}
                           onChange={(e) => setNewPasswordInput(e.target.value)}
                           placeholder="رمز عبور جدید..."
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:border-amber-400 focus:outline-none"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowNewPass(!showNewPass)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-300 p-1"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-800 p-1"
                         >
                           {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -2464,7 +2687,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     </div>
 
                     <div>
-                      <label className="block text-xs text-stone-300 mb-1.5 font-medium">
+                      <label className="block text-xs text-stone-700 mb-1.5 font-medium">
                         تکرار رمز عبور جدید:
                       </label>
                       <div className="relative">
@@ -2473,12 +2696,12 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           value={confirmPasswordInput}
                           onChange={(e) => setConfirmPasswordInput(e.target.value)}
                           placeholder="تکرار رمز جدید..."
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-stone-900 border border-stone-700 text-stone-100 text-xs focus:border-amber-400 focus:outline-none"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPass(!showConfirmPass)}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-300 p-1"
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-amber-800 p-1"
                         >
                           {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -2491,14 +2714,14 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <div
                       className={`p-3 rounded-xl text-xs flex items-center gap-2 max-w-2xl ${
                         passChangeStatus.type === 'success'
-                          ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-300'
-                          : 'bg-rose-950/60 border border-rose-500/40 text-rose-300'
+                          ? 'bg-emerald-50 border border-emerald-300 text-emerald-800 font-bold'
+                          : 'bg-rose-50 border border-rose-300 text-rose-800 font-bold'
                       }`}
                     >
                       {passChangeStatus.type === 'success' ? (
-                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                       ) : (
-                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                       )}
                       <span>{passChangeStatus.message}</span>
                     </div>
@@ -2515,47 +2738,47 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               </div>
 
               {/* Security Shield & Protection Overview */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-stone-950/40 border border-stone-800 space-y-3">
-                <h4 className="text-xs font-bold text-stone-300 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-emerald-400" />
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-3">
+                <h4 className="text-xs font-bold text-stone-800 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-emerald-600" />
                   <span>لایه‌های امنیتی فعال در این سامانه:</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-stone-200 block mb-0.5">محافظت در برابر حدس پسورد (Anti Brute-Force)</strong>
-                      <span className="text-stone-400 text-[11px] leading-relaxed">
+                      <strong className="text-stone-900 block mb-0.5">محافظت در برابر حدس پسورد (Anti Brute-Force)</strong>
+                      <span className="text-stone-600 text-[11px] leading-relaxed">
                         پس از ۵ بار تلاش ناموفق، سیستم به صورت خودکار به مدت ۶۰ ثانیه قفل می‌شود.
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-stone-200 block mb-0.5">عدم افشای رمز پیش‌فرض</strong>
-                      <span className="text-stone-400 text-[11px] leading-relaxed">
+                      <strong className="text-stone-900 block mb-0.5">عدم افشای رمز پیش‌فرض</strong>
+                      <span className="text-stone-600 text-[11px] leading-relaxed">
                         نمایش رمز عبور در صفحه ورود مهمانان به طور کامل حذف و غیرقابل دسترس شده است.
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-stone-200 block mb-0.5">پالایش ورودی‌ها و ضد تزریق (Anti-XSS)</strong>
-                      <span className="text-stone-400 text-[11px] leading-relaxed">
+                      <strong className="text-stone-900 block mb-0.5">پالایش ورودی‌ها و ضد تزریق (Anti-XSS)</strong>
+                      <span className="text-stone-600 text-[11px] leading-relaxed">
                         تمام پیام‌های یادبود و فرم‌های تایید حضور فیلتر و کدگذاری می‌شوند.
                       </span>
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-white border border-amber-200 flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <div>
-                      <strong className="text-stone-200 block mb-0.5">فیلتر امنیتی فایل‌های آپلودی</strong>
-                      <span className="text-stone-400 text-[11px] leading-relaxed">
+                      <strong className="text-stone-900 block mb-0.5">فیلتر امنیتی فایل‌های آپلودی</strong>
+                      <span className="text-stone-600 text-[11px] leading-relaxed">
                         تنها فایل‌های مجاز تصویری و صوتی قابل بارگذاری هستند و پسوندهای خطرناک مسدود می‌شوند.
                       </span>
                     </div>
@@ -2568,13 +2791,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {/* TAB 11: BACKUP, RESTORE & FACTORY RESET */}
           {activeTab === 'backup' && (
             <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-stone-950/60 border border-stone-800 space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
                 <div>
-                  <h3 className="text-sm font-bold text-amber-200 font-amiri flex items-center gap-2">
-                    <Download className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-bold text-amber-950 font-amiri flex items-center gap-2">
+                    <Download className="w-4 h-4 text-amber-600" />
                     خروجی گرفتن و پشتیبان‌گیری از تنظیمات (JSON Export)
                   </h3>
-                  <p className="text-xs text-stone-400 mt-1">
+                  <p className="text-xs text-stone-600 mt-1">
                     شما می‌توانید تمام اطلاعات کارت، اشعار، تم، تصاویر و تنظیمات را به عنوان یک فایل پشتیبان دریافت نمایید.
                   </p>
                 </div>
@@ -2583,14 +2806,14 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   <button
                     type="button"
                     onClick={handleExportJson}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer transition-colors shadow-sm"
                   >
                     <Download className="w-4 h-4" />
                     <span>دانلود فایل پشتیبان (JSON)</span>
                   </button>
 
-                  <label className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs cursor-pointer transition-colors border border-stone-700">
-                    <Upload className="w-4 h-4 text-amber-400" />
+                  <label className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 text-xs cursor-pointer transition-colors border border-stone-300 font-semibold shadow-sm">
+                    <Upload className="w-4 h-4 text-amber-600" />
                     <span>بارگذاری و بازیابی فایل تنظیمات</span>
                     <input type="file" accept=".json" onChange={handleImportJson} className="hidden" />
                   </label>
@@ -2598,20 +2821,20 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               </div>
 
               {/* Factory Reset */}
-              <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-3">
-                <div className="flex items-center gap-2 text-rose-300 font-bold text-xs uppercase">
-                  <RotateCcw className="w-4 h-4 text-rose-400" />
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-3">
+                <div className="flex items-center gap-2 text-rose-800 font-bold text-xs uppercase">
+                  <RotateCcw className="w-4 h-4 text-rose-600" />
                   <span>بازنشانی به تنظیمات پیش‌فرض کارخانه</span>
                 </div>
-                <p className="text-xs text-stone-400">
+                <p className="text-xs text-stone-600">
                   در صورت تمایل می‌توانید تمامی مقادیر را به حالت پیش‌فرض اولیه بازگردانید.
                 </p>
                 <button
                   type="button"
                   onClick={handleResetToDefault}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-900/60 hover:bg-rose-900 text-rose-200 border border-rose-500/40 text-xs cursor-pointer transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 text-xs cursor-pointer transition-colors font-bold"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
                   <span>بازنشانی اطلاعات به حالت اولیه</span>
                 </button>
               </div>
@@ -2621,16 +2844,16 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
         </div>
 
         {/* Modal Bottom Sticky Actions */}
-        <div className="p-4 sm:p-5 border-t border-stone-800 bg-stone-950/90 flex items-center justify-between gap-3">
-          <div className="text-xs text-stone-400 hidden sm:block">
-            بخش‌های فعال: <span className="font-bold text-amber-300 font-cinzel">{activeSectionsCount}</span> از <span className="font-cinzel">{totalSectionsCount}</span> بخش
+        <div className="p-4 sm:p-5 border-t border-amber-200/80 bg-[#FAF6ED] flex items-center justify-between gap-3">
+          <div className="text-xs text-stone-600 hidden sm:block">
+            بخش‌های فعال: <span className="font-bold text-amber-900 font-cinzel">{activeSectionsCount}</span> از <span className="font-cinzel">{totalSectionsCount}</span> بخش
           </div>
 
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 text-xs cursor-pointer transition-colors"
+              className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-xs cursor-pointer transition-colors"
             >
               انصراف
             </button>
@@ -2638,7 +2861,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             <button
               type="button"
               onClick={handleSaveAndClose}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs shadow-md shadow-amber-500/20 flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:scale-[1.01]"
             >
               <Check className="w-4 h-4" />
               <span>ذخیره و اعمال در کارت دعوت</span>
