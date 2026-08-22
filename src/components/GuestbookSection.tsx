@@ -6,6 +6,7 @@ import { GuestbookEntry } from '../types';
 import { INITIAL_GUESTBOOK } from '../data/defaultWedding';
 import { toPersianDigits } from '../utils/dateUtils';
 import { getIsAdminSessionValid } from '../utils/security';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   cardId?: string;
@@ -13,11 +14,23 @@ interface Props {
 }
 
 export default function GuestbookSection({ cardId, isLight }: Props) {
-  const [entries, setEntries] = useState<GuestbookEntry[]>(INITIAL_GUESTBOOK);
+  const [entries, setEntries] = useState<GuestbookEntry[]>([]);
   const [author, setAuthor] = useState('');
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   const loadGuestbook = () => {
     fetch('/api/guestbook')
@@ -116,21 +129,25 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
     }
   };
 
-  const handleDeleteEntry = async (id: string, authorName: string) => {
-    if (!window.confirm(`آیا از حذف این پیام ثبت‌شده توسط "${authorName}" اطمینان دارید؟`)) return;
-    try {
-      // Optimistically remove from state
-      setEntries((prev) => prev.filter((item) => item.id !== id));
-
-      const encodedId = encodeURIComponent(id);
-      const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+  const handleDeleteEntry = (id: string, authorName: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'حذف پیام یادبود',
+      message: `آیا از حذف این پیام ثبت‌شده توسط "${authorName}" اطمینان دارید؟`,
+      onConfirm: async () => {
+        try {
+          setEntries((prev) => prev.filter((item) => item.id !== id));
+          const encodedId = encodeURIComponent(id);
+          const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
+          if (!res.ok) {
+            await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+          }
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch {
+          loadGuestbook();
+        }
       }
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-    } catch {
-      loadGuestbook();
-    }
+    });
   };
 
   const isAdmin = getIsAdminSessionValid();
@@ -312,6 +329,14 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
           </AnimatePresence>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        onConfirm={confirmConfig.onConfirm}
+        onClose={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

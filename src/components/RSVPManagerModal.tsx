@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { RSVPResponse, GuestbookEntry } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   isOpen: boolean;
@@ -19,6 +20,18 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'yes' | 'no'>('all');
   const [isLoading, setIsLoading] = useState(false);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   const fetchRSVPs = async () => {
     setIsLoading(true);
@@ -103,86 +116,101 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
   });
 
   // Delete single RSVP item
-  const handleDeleteRSVP = async (id: string, name: string) => {
-    if (!window.confirm(`آیا از حذف تاییدیه حضور "${name}" اطمینان دارید؟`)) return;
-    try {
-      setIsLoading(true);
-      // Optimistically update UI
-      setRsvps((prev) => prev.filter((r) => r.id !== id));
-
-      const encodedId = encodeURIComponent(id);
-      const res = await fetch(`/api/rsvp/${encodedId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        await fetch(`/api/rsvp/${encodedId}/delete`, { method: 'POST' });
+  const handleDeleteRSVP = (id: string, name: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'حذف تاییدیه حضور',
+      message: `آیا از حذف تاییدیه حضور "${name}" اطمینان دارید؟`,
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          setRsvps((prev) => prev.filter((r) => r.id !== id));
+          const encodedId = encodeURIComponent(id);
+          const res = await fetch(`/api/rsvp/${encodedId}`, { method: 'DELETE' });
+          if (!res.ok) {
+            await fetch(`/api/rsvp/${encodedId}/delete`, { method: 'POST' });
+          }
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch {
+          fetchRSVPs();
+        } finally {
+          setIsLoading(false);
+        }
       }
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-    } catch {
-      // Refresh list if error
-      fetchRSVPs();
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   // Clear all RSVPs
-  const handleClearAllRSVPs = async () => {
-    if (!window.confirm('آیا مطمئنید که می‌خواهید تمامی تاییده‌های حضور مهمانان را پاکسازی کنید؟ این عمل غیرقابل بازگشت است.')) return;
-    try {
-      setIsLoading(true);
-      setRsvps([]);
-      await Promise.allSettled([
-        fetch('/api/rsvp', { method: 'DELETE' }),
-        fetch('/api/rsvp/reset', { method: 'POST' })
-      ]);
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-      alert('تمامی تاییده‌های حضور با موفقیت حذف شدند.');
-    } catch {
-      alert('خطا در پاکسازی تاییده‌ها');
-      fetchRSVPs();
-    } finally {
-      setIsLoading(false);
-    }
+  const handleClearAllRSVPs = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'پاکسازی تمامی تاییده‌ها',
+      message: 'آیا مطمئنید که می‌خواهید تمامی تاییده‌های حضور مهمانان را پاکسازی کنید؟ این عمل غیرقابل بازگشت است.',
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          setRsvps([]);
+          await Promise.allSettled([
+            fetch('/api/rsvp', { method: 'DELETE' }),
+            fetch('/api/rsvp/reset', { method: 'POST' })
+          ]);
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch {
+          fetchRSVPs();
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
   };
 
   // Delete single Guestbook entry
-  const handleDeleteGuestbookEntry = async (id: string, author: string) => {
-    if (!window.confirm(`آیا از حذف نظر ثبت‌شده توسط "${author}" اطمینان دارید؟`)) return;
-    try {
-      setIsLoading(true);
-      // Optimistically update UI
-      setGuestbookEntries((prev) => prev.filter((g) => g.id !== id));
-
-      const encodedId = encodeURIComponent(id);
-      const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+  const handleDeleteGuestbookEntry = (id: string, author: string) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'حذف پیام یادبود',
+      message: `آیا از حذف نظر ثبت‌شده توسط "${author}" اطمینان دارید؟`,
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          setGuestbookEntries((prev) => prev.filter((g) => g.id !== id));
+          const encodedId = encodeURIComponent(id);
+          const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
+          if (!res.ok) {
+            await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+          }
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch {
+          fetchGuestbook();
+        } finally {
+          setIsLoading(false);
+        }
       }
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-    } catch {
-      fetchGuestbook();
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   // Clear all Guestbook entries
-  const handleClearAllGuestbookEntries = async () => {
-    if (!window.confirm('آیا مطمئنید که می‌خواهید تمامی نظرات دفترچه یادبود را پاکسازی کنید؟ این عمل غیرقابل بازگشت است.')) return;
-    try {
-      setIsLoading(true);
-      setGuestbookEntries([]);
-      await Promise.allSettled([
-        fetch('/api/guestbook', { method: 'DELETE' }),
-        fetch('/api/guestbook/reset', { method: 'POST' })
-      ]);
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-      alert('تمامی نظرات با موفقیت حذف شدند.');
-    } catch {
-      alert('خطا در پاکسازی نظرات');
-      fetchGuestbook();
-    } finally {
-      setIsLoading(false);
-    }
+  const handleClearAllGuestbookEntries = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'پاکسازی تمامی پیام‌های یادبود',
+      message: 'آیا مطمئنید که می‌خواهید تمامی نظرات دفترچه یادبود را پاکسازی کنید؟ این عمل غیرقابل بازگشت است.',
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          setGuestbookEntries([]);
+          await Promise.allSettled([
+            fetch('/api/guestbook', { method: 'DELETE' }),
+            fetch('/api/guestbook/reset', { method: 'POST' })
+          ]);
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch {
+          fetchGuestbook();
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
   };
 
   const exportToCSV = () => {
@@ -564,6 +592,14 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
               </button>
             </div>
           </motion.div>
+
+          <ConfirmModal
+            isOpen={confirmConfig.isOpen}
+            title={confirmConfig.title}
+            message={confirmConfig.message}
+            onConfirm={confirmConfig.onConfirm}
+            onClose={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
+          />
         </div>,
         document.body
       )

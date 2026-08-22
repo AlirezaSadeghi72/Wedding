@@ -5,6 +5,7 @@ import { X, Check, Heart, User, Phone, Users, MessageSquare, AlertCircle, Sparkl
 import confetti from 'canvas-confetti';
 import { WeddingCardData } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
+import { sanitizePhoneInput, normalizePhoneNumber, isValidIranianMobile } from '../utils/phoneUtils';
 
 interface Props {
   isOpen: boolean;
@@ -55,8 +56,15 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
       return;
     }
 
-    if (data.rsvpConfig.requirePhone && !phone.trim()) {
-      setErrorMsg('وارد کردن شماره تماس الزامی است');
+    const cleanedPhone = normalizePhoneNumber(phone);
+
+    if (data.rsvpConfig.requirePhone && !cleanedPhone) {
+      setErrorMsg('وارد کردن شماره موبایل الزامی است');
+      return;
+    }
+
+    if (cleanedPhone && !isValidIranianMobile(cleanedPhone)) {
+      setErrorMsg('لطفاً شماره موبایل معتبر ۱۱ رقمی وارد نمایید (مثال: ۰۹۱۲۳۴۵۶۷۸۹)');
       return;
     }
 
@@ -69,7 +77,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           guestName: guestName.trim(),
-          phone: phone.trim(),
+          phone: cleanedPhone,
           attending,
           guestCount: attending === 'yes' ? (guestCount > 0 ? guestCount : 1) : 0,
           dietaryNotes: dietaryNotes.trim(),
@@ -252,7 +260,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               {/* Phone Number */}
               <div>
                 <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
-                  شماره تماس {data.rsvpConfig.requirePhone ? <span className="text-rose-500">* (الزامی)</span> : '(اختیاری جهت هماهنگی)'}
+                  شماره همراه {data.rsvpConfig.requirePhone ? <span className="text-rose-500">* (الزامی)</span> : '(اختیاری جهت هماهنگی)'}
                 </label>
                 <div className="relative">
                   <Phone className={`w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 ${isLight ? 'text-stone-500' : 'text-stone-400'}`} />
@@ -261,13 +269,14 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     dir="ltr"
                     required={data.rsvpConfig.requirePhone}
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0912..."
+                    onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                    placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                    maxLength={11}
                     className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
                       isLight
                         ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
                         : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
-                    } border focus:outline-none text-right`}
+                    } border focus:outline-none text-right font-mono tracking-wider`}
                   />
                 </div>
               </div>

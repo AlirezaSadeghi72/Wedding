@@ -72,6 +72,7 @@ import {
   AMBIENT_EFFECT_STYLES
 } from '../data/themes';
 import { SAMPLE_POEMS, DEFAULT_WEDDING_DATA } from '../data/defaultWedding';
+import ConfirmModal from './ConfirmModal';
 
 const toPersianDigits = (num: number | string): string => {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -137,6 +138,18 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
   // Live audio player state inside settings modal
   const [isPlayingInSettings, setIsPlayingInSettings] = useState(false);
   const [activeTrackIdInSettings, setActiveTrackIdInSettings] = useState<string | null>(null);
+
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -642,69 +655,63 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     reader.readAsText(file);
   };
 
-  const handleResetToDefault = async () => {
-    const confirmMessage = 
-      'آیا از بازنشانی به تنظیمات پیش‌فرض کارخانه اطمینان دارید؟\n\n' +
-      '۱. یک نسخه پشتیبان شامل اطلاعات کارت، لیست مهمانان و نظرات در سرور ذخیره و روی سیستم شما دانلود می‌شود.\n' +
-      '۲. تمامی تاییده‌های حضور مهمانان (RSVP) و پیام‌های دفترچه یادبود (نظرات) پاکسازی می‌شوند.\n' +
-      '۳. تمام اطلاعات کارت دعوت به حالت پیش‌فرض اولیه بازمی‌گردد.';
+  const handleResetToDefault = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'بازنشانی به تنظیمات پیش‌فرض کارخانه',
+      message: 'آیا از بازنشانی به تنظیمات پیش‌فرض کارخانه اطمینان دارید؟ تمامی تاییده‌های حضور مهمانان (RSVP) و پیام‌های دفترچه یادبود پاکسازی شده و یک نسخه پشتیبان دانلود می‌گردد.',
+      onConfirm: async () => {
+        try {
+          // 1. Send backup to server FIRST before clearing anything
+          try {
+            await fetch('/api/backup', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                formData,
+                reason: 'Factory Reset'
+              })
+            });
+          } catch (err) {
+            console.warn('Server backup fetch error:', err);
+          }
 
-    if (!window.confirm(confirmMessage)) return;
+          // 2. Take automatic client browser backup download
+          const backupData = JSON.stringify(formData, null, 2);
+          const jsonBlob = new Blob([backupData], { type: 'application/json;charset=utf-8;' });
+          const url = URL.createObjectURL(jsonBlob);
+          const downloadAnchor = document.createElement('a');
+          const timeStamp = new Date().toISOString().slice(0, 10);
+          downloadAnchor.setAttribute('href', url);
+          downloadAnchor.setAttribute('download', `wedding-backup-before-reset-${timeStamp}.json`);
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          document.body.removeChild(downloadAnchor);
+          URL.revokeObjectURL(url);
 
-    try {
-      // 1. Send backup to server FIRST before clearing anything
-      try {
-        await fetch('/api/backup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            formData,
-            reason: 'Factory Reset'
-          })
-        });
-      } catch (err) {
-        console.warn('Server backup fetch error:', err);
+          // Save a local storage backup as well
+          localStorage.setItem('wedding_card_backup_before_reset', backupData);
+
+          // 3. Reset RSVPs and Guestbook store to default initial seed
+          await Promise.allSettled([
+            fetch('/api/rsvp/reset?mode=seed', { method: 'POST' }),
+            fetch('/api/guestbook/reset?mode=seed', { method: 'POST' })
+          ]);
+
+          // 4. Reset form state and notify parent app
+          setFormData(DEFAULT_WEDDING_DATA);
+          onSave(DEFAULT_WEDDING_DATA);
+          localStorage.setItem('wedding_card_data', JSON.stringify(DEFAULT_WEDDING_DATA));
+
+          // 5. Trigger global event so active components re-fetch/clear their lists
+          window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+        } catch (error) {
+          console.error('Error during factory reset:', error);
+          setFormData(DEFAULT_WEDDING_DATA);
+          onSave(DEFAULT_WEDDING_DATA);
+        }
       }
-
-      // 2. Take automatic client browser backup download
-      const backupData = JSON.stringify(formData, null, 2);
-      const jsonBlob = new Blob([backupData], { type: 'application/json;charset=utf-8;' });
-      const url = URL.createObjectURL(jsonBlob);
-      const downloadAnchor = document.createElement('a');
-      const timeStamp = new Date().toISOString().slice(0, 10);
-      downloadAnchor.setAttribute('href', url);
-      downloadAnchor.setAttribute('download', `wedding-backup-before-reset-${timeStamp}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      document.body.removeChild(downloadAnchor);
-      URL.revokeObjectURL(url);
-
-      // Save a local storage backup as well
-      localStorage.setItem('wedding_card_backup_before_reset', backupData);
-
-      // 3. Delete RSVPs and Guestbook comments from server
-      await Promise.allSettled([
-        fetch('/api/rsvp', { method: 'DELETE' }),
-        fetch('/api/rsvp/reset', { method: 'POST' }),
-        fetch('/api/guestbook', { method: 'DELETE' }),
-        fetch('/api/guestbook/reset', { method: 'POST' })
-      ]);
-
-      // 4. Reset form state and notify parent app
-      setFormData(DEFAULT_WEDDING_DATA);
-      onSave(DEFAULT_WEDDING_DATA);
-      localStorage.setItem('wedding_card_data', JSON.stringify(DEFAULT_WEDDING_DATA));
-
-      // 5. Trigger global event so active components re-fetch/clear their lists
-      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
-
-      alert('بازنشانی به تنظیمات کارخانه با موفقیت انجام شد.\n\nنسخه پشتیبان کامل در سرور ذخیره شد و فایل آن نیز دانلود گردید. تمامی تاییده‌ها و نظرات با موفقیت پاکسازی شدند.');
-    } catch (error) {
-      console.error('Error during factory reset:', error);
-      setFormData(DEFAULT_WEDDING_DATA);
-      onSave(DEFAULT_WEDDING_DATA);
-      alert('اطلاعات به حالت پیش‌فرض اولیه بازگردانده شد.');
-    }
+    });
   };
 
   const handleChangeAdminPassword = async (e: FormEvent) => {
@@ -3146,6 +3153,14 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             </button>
           </div>
         </div>
+
+        <ConfirmModal
+          isOpen={confirmConfig.isOpen}
+          title={confirmConfig.title}
+          message={confirmConfig.message}
+          onConfirm={confirmConfig.onConfirm}
+          onClose={() => setConfirmConfig((prev) => ({ ...prev, isOpen: false }))}
+        />
       </motion.div>
     </div>,
     document.body

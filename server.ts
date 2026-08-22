@@ -109,6 +109,22 @@ const initialGuestbookSeed = [
 let rsvpList = loadRSVPs();
 let guestbookList = loadGuestbook();
 
+function saveRSVPsToFile(list: any[]) {
+  try {
+    const dir = path.dirname(rsvpsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(rsvpsFilePath, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving rsvps to disk:', err);
+  }
+}
+
+function saveRSVPs() {
+  saveRSVPsToFile(rsvpList);
+}
+
 function loadRSVPs() {
   try {
     if (fs.existsSync(rsvpsFilePath)) {
@@ -118,15 +134,25 @@ function loadRSVPs() {
   } catch (err) {
     console.error('Error reading rsvps from disk:', err);
   }
-  return [...initialRsvpsSeed];
+  const initial = [...initialRsvpsSeed];
+  saveRSVPsToFile(initial);
+  return initial;
 }
 
-function saveRSVPs() {
+function saveGuestbookToFile(list: any[]) {
   try {
-    fs.writeFileSync(rsvpsFilePath, JSON.stringify(rsvpList, null, 2), 'utf-8');
+    const dir = path.dirname(guestbookFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(guestbookFilePath, JSON.stringify(list, null, 2), 'utf-8');
   } catch (err) {
-    console.error('Error saving rsvps to disk:', err);
+    console.error('Error saving guestbook to disk:', err);
   }
+}
+
+function saveGuestbook() {
+  saveGuestbookToFile(guestbookList);
 }
 
 function loadGuestbook() {
@@ -138,15 +164,9 @@ function loadGuestbook() {
   } catch (err) {
     console.error('Error reading guestbook from disk:', err);
   }
-  return [...initialGuestbookSeed];
-}
-
-function saveGuestbook() {
-  try {
-    fs.writeFileSync(guestbookFilePath, JSON.stringify(guestbookList, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error saving guestbook to disk:', err);
-  }
+  const initial = [...initialGuestbookSeed];
+  saveGuestbookToFile(initial);
+  return initial;
 }
 
 // Lazy Google Gen AI helper
@@ -339,7 +359,21 @@ app.get('/api/rsvp', (req, res) => {
 
 app.post('/api/rsvp', (req, res) => {
   const guestName = sanitize(req.body.guestName, 100);
-  const phone = sanitize(req.body.phone, 30);
+  const rawPhone = sanitize(req.body.phone, 30);
+
+  // Normalize phone digit conversion
+  const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  let cleanedPhone = String(rawPhone || '');
+  for (let i = 0; i < 10; i++) {
+    cleanedPhone = cleanedPhone.replace(new RegExp(persianDigits[i], 'g'), String(i));
+    cleanedPhone = cleanedPhone.replace(new RegExp(arabicDigits[i], 'g'), String(i));
+  }
+  cleanedPhone = cleanedPhone.replace(/\D/g, '').slice(0, 11);
+  if (cleanedPhone.length === 10 && cleanedPhone.startsWith('9')) {
+    cleanedPhone = '0' + cleanedPhone;
+  }
+
   const attending = req.body.attending === 'no' ? 'no' : 'yes';
   const guestCount = Math.min(Math.max(Number(req.body.guestCount) || 1, 1), 20);
   const dietaryNotes = sanitize(req.body.dietaryNotes, 200);
@@ -349,10 +383,14 @@ app.post('/api/rsvp', (req, res) => {
     return res.status(400).json({ success: false, error: 'نام مهمان الزامی است' });
   }
 
+  if (rawPhone && !/^09\d{9}$/.test(cleanedPhone)) {
+    return res.status(400).json({ success: false, error: 'شماره موبایل وارد شده معتبر نیست. مثال: ۰۹۱۲۳۴۵۶۷۸۹' });
+  }
+
   const newRsvp = {
     id: `rsvp-${Date.now()}`,
     guestName,
-    phone,
+    phone: cleanedPhone,
     attending,
     guestCount,
     dietaryNotes,
@@ -390,9 +428,14 @@ app.delete('/api/rsvp', (req, res) => {
 });
 
 app.post('/api/rsvp/reset', (req, res) => {
-  rsvpList = [];
+  const mode = req.query.mode || req.body?.mode;
+  if (mode === 'seed' || mode === 'reseed') {
+    rsvpList = [...initialRsvpsSeed];
+  } else {
+    rsvpList = [];
+  }
   saveRSVPs();
-  res.json({ success: true, message: 'تمام تاییده‌های حضور با موفقیت حذف شدند' });
+  res.json({ success: true, message: 'تاییده‌های حضور با موفقیت بروزرسانی شد', data: rsvpList });
 });
 
 // Guestbook Endpoints with Sanitization
@@ -448,9 +491,14 @@ app.delete('/api/guestbook', (req, res) => {
 });
 
 app.post('/api/guestbook/reset', (req, res) => {
-  guestbookList = [];
+  const mode = req.query.mode || req.body?.mode;
+  if (mode === 'seed' || mode === 'reseed') {
+    guestbookList = [...initialGuestbookSeed];
+  } else {
+    guestbookList = [];
+  }
   saveGuestbook();
-  res.json({ success: true, message: 'تمام پیام‌های یادبود و نظرات با موفقیت حذف شدند' });
+  res.json({ success: true, message: 'پیام‌های یادبود با موفقیت بروزرسانی شد', data: guestbookList });
 });
 
 app.post('/api/guestbook/:id/reaction', (req, res) => {
