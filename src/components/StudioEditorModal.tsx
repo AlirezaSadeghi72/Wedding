@@ -127,6 +127,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
   // Uploading state
   const [isUploading, setIsUploading] = useState(false);
 
+  // Synchronize internal formData whenever modal opens or external data updates
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(data);
+    }
+  }, [isOpen, data]);
+
   // Live audio player state inside settings modal
   const [isPlayingInSettings, setIsPlayingInSettings] = useState(false);
   const [activeTrackIdInSettings, setActiveTrackIdInSettings] = useState<string | null>(null);

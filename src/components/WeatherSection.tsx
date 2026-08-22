@@ -37,7 +37,7 @@ export default function WeatherSection({ weather, isLight }: Props) {
             <div>
               <div className="flex items-center gap-2">
                 <span className={`font-mono text-lg sm:text-xl font-bold ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
-                  {weather.temperature}
+                  {weather.temperature || weather.temp || '۲۴°C'}
                 </span>
                 <span className={`text-xs sm:text-sm font-medium ${isLight ? 'text-emerald-950 font-semibold' : 'text-stone-200'} font-amiri`}>
                   {weather.condition}
