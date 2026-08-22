@@ -22,19 +22,19 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Ensure public and uploads directories exist
+// Ensure public, uploads, and backups directories exist
 const publicDir = path.join(process.cwd(), 'public');
 const uploadsDir = path.join(publicDir, 'uploads');
+const backupsDir = path.join(process.cwd(), 'backups');
 if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-
-// Serve public uploads statically with cache headers
-app.use('/uploads', express.static(uploadsDir, { maxAge: '1d' }));
-app.use(express.static(publicDir));
+if (!fs.existsSync(backupsDir)) {
+  fs.mkdirSync(backupsDir, { recursive: true });
+}
 
 // Input sanitization helper for backend
 function sanitize(input: any, maxLen = 500): string {
@@ -48,8 +48,11 @@ function sanitize(input: any, maxLen = 500): string {
     .slice(0, maxLen);
 }
 
-// In-memory persistent store for RSVPs and Guestbook (with initial demo seeds)
-let rsvpList = [
+const rsvpsFilePath = path.join(backupsDir, 'rsvps_store.json');
+const guestbookFilePath = path.join(backupsDir, 'guestbook_store.json');
+
+// Initial seed data
+const initialRsvpsSeed = [
   {
     id: 'rsvp-1',
     guestName: 'جناب دکتر کاظمی و خانواده',
@@ -72,7 +75,7 @@ let rsvpList = [
   }
 ];
 
-let guestbookList = [
+const initialGuestbookSeed = [
   {
     id: 'gb-1',
     author: 'خانواده محترم اکبری',
@@ -101,6 +104,50 @@ let guestbookList = [
     esfand: 29
   }
 ];
+
+// Persistent store for RSVPs and Guestbook
+let rsvpList = loadRSVPs();
+let guestbookList = loadGuestbook();
+
+function loadRSVPs() {
+  try {
+    if (fs.existsSync(rsvpsFilePath)) {
+      const data = fs.readFileSync(rsvpsFilePath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error reading rsvps from disk:', err);
+  }
+  return [...initialRsvpsSeed];
+}
+
+function saveRSVPs() {
+  try {
+    fs.writeFileSync(rsvpsFilePath, JSON.stringify(rsvpList, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving rsvps to disk:', err);
+  }
+}
+
+function loadGuestbook() {
+  try {
+    if (fs.existsSync(guestbookFilePath)) {
+      const data = fs.readFileSync(guestbookFilePath, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Error reading guestbook from disk:', err);
+  }
+  return [...initialGuestbookSeed];
+}
+
+function saveGuestbook() {
+  try {
+    fs.writeFileSync(guestbookFilePath, JSON.stringify(guestbookList, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving guestbook to disk:', err);
+  }
+}
 
 // Lazy Google Gen AI helper
 let aiClient: GoogleGenAI | null = null;
@@ -314,7 +361,38 @@ app.post('/api/rsvp', (req, res) => {
   };
 
   rsvpList.unshift(newRsvp);
+  saveRSVPs();
   res.json({ success: true, data: newRsvp });
+});
+
+// Delete single RSVP item
+app.delete('/api/rsvp/:id', (req, res) => {
+  const { id } = req.params;
+  const decodedId = decodeURIComponent(id);
+  rsvpList = rsvpList.filter((r) => r.id !== id && r.id !== decodedId);
+  saveRSVPs();
+  res.json({ success: true, message: 'تاییدیه حضور مورد نظر با موفقیت حذف شد' });
+});
+
+app.post('/api/rsvp/:id/delete', (req, res) => {
+  const { id } = req.params;
+  const decodedId = decodeURIComponent(id);
+  rsvpList = rsvpList.filter((r) => r.id !== id && r.id !== decodedId);
+  saveRSVPs();
+  res.json({ success: true, message: 'تاییدیه حضور مورد نظر با موفقیت حذف شد' });
+});
+
+// Delete / Clear all RSVPs
+app.delete('/api/rsvp', (req, res) => {
+  rsvpList = [];
+  saveRSVPs();
+  res.json({ success: true, message: 'تمام تاییده‌های حضور با موفقیت حذف شدند' });
+});
+
+app.post('/api/rsvp/reset', (req, res) => {
+  rsvpList = [];
+  saveRSVPs();
+  res.json({ success: true, message: 'تمام تاییده‌های حضور با موفقیت حذف شدند' });
 });
 
 // Guestbook Endpoints with Sanitization
@@ -341,23 +419,128 @@ app.post('/api/guestbook', (req, res) => {
   };
 
   guestbookList.unshift(newEntry);
+  saveGuestbook();
   res.json({ success: true, data: newEntry });
+});
+
+// Delete single Guestbook entry
+app.delete('/api/guestbook/:id', (req, res) => {
+  const { id } = req.params;
+  const decodedId = decodeURIComponent(id);
+  guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
+  saveGuestbook();
+  res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
+});
+
+app.post('/api/guestbook/:id/delete', (req, res) => {
+  const { id } = req.params;
+  const decodedId = decodeURIComponent(id);
+  guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
+  saveGuestbook();
+  res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
+});
+
+// Delete / Clear all Guestbook entries
+app.delete('/api/guestbook', (req, res) => {
+  guestbookList = [];
+  saveGuestbook();
+  res.json({ success: true, message: 'تمام پیام‌های یادبود و نظرات با موفقیت حذف شدند' });
+});
+
+app.post('/api/guestbook/reset', (req, res) => {
+  guestbookList = [];
+  saveGuestbook();
+  res.json({ success: true, message: 'تمام پیام‌های یادبود و نظرات با موفقیت حذف شدند' });
 });
 
 app.post('/api/guestbook/:id/reaction', (req, res) => {
   const { id } = req.params;
   const { type } = req.body; // 'likes' | 'flowers' | 'esfand'
 
-  const entry = guestbookList.find((g) => g.id === id);
+  const entry = guestbookList.find((g) => g.id === id || g.id === decodeURIComponent(id));
   if (entry) {
     if (type === 'flowers') entry.flowers = (entry.flowers || 0) + 1;
     else if (type === 'esfand') entry.esfand = (entry.esfand || 0) + 1;
     else entry.likes = (entry.likes || 0) + 1;
 
+    saveGuestbook();
     return res.json({ success: true, data: entry });
   }
 
   res.status(404).json({ success: false, error: 'پیام یافت نشد' });
+});
+
+// Server Backup Endpoints
+app.post('/api/backup', (req, res) => {
+  try {
+    const { formData, reason } = req.body;
+
+    const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `wedding-backup-${timeStamp}.json`;
+    const filePath = path.join(backupsDir, fileName);
+
+    const backupContent = {
+      backupDate: new Date().toISOString(),
+      reason: reason || 'Factory Reset Backup',
+      weddingData: formData || null,
+      rsvps: rsvpList,
+      guestbook: guestbookList
+    };
+
+    fs.writeFileSync(filePath, JSON.stringify(backupContent, null, 2), 'utf-8');
+
+    // Also update a latest backup file
+    const latestPath = path.join(backupsDir, 'wedding-backup-latest.json');
+    fs.writeFileSync(latestPath, JSON.stringify(backupContent, null, 2), 'utf-8');
+
+    res.json({
+      success: true,
+      message: 'نسخه پشتیبان با موفقیت در سرور ذخیره شد',
+      fileName,
+      filePath: `/backups/${fileName}`
+    });
+  } catch (error) {
+    console.error('Error creating server backup:', error);
+    res.status(500).json({ success: false, error: 'خطا در ذخیره نسخه پشتیبان در سرور' });
+  }
+});
+
+app.get('/api/backups', (req, res) => {
+  try {
+    if (!fs.existsSync(backupsDir)) {
+      return res.json({ success: true, data: [] });
+    }
+    const files = fs.readdirSync(backupsDir)
+      .filter((file) => file.endsWith('.json'))
+      .map((file) => {
+        const stats = fs.statSync(path.join(backupsDir, file));
+        return {
+          fileName: file,
+          sizeBytes: stats.size,
+          createdAt: stats.mtime.toISOString()
+        };
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({ success: true, data: files });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'خطا در دریافت لیست پشتیبان‌های سرور' });
+  }
+});
+
+app.get('/api/backup/download/:fileName', (req, res) => {
+  try {
+    const fileName = path.basename(req.params.fileName);
+    const filePath = path.join(backupsDir, fileName);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, error: 'فایل پشتیبان مورد نظر یافت نشد' });
+    }
+
+    res.download(filePath, fileName);
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'خطا در دانلود پشتیبان' });
+  }
 });
 
 async function startServer() {

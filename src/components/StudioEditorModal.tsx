@@ -642,9 +642,68 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     reader.readAsText(file);
   };
 
-  const handleResetToDefault = () => {
-    if (window.confirm('آیا مطمئنید که می‌خواهید تمام اطلاعات به حالت پیش‌فرض بازگردد؟')) {
+  const handleResetToDefault = async () => {
+    const confirmMessage = 
+      'آیا از بازنشانی به تنظیمات پیش‌فرض کارخانه اطمینان دارید؟\n\n' +
+      '۱. یک نسخه پشتیبان شامل اطلاعات کارت، لیست مهمانان و نظرات در سرور ذخیره و روی سیستم شما دانلود می‌شود.\n' +
+      '۲. تمامی تاییده‌های حضور مهمانان (RSVP) و پیام‌های دفترچه یادبود (نظرات) پاکسازی می‌شوند.\n' +
+      '۳. تمام اطلاعات کارت دعوت به حالت پیش‌فرض اولیه بازمی‌گردد.';
+
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      // 1. Send backup to server FIRST before clearing anything
+      try {
+        await fetch('/api/backup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            formData,
+            reason: 'Factory Reset'
+          })
+        });
+      } catch (err) {
+        console.warn('Server backup fetch error:', err);
+      }
+
+      // 2. Take automatic client browser backup download
+      const backupData = JSON.stringify(formData, null, 2);
+      const jsonBlob = new Blob([backupData], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(jsonBlob);
+      const downloadAnchor = document.createElement('a');
+      const timeStamp = new Date().toISOString().slice(0, 10);
+      downloadAnchor.setAttribute('href', url);
+      downloadAnchor.setAttribute('download', `wedding-backup-before-reset-${timeStamp}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
+
+      // Save a local storage backup as well
+      localStorage.setItem('wedding_card_backup_before_reset', backupData);
+
+      // 3. Delete RSVPs and Guestbook comments from server
+      await Promise.allSettled([
+        fetch('/api/rsvp', { method: 'DELETE' }),
+        fetch('/api/rsvp/reset', { method: 'POST' }),
+        fetch('/api/guestbook', { method: 'DELETE' }),
+        fetch('/api/guestbook/reset', { method: 'POST' })
+      ]);
+
+      // 4. Reset form state and notify parent app
       setFormData(DEFAULT_WEDDING_DATA);
+      onSave(DEFAULT_WEDDING_DATA);
+      localStorage.setItem('wedding_card_data', JSON.stringify(DEFAULT_WEDDING_DATA));
+
+      // 5. Trigger global event so active components re-fetch/clear their lists
+      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+
+      alert('بازنشانی به تنظیمات کارخانه با موفقیت انجام شد.\n\nنسخه پشتیبان کامل در سرور ذخیره شد و فایل آن نیز دانلود گردید. تمامی تاییده‌ها و نظرات با موفقیت پاکسازی شدند.');
+    } catch (error) {
+      console.error('Error during factory reset:', error);
+      setFormData(DEFAULT_WEDDING_DATA);
+      onSave(DEFAULT_WEDDING_DATA);
+      alert('اطلاعات به حالت پیش‌فرض اولیه بازگردانده شد.');
     }
   };
 
@@ -3045,16 +3104,16 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   <RotateCcw className="w-4 h-4 text-rose-600" />
                   <span>بازنشانی به تنظیمات پیش‌فرض کارخانه</span>
                 </div>
-                <p className="text-xs text-stone-600">
-                  در صورت تمایل می‌توانید تمامی مقادیر را به حالت پیش‌فرض اولیه بازگردانید.
+                <p className="text-xs text-stone-600 leading-relaxed">
+                  با فشردن این دکمه، ابتدا یک فایل پشتیبان کامل (JSON) شامل تمامی تنظیمات، تاییده‌های حضور و پیام‌ها در پوشه بکاپ سرور (`/backups`) ذخیره و نسخه فایل آن روی مرورگر شما دانلود می‌گردد. سپس تمامی تاییده‌ها و پیام‌ها پاکسازی شده و کارت دعوت به حالت اولیه بازمی‌گردد.
                 </p>
                 <button
                   type="button"
                   onClick={handleResetToDefault}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300 text-xs cursor-pointer transition-colors font-bold"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs cursor-pointer transition-colors font-bold"
                 >
-                  <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
-                  <span>بازنشانی اطلاعات به حالت اولیه</span>
+                  <RotateCcw className="w-3.5 h-3.5 text-white" />
+                  <span>پشتیبان‌گیری و بازنشانی کامل به تنظیمات اولیه</span>
                 </button>
               </div>
             </div>

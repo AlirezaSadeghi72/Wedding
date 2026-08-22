@@ -1,10 +1,11 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Send, Sparkles, MessageCircleHeart, Flame, Smile, Check } from 'lucide-react';
+import { Heart, Send, Sparkles, MessageCircleHeart, Flame, Smile, Check, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GuestbookEntry } from '../types';
 import { INITIAL_GUESTBOOK } from '../data/defaultWedding';
 import { toPersianDigits } from '../utils/dateUtils';
+import { getIsAdminSessionValid } from '../utils/security';
 
 interface Props {
   cardId?: string;
@@ -18,8 +19,7 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Fetch latest guestbook from server if available
+  const loadGuestbook = () => {
     fetch('/api/guestbook')
       .then((res) => res.json())
       .then((data) => {
@@ -30,6 +30,17 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
       .catch(() => {
         // Fallback to local
       });
+  };
+
+  useEffect(() => {
+    loadGuestbook();
+
+    const handleReset = () => {
+      loadGuestbook();
+    };
+
+    window.addEventListener('wedding_data_reset', handleReset);
+    return () => window.removeEventListener('wedding_data_reset', handleReset);
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -104,6 +115,25 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
       // Keep optimistic
     }
   };
+
+  const handleDeleteEntry = async (id: string, authorName: string) => {
+    if (!window.confirm(`آیا از حذف این پیام ثبت‌شده توسط "${authorName}" اطمینان دارید؟`)) return;
+    try {
+      // Optimistically remove from state
+      setEntries((prev) => prev.filter((item) => item.id !== id));
+
+      const encodedId = encodeURIComponent(id);
+      const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+      }
+      window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+    } catch {
+      loadGuestbook();
+    }
+  };
+
+  const isAdmin = getIsAdminSessionValid();
 
   return (
     <div id="guestbook-section" className="w-full max-w-2xl mx-auto my-12 px-4 select-none">
@@ -219,7 +249,19 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
                       {entry.author}
                     </span>
                   </div>
-                  <span className={`text-[10px] ${isLight ? 'text-stone-500' : 'text-stone-500'}`}>{entry.date}</span>
+
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] ${isLight ? 'text-stone-500' : 'text-stone-500'}`}>{entry.date}</span>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id, entry.author)}
+                        className="p-1 rounded-md bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-300 transition-colors cursor-pointer"
+                        title="حذف این نظر (مدیریت)"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <p className={`text-xs ${isLight ? 'text-stone-800 font-normal' : 'text-stone-300 font-light'} leading-relaxed mb-3`}>

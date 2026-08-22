@@ -52,6 +52,19 @@ export default function App() {
     }
   }, [isAdminAuthenticated]);
 
+  // Dynamically update page title with bride and groom names
+  useEffect(() => {
+    const groom = weddingData.groomName?.trim();
+    const bride = weddingData.brideName?.trim();
+    if (groom && bride) {
+      document.title = `کارت دعوت عروسی ${groom} و ${bride}`;
+    } else if (groom || bride) {
+      document.title = `کارت دعوت عروسی ${groom || bride}`;
+    } else {
+      document.title = 'کارت دعوت عروسی';
+    }
+  }, [weddingData.groomName, weddingData.brideName]);
+
   // If envelope is disabled in section visibility, automatically show card view
   useEffect(() => {
     if (weddingData.sectionVisibility?.envelope === false) {
@@ -131,10 +144,10 @@ export default function App() {
               id="rsvp-manager-toggle-btn"
               onClick={() => setIsRsvpManagerOpen(true)}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-stone-800 border border-emerald-300/80 transition-colors cursor-pointer text-xs shadow-sm"
-              title="مدیریت لیست مهمانان و تایید حضورها"
+              title="مدیریت لیست مهمانان، تایید حضورها و نظرات"
             >
               <Users className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden sm:inline">لیست مهمانان (RSVP)</span>
+              <span className="hidden sm:inline">مهمانان و نظرات</span>
               <span className="sm:hidden">مهمانان</span>
             </button>
 
