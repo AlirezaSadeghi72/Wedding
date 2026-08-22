@@ -29,7 +29,7 @@ interface Props {
 }
 
 export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthenticated }: Props) {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(() => weddingAudio.getIsPlaying());
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [volume, setVolume] = useState<number>(() => {
     return data.music?.volume ? Math.round(data.music.volume * 100) : 80;
@@ -89,6 +89,21 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
   const playlist = buildPlaylist();
   const safeIndex = Math.min(Math.max(0, currentTrackIndex), Math.max(0, playlist.length - 1));
   const currentTrack = playlist[safeIndex] || playlist[0];
+
+  // Sync currentTrackIndex on mount with whatever track is already playing in the global engine
+  useEffect(() => {
+    const runningTrack = weddingAudio.getCurrentTrack();
+    if (runningTrack) {
+      const idx = playlist.findIndex(t => 
+        (t.id && runningTrack.id && t.id === runningTrack.id) ||
+        (t.url && runningTrack.url && t.url === runningTrack.url) ||
+        (t.synthPreset && runningTrack.synthPreset && t.synthPreset === runningTrack.synthPreset)
+      );
+      if (idx !== -1) {
+        setCurrentTrackIndex(idx);
+      }
+    }
+  }, [playlist]);
 
   // Sync volume with data.music when settings are saved
   useEffect(() => {

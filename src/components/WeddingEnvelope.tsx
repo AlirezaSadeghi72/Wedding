@@ -54,8 +54,8 @@ export default function WeddingEnvelope({
     if (isBreaking) return;
     setIsBreaking(true);
 
-    // Play wedding music automatically on interaction
-    if (data.music?.enabled) {
+    // Play wedding music automatically on interaction if not already playing
+    if (data.music?.enabled && !weddingAudio.getIsPlaying()) {
       if (data.music.audioUrl) {
         weddingAudio.playCustomAudio(data.music.audioUrl);
       } else {

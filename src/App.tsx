@@ -30,6 +30,25 @@ export default function App() {
     return DEFAULT_WEDDING_DATA;
   });
 
+  // Fetch wedding settings from server on mount
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData && resData.success && resData.data) {
+          setWeddingData(resData.data);
+          try {
+            localStorage.setItem('wedding_card_data', JSON.stringify(resData.data));
+          } catch {
+            // Ignore
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load settings from server:', err);
+      });
+  }, []);
+
   const [isOpened, setIsOpened] = useState(false);
   const [isStudioOpen, setIsStudioOpen] = useState(false);
   const [isRsvpManagerOpen, setIsRsvpManagerOpen] = useState(false);
@@ -100,6 +119,24 @@ export default function App() {
     } catch {
       // Ignore
     }
+
+    // Persist settings to the server
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updated)
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (!resData || !resData.success) {
+          console.error('Failed to save settings to server:', resData?.error);
+        }
+      })
+      .catch((err) => {
+        console.error('Error saving settings to server:', err);
+      });
   };
 
   const showEnvelope = !isOpened && weddingData.sectionVisibility?.envelope !== false;
