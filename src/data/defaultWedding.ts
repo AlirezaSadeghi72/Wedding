@@ -53,8 +53,6 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     address: 'کیلومتر ۲۲ اتوبان تهران-کرج، خروجی گرمدره، خیابان تاج‌بخش، کوچه کوشک، پلاک ۱۲',
     lat: 35.7335,
     lng: 51.0825,
-    snappUrl: 'https://app.snapp.taxi/?drop_lat=35.7335&drop_lng=51.0825',
-    wazeUrl: 'https://waze.com/ul?ll=35.7335,51.0825&navigate=yes',
     googleMapsUrl: 'https://maps.google.com/?q=35.7335,51.0825',
     neshanUrl: 'https://nshn.ir',
     baladUrl: 'https://balad.ir'
@@ -92,7 +90,12 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
   waxSeal: {
     color: 'gold',
     monogram: 'P & N',
-    iconType: 'rings'
+    iconType: 'rings',
+    envelopeStyle: 'classic_cream',
+    ribbonStyle: 'gold_cross',
+    sealShape: 'round',
+    sealText: 'بازگشایی دعوت‌نامه',
+    guideText: 'برای گشودن پاکت روی مهر و موم لمس کنید'
   },
   adminPin: '1404',
   colorMode: 'light',

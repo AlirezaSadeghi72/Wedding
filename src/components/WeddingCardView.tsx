@@ -6,7 +6,6 @@ import {
   MapPin,
   Heart,
   Share2,
-  Navigation,
   Sparkles,
   CheckCircle2,
   Download,
@@ -14,7 +13,6 @@ import {
   Check,
   Eye,
   CalendarCheck,
-  Car,
   Lock,
   Sun,
   Moon
@@ -514,52 +512,26 @@ export default function WeddingCardView({
                 )}
               </button>
 
-              {/* Navigation Buttons Grid with Snapp */}
+              {/* Navigation Buttons Grid - 3 Map Apps */}
               <div className={`pt-3 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/80'}`}>
                 <span className={`text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/80'} block mb-2 font-medium`}>
-                  مسیریابی و درخواست خودرو آنلاین:
+                  مسیریابی هوشمند تالار:
                 </span>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                  {/* Snapp (اسنپ) */}
-                  <a
-                    href={data.venue.snappUrl || `https://app.snapp.taxi`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="py-2.5 px-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md"
-                  >
-                    <Car className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
-                    <span>درخواست اسنپ (Snapp)</span>
-                  </a>
-
-                  {/* Waze */}
-                  <a
-                    href={data.venue.wazeUrl || `https://waze.com/ul?ll=${data.venue.lat},${data.venue.lng}&navigate=yes`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`py-2.5 px-2 rounded-xl ${
-                      isLight
-                        ? 'bg-cyan-50 hover:bg-cyan-100 border border-cyan-300 text-cyan-950 font-medium'
-                        : 'bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors`}
-                  >
-                    <Navigation className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-                    <span>ویز (Waze)</span>
-                  </a>
-
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {/* Google Maps */}
                   <a
                     href={data.venue.googleMapsUrl || `https://maps.google.com/?q=${data.venue.lat},${data.venue.lng}`}
                     target="_blank"
                     rel="noreferrer"
-                    className={`py-2.5 px-2 rounded-xl ${
+                    className={`py-2.5 px-3 rounded-xl ${
                       isLight
                         ? 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-950 font-medium'
                         : 'bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors`}
+                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
                   >
                     <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    <span>گوگل مپ</span>
+                    <span>گوگل مپ (Google Maps)</span>
                   </a>
 
                   {/* Neshan */}
@@ -567,13 +539,14 @@ export default function WeddingCardView({
                     href={data.venue.neshanUrl || `https://nshn.ir`}
                     target="_blank"
                     rel="noreferrer"
-                    className={`py-2.5 px-2 rounded-xl ${
+                    className={`py-2.5 px-3 rounded-xl ${
                       isLight
                         ? 'bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-950 font-medium'
                         : 'bg-blue-950/50 hover:bg-blue-900/60 border border-blue-500/40 text-blue-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors`}
+                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
                   >
-                    <span>نشان (Neshan)</span>
+                    <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span>مسیریاب نشان (Neshan)</span>
                   </a>
 
                   {/* Balad */}
@@ -581,13 +554,14 @@ export default function WeddingCardView({
                     href={data.venue.baladUrl || `https://balad.ir`}
                     target="_blank"
                     rel="noreferrer"
-                    className={`py-2.5 px-2 rounded-xl ${
+                    className={`py-2.5 px-3 rounded-xl ${
                       isLight
-                        ? 'bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-medium'
-                        : 'bg-amber-950/50 hover:bg-amber-900/60 border border-amber-500/40 text-amber-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors`}
+                        ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium'
+                        : 'bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
+                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
                   >
-                    <span>بلد (Balad)</span>
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>مسیریاب بلد (Balad)</span>
                   </a>
                 </div>
               </div>

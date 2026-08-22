@@ -17,6 +17,7 @@ import {
   Trash2,
   Copy,
   Heart,
+  MailOpen,
   Image as ImageIcon,
   Camera,
   Gift,
@@ -32,7 +33,6 @@ import {
   Sliders,
   Users,
   Volume2,
-  Car,
   Lock,
   Shield,
   ShieldCheck,
@@ -87,6 +87,7 @@ interface Props {
 
 type TabType =
   | 'sections'
+  | 'envelope'
   | 'basics'
   | 'text_ai'
   | 'story'
@@ -871,6 +872,18 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
                 <button
                   type="button"
+                  data-tab="envelope"
+                  onClick={() => setActiveTab('envelope')}
+                  className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
+                    activeTab === 'envelope' ? 'bg-amber-500 text-stone-950 font-bold shadow-md' : 'text-stone-700 hover:bg-amber-100 hover:text-stone-900'
+                  }`}
+                >
+                  <MailOpen className="w-3.5 h-3.5 text-amber-800" />
+                  <span>تم و دکمه پاکت اولیه</span>
+                </button>
+
+                <button
+                  type="button"
                   data-tab="basics"
                   onClick={() => setActiveTab('basics')}
                   className={`shrink-0 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer select-none font-medium ${
@@ -1105,6 +1118,237 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ENVELOPE THEMES & WAX SEAL CUSTOMIZATION */}
+          {activeTab === 'envelope' && (
+            <div className="space-y-6">
+              {/* Header Info Banner */}
+              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center shrink-0">
+                    <MailOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-amber-950 font-amiri">
+                      تنظیمات پاکت و مهر و موم مومین (مهر دایره‌ای دوحلقه)
+                    </h3>
+                    <p className="text-xs text-stone-600">
+                      شخصی‌سازی رنگ کاغذ پاکت، رنگ مهر و موم دایره‌ای، روبان تزئینی و متن راهنمای بازگشایی
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Interactive Envelope Mini-Preview */}
+              <div className="p-5 rounded-3xl border border-amber-300 bg-gradient-to-b from-[#FFFDF7] via-[#FAF6ED] to-amber-50/50 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-950 font-amiri flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    پیش‌نمایش زنده پاکت و مهر و موم:
+                  </span>
+                  <span className="text-[11px] text-stone-500 font-mono">
+                    {formData.brideName} & {formData.groomName}
+                  </span>
+                </div>
+
+                {/* Preview Envelope Container */}
+                <div className="relative w-full max-w-sm mx-auto p-4 rounded-2xl border border-amber-400/60 shadow-md bg-white flex flex-col items-center justify-center text-center overflow-hidden">
+                  {/* Ribbon Overlay */}
+                  {formData.waxSeal.ribbonStyle !== 'none' && (
+                    <div className={`absolute w-full h-6 -z-0 ${
+                      formData.waxSeal.ribbonStyle === 'satin_red'
+                        ? 'bg-gradient-to-r from-red-700/40 via-rose-500/60 to-red-700/40 border-y border-rose-400/50'
+                        : formData.waxSeal.ribbonStyle === 'emerald_velvet'
+                        ? 'bg-gradient-to-r from-emerald-800/40 via-emerald-600/60 to-emerald-800/40 border-y border-emerald-400/50'
+                        : formData.waxSeal.ribbonStyle === 'royal_navy'
+                        ? 'bg-gradient-to-r from-sky-800/40 via-blue-600/60 to-sky-800/40 border-y border-sky-400/50'
+                        : 'bg-gradient-to-r from-amber-600/30 via-amber-400/50 to-amber-600/30 border-y border-amber-400/50'
+                    }`} />
+                  )}
+
+                  {/* Circular Wax Seal Button Preview with Two Interlocking Rings */}
+                  <div className={`relative z-10 w-20 h-20 rounded-full border-2 flex flex-col items-center justify-center p-1 shadow-lg ${
+                    formData.waxSeal.color === 'gold'
+                      ? 'bg-gradient-to-br from-amber-400 via-amber-600 to-amber-800 text-amber-950 border-amber-300'
+                      : formData.waxSeal.color === 'emerald'
+                      ? 'bg-gradient-to-br from-emerald-600 via-emerald-800 to-emerald-950 text-emerald-100 border-emerald-400'
+                      : formData.waxSeal.color === 'navy'
+                      ? 'bg-gradient-to-br from-sky-600 via-blue-800 to-slate-950 text-sky-100 border-sky-400'
+                      : formData.waxSeal.color === 'black'
+                      ? 'bg-gradient-to-br from-stone-700 via-stone-900 to-black text-stone-200 border-stone-600'
+                      : formData.waxSeal.color === 'silver'
+                      ? 'bg-gradient-to-br from-slate-200 via-slate-400 to-slate-600 text-slate-950 border-slate-200'
+                      : formData.waxSeal.color === 'burgundy'
+                      ? 'bg-gradient-to-br from-rose-900 via-red-950 to-black text-rose-100 border-rose-600'
+                      : formData.waxSeal.color === 'rose_gold'
+                      ? 'bg-gradient-to-br from-rose-300 via-rose-500 to-amber-600 text-rose-950 border-rose-300'
+                      : 'bg-gradient-to-br from-red-600 via-rose-800 to-red-950 text-red-100 border-rose-400'
+                  }`}>
+                    <div className="w-full h-full rounded-full border border-white/40 flex flex-col items-center justify-center p-1 shadow-inner">
+                      <div className="flex items-center -space-x-2 my-auto drop-shadow-md">
+                        <div className="w-6 h-6 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
+                          <div className="absolute -top-1 w-1 h-1 rounded-full bg-white shadow-sm" />
+                        </div>
+                        <div className="w-6 h-6 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
+                          <div className="absolute -top-1 w-1 h-1 rounded-full bg-white shadow-sm" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-amber-800 font-bold mt-2.5 z-10">
+                    {formData.waxSeal.guideText || 'برای گشودن پاکت روی مهر و موم لمس کنید'}
+                  </p>
+                </div>
+              </div>
+
+              {/* 1. Envelope Paper Style */}
+              <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
+                <label className="block text-xs font-bold text-stone-900">
+                  ۱. تم رنگی و جنس کاغذ پاکت اولیه:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'classic_cream', name: 'کرم عاجی و طلاکوب', desc: 'کلاسیک و سنتی', color: 'bg-[#FFFDF7] border-amber-300 text-stone-900' },
+                    { id: 'royal_gold', name: 'طلایی سلطنتی درخشان', desc: 'طلاکوب فاخر', color: 'bg-amber-100 border-amber-400 text-amber-950' },
+                    { id: 'emerald_palace', name: 'زمردی شاهانه', desc: 'سبز زمردین کاخ', color: 'bg-emerald-900 border-emerald-400 text-emerald-100' },
+                    { id: 'deep_burgundy', name: 'یاقوتی و زرشکی', desc: 'سرخ شرابی اعلا', color: 'bg-rose-950 border-rose-500 text-rose-100' },
+                    { id: 'midnight_navy', name: 'سرمه‌ای شبانه', desc: 'آبی تیره ستاره‌باران', color: 'bg-sky-950 border-sky-400 text-sky-100' },
+                    { id: 'pearl_white', name: 'سفید مرواریدی', desc: 'ساتن مروارید و رزگلد', color: 'bg-slate-50 border-slate-300 text-slate-900' }
+                  ].map((styleItem) => {
+                    const isSelected = (formData.waxSeal.envelopeStyle || 'classic_cream') === styleItem.id;
+                    return (
+                      <button
+                        key={styleItem.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            waxSeal: { ...formData.waxSeal, envelopeStyle: styleItem.id as any }
+                          })
+                        }
+                        className={`p-3 rounded-2xl border text-right transition-all cursor-pointer ${styleItem.color} ${
+                          isSelected ? 'ring-2 ring-amber-500 shadow-md scale-[1.02]' : 'opacity-85 hover:opacity-100'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold font-amiri">{styleItem.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                        </div>
+                        <span className="text-[10px] opacity-75 block mt-0.5">{styleItem.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Wax Seal Color */}
+              <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
+                <label className="block text-xs font-bold text-stone-900">
+                  ۲. رنگ مهر و موم مومین (Wax Color):
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {[
+                    { id: 'gold', name: 'طلایی درخشان', bg: 'bg-gradient-to-r from-amber-400 to-amber-600 text-stone-950' },
+                    { id: 'red', name: 'قرمز کلاسیک', bg: 'bg-gradient-to-r from-red-600 to-rose-800 text-white' },
+                    { id: 'emerald', name: 'سبز زمردی', bg: 'bg-gradient-to-r from-emerald-600 to-emerald-800 text-white' },
+                    { id: 'navy', name: 'سرمه‌ای ملکی', bg: 'bg-gradient-to-r from-blue-700 to-sky-900 text-white' },
+                    { id: 'burgundy', name: 'زرشکی و یاقوتی', bg: 'bg-gradient-to-r from-rose-900 to-red-950 text-white' },
+                    { id: 'rose_gold', name: 'رزگلد رومانتیک', bg: 'bg-gradient-to-r from-rose-400 to-amber-500 text-stone-950' },
+                    { id: 'silver', name: 'نقره‌ای شیک', bg: 'bg-gradient-to-r from-slate-300 to-slate-500 text-slate-950' },
+                    { id: 'black', name: 'مشکی مدرن', bg: 'bg-gradient-to-r from-stone-800 to-black text-stone-100' }
+                  ].map((colorItem) => {
+                    const isSelected = formData.waxSeal.color === colorItem.id;
+                    return (
+                      <button
+                        key={colorItem.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            waxSeal: { ...formData.waxSeal, color: colorItem.id as any }
+                          })
+                        }
+                        className={`p-2.5 rounded-xl border text-right transition-all cursor-pointer flex items-center justify-between gap-2 ${colorItem.bg} ${
+                          isSelected ? 'ring-2 ring-stone-900 shadow-md scale-105' : 'opacity-90 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-xs font-bold">{colorItem.name}</span>
+                        {isSelected && <Check className="w-4 h-4 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Ribbon Overlay Style */}
+              <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
+                <label className="block text-xs font-bold text-stone-900">
+                  ۳. طرح نوار و روبان تزئینی پاکت:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'gold_cross', name: 'روبان طلایی متقاطع' },
+                    { id: 'satin_red', name: 'روبان ساتن قرمز' },
+                    { id: 'emerald_velvet', name: 'روبان مخمل زمردی' },
+                    { id: 'royal_navy', name: 'روبان آبی سلطنتی' },
+                    { id: 'none', name: 'بدون روبان (ساده)' }
+                  ].map((ribbonItem) => {
+                    const isSelected = (formData.waxSeal.ribbonStyle || 'gold_cross') === ribbonItem.id;
+                    return (
+                      <button
+                        key={ribbonItem.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            waxSeal: { ...formData.waxSeal, ribbonStyle: ribbonItem.id as any }
+                          })
+                        }
+                        className={`p-2.5 rounded-xl border text-xs text-right transition-all cursor-pointer flex items-center justify-between ${
+                          isSelected ? 'bg-amber-100 border-amber-500 font-bold text-amber-950' : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
+                        }`}
+                      >
+                        <span>{ribbonItem.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-700 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Guidance Text */}
+              <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
+                <label className="block text-xs font-bold text-stone-900">
+                  ۴. متن راهنمای لمس و بازگشایی پاکت:
+                </label>
+
+                <div>
+                  <input
+                    type="text"
+                    value={formData.waxSeal.guideText || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        waxSeal: {
+                          ...formData.waxSeal,
+                          sealShape: 'round',
+                          iconType: 'rings',
+                          sealText: '',
+                          guideText: e.target.value
+                        }
+                      })
+                    }
+                    placeholder="برای گشودن پاکت روی مهر و موم لمس کنید"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[11px] text-stone-500 mt-1.5">
+                    این متن به صورت انیمیشن زیر مهر دایره‌ای دوحلقه نمایش داده می‌شود.
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -1754,7 +1998,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             </div>
           )}
 
-          {/* TAB 7: VENUE & NAVIGATION (INCLUDING SNAPP) */}
+          {/* TAB 7: VENUE & NAVIGATION */}
           {activeTab === 'venue' && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1839,49 +2083,14 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 </div>
               </div>
 
-              {/* Navigation Links with Snapp Feature */}
+              {/* Navigation Links (Google Maps, Neshan, Balad) */}
               <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-3">
-                <span className="text-xs text-amber-950 font-bold block flex items-center gap-1.5">
-                  <Car className="w-4 h-4 text-emerald-600" />
-                  لینک مستقیم اپلیکیشن‌های مسیریابی و درخواست خودرو اسنپ (Snapp)
+                <span className="text-xs text-amber-950 font-bold flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-amber-700" />
+                  لینک‌های مستقیم اپلیکیشن‌های مسیریابی (گوگل مپ، نشان و بلد)
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] text-emerald-900 mb-1 font-bold">
-                      لینک درخواست اسنپ (Snapp Deep Link / Web App):
-                    </label>
-                    <input
-                      type="text"
-                      dir="ltr"
-                      value={formData.venue.snappUrl || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          venue: { ...formData.venue, snappUrl: e.target.value }
-                        })
-                      }
-                      placeholder="https://app.snapp.taxi or https://snapp.ir"
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-emerald-300 text-xs text-emerald-900 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک ویز (Waze):</label>
-                    <input
-                      type="text"
-                      dir="ltr"
-                      value={formData.venue.wazeUrl || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          venue: { ...formData.venue, wazeUrl: e.target.value }
-                        })
-                      }
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
-                    />
-                  </div>
-
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-[11px] text-stone-600 font-medium mb-1">لینک گوگل مپ (Google Maps):</label>
                     <input
@@ -1894,7 +2103,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, googleMapsUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
+                      placeholder="https://maps.google.com/..."
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
@@ -1910,7 +2120,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, neshanUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
+                      placeholder="https://nshn.ir/..."
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
@@ -1926,7 +2137,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           venue: { ...formData.venue, baladUrl: e.target.value }
                         })
                       }
-                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900"
+                      placeholder="https://balad.ir/..."
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
                     />
                   </div>
                 </div>

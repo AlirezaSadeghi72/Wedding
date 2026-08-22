@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import confetti from 'canvas-confetti';
-import { WeddingCardData, SealColor } from '../types';
+import { WeddingCardData, SealColor, EnvelopeStyle, RibbonStyle } from '../types';
 import { THEMES } from '../data/themes';
-import { Sparkles, Heart, MailOpen, Sun, Moon } from 'lucide-react';
+import { Sparkles, MailOpen } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 
 interface Props {
@@ -15,9 +15,7 @@ interface Props {
 export default function WeddingEnvelope({
   data,
   onOpen,
-  isOpened
 }: Props) {
-  const [isSealed, setIsSealed] = useState(!isOpened);
   const [isBreaking, setIsBreaking] = useState(false);
 
   const currentTheme = THEMES[data.themeId] || THEMES.emerald;
@@ -68,7 +66,6 @@ export default function WeddingEnvelope({
     triggerPetalsAndGold();
 
     setTimeout(() => {
-      setIsSealed(false);
       onOpen();
     }, 700);
   };
@@ -94,6 +91,44 @@ export default function WeddingEnvelope({
         return 'bg-gradient-to-br from-red-600 via-rose-800 to-red-950 text-red-100 border-rose-400/80 shadow-[0_0_20px_rgba(239,68,68,0.3)]';
     }
   };
+
+  const getEnvelopePaperStyle = (style?: EnvelopeStyle) => {
+    switch (style) {
+      case 'royal_gold':
+        return 'bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300/90 border-amber-500/80 text-amber-950 shadow-amber-500/15';
+      case 'emerald_palace':
+        return 'bg-gradient-to-b from-emerald-900 via-emerald-950 to-stone-950 border-emerald-400/70 text-emerald-100';
+      case 'deep_burgundy':
+        return 'bg-gradient-to-b from-rose-950 via-stone-900 to-black border-rose-500/70 text-rose-100';
+      case 'midnight_navy':
+        return 'bg-gradient-to-b from-sky-950 via-slate-900 to-black border-sky-400/70 text-sky-100';
+      case 'pearl_white':
+        return 'bg-gradient-to-b from-white via-slate-50 to-amber-50/80 border-slate-300 text-slate-900';
+      case 'classic_cream':
+      default:
+        return 'bg-gradient-to-b from-[#FFFDF7] via-[#FAF6ED] to-[#FEF3C7]/90 border-amber-400/50 text-stone-900';
+    }
+  };
+
+  const getRibbonStyle = (ribbon?: RibbonStyle) => {
+    switch (ribbon) {
+      case 'satin_red':
+        return 'bg-gradient-to-r from-red-700/40 via-rose-500/60 to-red-700/40 border-y border-rose-400/50';
+      case 'emerald_velvet':
+        return 'bg-gradient-to-r from-emerald-800/40 via-emerald-600/60 to-emerald-800/40 border-y border-emerald-400/50';
+      case 'royal_navy':
+        return 'bg-gradient-to-r from-sky-800/40 via-blue-600/60 to-sky-800/40 border-y border-sky-400/50';
+      case 'none':
+        return 'hidden';
+      case 'gold_cross':
+      default:
+        return 'bg-gradient-to-r from-amber-600/30 via-amber-400/50 to-amber-600/30 border-y border-amber-400/50';
+    }
+  };
+
+  const isDarkEnvelope = data.waxSeal.envelopeStyle === 'emerald_palace' ||
+    data.waxSeal.envelopeStyle === 'deep_burgundy' ||
+    data.waxSeal.envelopeStyle === 'midnight_navy';
 
   return (
     <div id="envelope-container" className="relative flex flex-col items-center justify-between min-h-screen py-4 sm:py-8 px-3 sm:px-6 select-none overflow-x-hidden transition-colors duration-500 bg-gradient-to-b from-[#FFFDF7] via-[#FAF6ED] to-[#FEF3C7]">
@@ -134,13 +169,17 @@ export default function WeddingEnvelope({
           <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
           {/* Envelope Main Body */}
-          <div className="relative rounded-xl sm:rounded-2xl p-4 sm:p-7 border flex flex-col items-center text-center bg-gradient-to-b from-[#FFFDF7] via-[#FAF6ED] to-[#FEF3C7]/90 border-amber-400/50 text-stone-900">
+          <div className={`relative rounded-xl sm:rounded-2xl p-4 sm:p-7 border flex flex-col items-center text-center transition-colors duration-500 ${getEnvelopePaperStyle(
+            data.waxSeal.envelopeStyle
+          )}`}>
             
             {/* Top Ornamental Arch */}
             <div className="w-full flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
               <div className="w-1.5 h-1.5 rotate-45 border border-amber-500 bg-amber-400/30" />
-              <span className="font-scheherazade text-sm sm:text-base px-1 sm:px-2 font-bold text-amber-900">
+              <span className={`font-scheherazade text-sm sm:text-base px-1 sm:px-2 font-bold ${
+                isDarkEnvelope ? 'text-amber-200' : 'text-amber-900'
+              }`}>
                 بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
               </span>
               <div className="w-1.5 h-1.5 rotate-45 border border-amber-500 bg-amber-400/30" />
@@ -149,20 +188,24 @@ export default function WeddingEnvelope({
 
             {/* Couple Calligraphy Monogram */}
             <div className="my-2 sm:my-3 text-center">
-              <span className="font-scheherazade text-2xl sm:text-3xl md:text-4xl block font-bold leading-relaxed text-amber-900">
+              <span className={`font-scheherazade text-2xl sm:text-3xl md:text-4xl block font-bold leading-relaxed ${
+                isDarkEnvelope ? 'text-amber-200' : 'text-amber-900'
+              }`}>
                 {data.brideName} & {data.groomName}
               </span>
-              <p className="text-[11px] sm:text-xs mt-0.5 font-medium text-amber-800/80">
+              <p className={`text-[11px] sm:text-xs mt-0.5 font-medium ${
+                isDarkEnvelope ? 'text-amber-200/80' : 'text-amber-800/80'
+              }`}>
                 جشن آغاز فصل نوینی از عاشقانه‌ها
               </p>
             </div>
 
             {/* Envelope Flap & Wax Seal Section */}
             <div className="relative my-5 sm:my-8 flex flex-col items-center justify-center w-full">
-              {/* Golden Ribbon Cross */}
-              <div className="absolute w-full h-7 sm:h-8 bg-gradient-to-r from-amber-600/30 via-amber-400/50 to-amber-600/30 border-y border-amber-400/50 -z-0" />
+              {/* Ribbon Overlay */}
+              <div className={`absolute w-full h-7 sm:h-8 -z-0 ${getRibbonStyle(data.waxSeal.ribbonStyle)}`} />
 
-              {/* Interactive Wax Seal */}
+              {/* Interactive Wax Seal Button (Strictly Round with Two Interlocking Rings) */}
               <motion.button
                 id="break-seal-btn"
                 whileHover={{ scale: 1.08 }}
@@ -170,48 +213,45 @@ export default function WeddingEnvelope({
                 animate={isBreaking ? { scale: [1, 1.25, 0], rotate: [0, -10, 20], opacity: [1, 1, 0] } : {}}
                 transition={{ duration: 0.6 }}
                 onClick={handleBreakSeal}
-                className={`relative z-10 w-20 h-20 sm:w-28 sm:h-28 rounded-full border-2 p-1 sm:p-1.5 flex flex-col items-center justify-center cursor-pointer wax-seal transition-transform ${getSealBg(
+                className={`relative z-10 w-22 h-22 sm:w-28 sm:h-28 rounded-full border-2 p-1 sm:p-1.5 flex flex-col items-center justify-center cursor-pointer wax-seal transition-all shadow-xl ${getSealBg(
                   data.waxSeal.color
                 )}`}
               >
                 {/* Inner Intaglio Rim */}
                 <div className="w-full h-full rounded-full border border-white/40 flex flex-col items-center justify-center p-1.5 sm:p-2 shadow-inner">
-                  {data.waxSeal.iconType === 'heart' ? (
-                    <Heart className="w-6 h-6 sm:w-8 sm:h-8 fill-current drop-shadow-md" />
-                  ) : data.waxSeal.iconType === 'monogram' ? (
-                    <span className="font-cinzel text-lg sm:text-2xl font-black tracking-widest drop-shadow-md">
-                      {data.waxSeal.monogram || 'P & N'}
-                    </span>
-                  ) : (
-                    <div className="flex items-center -space-x-2 my-1 drop-shadow-md">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
-                        <div className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
-                      </div>
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
-                        <div className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
-                      </div>
+                  {/* Two Interlocking Rings Icon */}
+                  <div className="flex items-center -space-x-2 sm:-space-x-2.5 my-auto drop-shadow-md">
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
+                      <div className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
                     </div>
-                  )}
-                  <span className="text-[9px] sm:text-[10px] mt-0.5 tracking-tighter opacity-90 font-medium">
-                    بازگشایی دعوت‌نامه
-                  </span>
+                    <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
+                      <div className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-white shadow-sm animate-pulse" />
+                    </div>
+                  </div>
                 </div>
               </motion.button>
 
+              {/* Guidance Text Below Seal */}
               <motion.div
                 animate={{ y: [0, 4, 0] }}
                 transition={{ repeat: Infinity, duration: 2 }}
-                className="mt-3 flex items-center gap-1.5 text-[11px] sm:text-xs text-amber-700 font-bold"
+                className={`mt-3.5 flex items-center gap-1.5 text-[11px] sm:text-xs font-bold ${
+                  isDarkEnvelope ? 'text-amber-200' : 'text-amber-700'
+                }`}
               >
                 <MailOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
-                <span>برای گشودن پاکت روی مهر و موم لمس کنید</span>
+                <span>{data.waxSeal.guideText || 'برای گشودن پاکت روی مهر و موم لمس کنید'}</span>
               </motion.div>
             </div>
 
             {/* Date Preview Footer */}
-            <div className="w-full pt-3 sm:pt-4 border-t border-amber-200 flex items-center justify-between text-[11px] sm:text-xs text-amber-900 font-medium">
+            <div className={`w-full pt-3 sm:pt-4 border-t flex items-center justify-between text-[11px] sm:text-xs font-medium ${
+              isDarkEnvelope ? 'border-amber-500/30 text-amber-200' : 'border-amber-200 text-amber-900'
+            }`}>
               <span>{data.solarDate.dayOfWeek} {data.solarDate.day} {data.solarDate.month} {data.solarDate.year}</span>
-              <span className="font-cinzel text-amber-800 font-bold">{data.eventTime}</span>
+              <span className={`font-cinzel font-bold ${isDarkEnvelope ? 'text-amber-300' : 'text-amber-800'}`}>
+                {data.eventTime}
+              </span>
             </div>
           </div>
         </div>
@@ -222,3 +262,5 @@ export default function WeddingEnvelope({
     </div>
   );
 }
+
+

@@ -22,6 +22,20 @@ export type ThemeId =
   | 'midnight_starlight';
 
 export type SealColor = 'red' | 'gold' | 'emerald' | 'navy' | 'black' | 'silver' | 'burgundy' | 'rose_gold';
+export type EnvelopeStyle = 'classic_cream' | 'royal_gold' | 'emerald_palace' | 'deep_burgundy' | 'midnight_navy' | 'pearl_white';
+export type RibbonStyle = 'gold_cross' | 'satin_red' | 'emerald_velvet' | 'royal_navy' | 'none';
+export type SealShape = 'round' | 'flower' | 'octagon' | 'shield';
+
+export interface WaxSealConfig {
+  color: SealColor;
+  monogram: string;
+  iconType: 'monogram' | 'heart' | 'rings' | 'floral' | 'crown' | 'bird';
+  envelopeStyle?: EnvelopeStyle;
+  ribbonStyle?: RibbonStyle;
+  sealShape?: SealShape;
+  sealText?: string;
+  guideText?: string;
+}
 
 export type CardBorderStyle =
   | 'persian_arabesque'
@@ -181,8 +195,6 @@ export interface WeddingCardData {
     address: string;
     lat: number;
     lng: number;
-    snappUrl?: string;
-    wazeUrl?: string;
     googleMapsUrl?: string;
     neshanUrl?: string;
     baladUrl?: string;
@@ -193,11 +205,7 @@ export interface WeddingCardData {
   giftRegistry?: GiftRegistryData;
   weather?: WeatherData;
   faqs?: FAQItem[];
-  waxSeal: {
-    color: SealColor;
-    monogram: string;
-    iconType: 'monogram' | 'heart' | 'rings' | 'floral';
-  };
+  waxSeal: WaxSealConfig;
   adminPin?: string;
   colorMode?: 'dark' | 'light';
   music: MusicConfig;

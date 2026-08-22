@@ -37,8 +37,6 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [autoNext, setAutoNext] = useState(true);
 
-  const isLight = true;
-
   // Build combined playlist strictly synchronized with data.music settings
   const buildPlaylist = useCallback((): MusicTrack[] => {
     const musicConfig = data.music;
