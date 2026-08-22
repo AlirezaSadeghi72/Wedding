@@ -1,6 +1,11 @@
-export function toPersianDigits(num: number | string): string {
+export function toPersianDigits(num: number | string | undefined | null): string {
+  if (num === undefined || num === null) return '';
+  const str = String(num);
   const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-  return String(num).replace(/[0-9]/g, (w) => persianDigits[+w]);
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+  return str
+    .replace(/[0-9]/g, (w) => persianDigits[+w])
+    .replace(/[٠-٩]/g, (w) => persianDigits[arabicDigits.indexOf(w)]);
 }
 
 export interface TimeLeft {

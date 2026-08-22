@@ -19,8 +19,8 @@ app.use((req, res, next) => {
 });
 
 // High body limit for base64 audio and image uploads
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Ensure public, uploads, and backups directories exist
 const publicDir = path.join(process.cwd(), 'public');
@@ -35,6 +35,11 @@ if (!fs.existsSync(uploadsDir)) {
 if (!fs.existsSync(backupsDir)) {
   fs.mkdirSync(backupsDir, { recursive: true });
 }
+
+// Serve uploaded files and public assets statically
+app.use('/uploads', express.static(uploadsDir));
+app.use('/public', express.static(publicDir));
+app.use('/backups', express.static(backupsDir));
 
 // Input sanitization helper for backend
 function sanitize(input: any, maxLen = 500): string {
@@ -197,16 +202,33 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/png',
   'image/webp',
   'image/gif',
+  'image/svg+xml',
+  'image/heic',
+  'image/heif',
   'audio/mpeg',
   'audio/mp3',
   'audio/wav',
+  'audio/wave',
+  'audio/x-wav',
   'audio/ogg',
+  'audio/vorbis',
   'audio/m4a',
+  'audio/x-m4a',
+  'audio/mp4',
   'audio/aac',
-  'audio/x-m4a'
+  'audio/x-aac',
+  'audio/webm',
+  'audio/flac',
+  'audio/x-flac',
+  'audio/3gpp',
+  'audio/3gpp2',
+  'application/octet-stream'
 ]);
 
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp3', 'wav', 'ogg', 'm4a', 'aac']);
+const ALLOWED_EXTENSIONS = new Set([
+  'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'heic', 'heif',
+  'mp3', 'wav', 'ogg', 'm4a', 'aac', 'webm', 'flac', '3gp'
+]);
 
 // Secure File Upload Endpoint
 app.post('/api/upload', (req, res) => {
@@ -217,10 +239,10 @@ app.post('/api/upload', (req, res) => {
     }
 
     // Extract base64 payload & MIME type
-    const matches = fileData.match(/^data:([A-Za-z0-9-+/]+);base64,(.+)$/);
+    const matches = fileData.match(/^data:([A-Za-z0-9-+/.]+);base64,(.+)$/);
     let buffer: Buffer;
     let mime = '';
-    let extension = 'jpg';
+    let extension = '';
 
     if (matches && matches.length === 3) {
       mime = matches[1].toLowerCase();
@@ -229,33 +251,33 @@ app.post('/api/upload', (req, res) => {
       buffer = Buffer.from(fileData, 'base64');
     }
 
-    // File size constraint: max 25MB
-    if (buffer.length > 25 * 1024 * 1024) {
-      return res.status(400).json({ success: false, error: 'حجم فایل بیش از حد مجاز (حداکثر ۲۵ مگابایت) است' });
+    // File size constraint: max 50MB
+    if (buffer.length > 50 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'حجم فایل بیش از حد مجاز (حداکثر ۵۰ مگابایت) است' });
     }
 
-    // Verify MIME if available
-    if (mime && !ALLOWED_MIME_TYPES.has(mime)) {
-      return res.status(400).json({ success: false, error: 'نوع فایل ارسالی مجاز نمی‌باشد (فقط تصاویر و قطعات صوتی مجازند)' });
-    }
-
-    // Extract extension safely
-    if (mime.includes('audio/mp3') || mime.includes('audio/mpeg')) extension = 'mp3';
-    else if (mime.includes('audio/wav')) extension = 'wav';
-    else if (mime.includes('audio/m4a') || mime.includes('audio/x-m4a') || mime.includes('audio/aac')) extension = 'm4a';
-    else if (mime.includes('audio/ogg')) extension = 'ogg';
-    else if (mime.includes('image/png')) extension = 'png';
-    else if (mime.includes('image/webp')) extension = 'webp';
-    else if (mime.includes('image/gif')) extension = 'gif';
-    else if (mime.includes('image/jpeg') || mime.includes('image/jpg')) extension = 'jpg';
-    else if (fileName && typeof fileName === 'string') {
+    // Extract extension safely from filename first if available
+    if (fileName && typeof fileName === 'string') {
       const sanitizedName = path.basename(fileName);
       const ext = sanitizedName.split('.').pop()?.toLowerCase();
       if (ext && ALLOWED_EXTENSIONS.has(ext)) {
         extension = ext;
-      } else {
-        return res.status(400).json({ success: false, error: 'پسوند فایل ارسالی نامعتبر است' });
       }
+    }
+
+    // Fallback to MIME if extension not found
+    if (!extension) {
+      if (mime.includes('audio/mp3') || mime.includes('audio/mpeg')) extension = 'mp3';
+      else if (mime.includes('audio/wav') || mime.includes('audio/x-wav')) extension = 'wav';
+      else if (mime.includes('audio/m4a') || mime.includes('audio/x-m4a') || mime.includes('audio/aac') || mime.includes('audio/mp4')) extension = 'm4a';
+      else if (mime.includes('audio/ogg')) extension = 'ogg';
+      else if (mime.includes('audio/webm')) extension = 'webm';
+      else if (mime.includes('image/png')) extension = 'png';
+      else if (mime.includes('image/webp')) extension = 'webp';
+      else if (mime.includes('image/gif')) extension = 'gif';
+      else if (mime.includes('image/svg')) extension = 'svg';
+      else if (mime.includes('image/jpeg') || mime.includes('image/jpg')) extension = 'jpg';
+      else extension = mime.startsWith('audio/') ? 'mp3' : 'jpg';
     }
 
     // Prevent Path Traversal by generating a secure random filename
