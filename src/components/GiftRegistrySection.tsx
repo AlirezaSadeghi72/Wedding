@@ -4,6 +4,7 @@ import { Gift, Copy, Check, Sparkles, CreditCard, HeartHandshake } from 'lucide-
 import confetti from 'canvas-confetti';
 import { GiftRegistryData } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface Props {
   registry?: GiftRegistryData;
@@ -17,22 +18,28 @@ export default function GiftRegistrySection({ registry, isLight }: Props) {
   if (!registry || !registry.enabled) return null;
 
   const handleCopyCard = () => {
-    navigator.clipboard.writeText(registry.cardNumber.replace(/-/g, ''));
-    setCopiedCard(true);
-    confetti({
-      particleCount: 35,
-      spread: 60,
-      origin: { y: 0.8 },
-      colors: ['#D4AF37', '#FFD700', '#FFFFFF']
+    copyToClipboard(registry.cardNumber.replace(/-/g, '')).then((success) => {
+      if (success) {
+        setCopiedCard(true);
+        confetti({
+          particleCount: 35,
+          spread: 60,
+          origin: { y: 0.8 },
+          colors: ['#D4AF37', '#FFD700', '#FFFFFF']
+        });
+        setTimeout(() => setCopiedCard(false), 2500);
+      }
     });
-    setTimeout(() => setCopiedCard(false), 2500);
   };
 
   const handleCopyIban = () => {
     if (registry.ibanNumber) {
-      navigator.clipboard.writeText(registry.ibanNumber);
-      setCopiedIban(true);
-      setTimeout(() => setCopiedIban(false), 2500);
+      copyToClipboard(registry.ibanNumber).then((success) => {
+        if (success) {
+          setCopiedIban(true);
+          setTimeout(() => setCopiedIban(false), 2500);
+        }
+      });
     }
   };
 

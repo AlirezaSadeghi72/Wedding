@@ -20,6 +20,7 @@ import {
 import { WeddingCardData } from '../types';
 import { getTheme } from '../data/themes';
 import { calculateTimeLeft, toPersianDigits, generateIcsCalendar, downloadCalendarFile, TimeLeft } from '../utils/dateUtils';
+import { copyToClipboard } from '../utils/clipboard';
 import RSVPModal from './RSVPModal';
 import GuestbookSection from './GuestbookSection';
 import LoveStorySection from './LoveStorySection';
@@ -65,15 +66,21 @@ export default function WeddingCardView({
   }, [data.gregorianDate]);
 
   const handleCopyAddress = () => {
-    navigator.clipboard.writeText(`${data.venue.name} - ${data.venue.address}`);
-    setCopiedAddress(true);
-    setTimeout(() => setCopiedAddress(false), 2500);
+    copyToClipboard(`${data.venue.name} - ${data.venue.address}`).then((success) => {
+      if (success) {
+        setCopiedAddress(true);
+        setTimeout(() => setCopiedAddress(false), 2500);
+      }
+    });
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    copyToClipboard(window.location.href).then((success) => {
+      if (success) {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      }
+    });
   };
 
   const handleAddToCalendar = () => {
