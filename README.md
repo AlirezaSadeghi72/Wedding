@@ -33,8 +33,8 @@
 
 ۱. پروژه را کلون کنید یا فایل‌های آن را در یک پوشه قرار دهید:
    ```bash
-   git clone https://github.com/USERNAME/wedding-card.git
-   cd wedding-card
+   git clone https://github.com/AlirezaSadeghi72/Wedding.git
+   cd Wedding
    ```
 
 ۲. وابستگی‌ها (Dependencies) را نصب کنید:
@@ -132,11 +132,11 @@ sudo ufw --force enable
 
 ### گام ۴: دریافت پروژه، نصب وابستگی‌ها و بیلد
 
-پروژه را در مسیر `/var/www/wedding-card` کلون کنید:
+پروژه را در مسیر `/var/www/Wedding` کلون کنید:
 ```bash
 cd /var/www
-git clone https://github.com/USERNAME/wedding-card.git
-cd wedding-card
+git clone https://github.com/AlirezaSadeghi72/Wedding.git
+cd Wedding
 ```
 
 نصب وابستگی‌ها و ساخت خروجی پروداکشن:
@@ -153,7 +153,7 @@ npm run build
 
 ۱. اجرا کردن برنامه با PM2:
    ```bash
-   pm2 start dist/server.cjs --name "wedding-card"
+   pm2 start dist/server.cjs --name "Wedding"
    ```
 
 ۲. ذخیره لیست پروسه‌های فعال PM2:
@@ -181,7 +181,7 @@ npm run build
 
 ۱. فایل سرویس جدید بسازید:
    ```bash
-   sudo nano /etc/systemd/system/wedding-card.service
+   sudo nano /etc/systemd/system/Wedding.service
    ```
 
 ۲. محتوای زیر را درون آن قرار داده و ذخیره کنید (Ctrl+O و سپس Enter، برای خروج Ctrl+X):
@@ -193,7 +193,7 @@ npm run build
    [Service]
    Type=simple
    User=root
-   WorkingDirectory=/var/www/wedding-card
+   WorkingDirectory=/var/www/Wedding
    ExecStart=/usr/bin/node dist/server.cjs
    Restart=always
    RestartSec=10
@@ -206,8 +206,8 @@ npm run build
 ۳. سرویس را فعال و روشن کنید:
    ```bash
    sudo systemctl daemon-reload
-   sudo systemctl enable wedding-card
-   sudo systemctl start wedding-card
+   sudo systemctl enable Wedding
+   sudo systemctl start Wedding
    ```
 
 با این کار، سرویس سیستم‌عامل مسئولیت بالا آوردن اتوماتیک پروژه در هر ریستارت را بر عهده می‌گیرد.
@@ -218,7 +218,7 @@ npm run build
 
 یک فایل کانفیگ برای دامنه‌تان در Nginx بسازید:
 ```bash
-sudo nano /etc/nginx/sites-available/wedding-card
+sudo nano /etc/nginx/sites-available/Wedding
 ```
 
 کدهای زیر را قرار داده و `your-domain.com` را با دامنه خود جایگزین کنید:
@@ -245,7 +245,7 @@ server {
 
 فعال‌سازی کانفیگ و تست Nginx:
 ```bash
-sudo ln -s /etc/nginx/sites-available/wedding-card /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/Wedding /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl restart nginx
@@ -298,7 +298,7 @@ sudo reboot
 ۳. اتصال به مخزن گیت‌هاب و پاش کردن کدها:
    ```bash
    git branch -M main
-   git remote add origin https://github.com/USERNAME/REPOSITORY-NAME.git
+   git remote add origin https://github.com/AlirezaSadeghi72/REPOSITORY-NAME.git
    git push -u origin main
    ```
 
