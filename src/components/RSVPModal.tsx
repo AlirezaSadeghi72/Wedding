@@ -5,7 +5,7 @@ import { X, Check, Heart, User, Phone, Users, MessageSquare, AlertCircle, Sparkl
 import confetti from 'canvas-confetti';
 import { WeddingCardData } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
-import { sanitizePhoneInput, normalizePhoneNumber, isValidIranianMobile } from '../utils/phoneUtils';
+import { sanitizePhoneInput, normalizePhoneNumber, isValidIranianMobile, toEnglishDigits } from '../utils/phoneUtils';
 
 interface Props {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
   const [guestName, setGuestName] = useState(initialGuestName);
   const [phone, setPhone] = useState('');
   const [attending, setAttending] = useState<'yes' | 'no'>('yes');
-  const [guestCount, setGuestCount] = useState(2);
+  const [guestCount, setGuestCount] = useState<number | ''>(2);
   const [isCustomCountMode, setIsCustomCountMode] = useState(false);
   const [dietaryNotes, setDietaryNotes] = useState('');
   const [songRequest, setSongRequest] = useState('');
@@ -79,7 +79,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
           guestName: guestName.trim(),
           phone: cleanedPhone,
           attending,
-          guestCount: attending === 'yes' ? (guestCount > 0 ? guestCount : 1) : 0,
+          guestCount: attending === 'yes' ? (Number(guestCount) > 0 ? Number(guestCount) : 1) : 0,
           dietaryNotes: dietaryNotes.trim(),
           songRequest: songRequest.trim(),
           message: message.trim()
@@ -160,7 +160,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
             <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-sm max-w-md leading-relaxed mb-6`}>
               {attending === 'yes'
-                ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${guestCount > 1 ? `به همراه ${toPersianDigits(guestCount - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
+                ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${Number(guestCount) > 1 ? `به همراه ${toPersianDigits(Number(guestCount) - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
                 : `با سپاس از اطلاع‌رسانی شما (${guestName}). دلتنگ حضورتان خواهیم بود و آرزوی سلامتی و بهترین‌ها را برایتان داریم.`}
             </p>
 
@@ -268,7 +268,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     type="tel"
                     dir="ltr"
                     required={data.rsvpConfig.requirePhone}
-                    value={phone}
+                    value={toPersianDigits(phone)}
                     onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
                     placeholder="۰۹۱۲۳۴۵۶۷۸۹"
                     maxLength={11}
@@ -276,7 +276,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       isLight
                         ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
                         : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
-                    } border focus:outline-none text-right font-mono tracking-wider`}
+                    } border focus:outline-none text-right font-vazir tracking-wider`}
                   />
                 </div>
               </div>
@@ -290,7 +290,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       <span>تعداد کل حاضرین (به همراه خودتان):</span>
                     </label>
                     <span className={`${isLight ? 'text-amber-800 font-black' : 'text-amber-400 font-bold'} font-cinzel text-sm`}>
-                      {toPersianDigits(guestCount)} نفر
+                      {toPersianDigits(guestCount || 1)} نفر
                     </span>
                   </div>
 
@@ -324,10 +324,10 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                         type="button"
                         onClick={() => {
                           setIsCustomCountMode(true);
-                          if (guestCount <= 6) setGuestCount(7);
+                          if (Number(guestCount) <= 6) setGuestCount(7);
                         }}
                         className={`flex-1 py-1.5 px-3 rounded-xl border text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                          isCustomCountMode || guestCount > 6
+                          isCustomCountMode || Number(guestCount) > 6
                             ? 'bg-amber-500/20 border-amber-400 text-amber-800 font-bold'
                             : isLight
                             ? 'bg-white border-stone-300 text-stone-700 hover:text-stone-900'
@@ -340,27 +340,44 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     </div>
 
                     {/* Numeric Stepper and Direct Input when custom mode is on or count > 6 */}
-                    {(isCustomCountMode || guestCount > 6) && (
+                    {(isCustomCountMode || Number(guestCount) > 6) && (
                       <div className={`mt-2.5 p-2.5 rounded-xl ${isLight ? 'bg-white border-amber-400/50' : 'bg-stone-900 border-amber-500/30'} border flex items-center justify-between gap-3`}>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setGuestCount(Math.max(1, guestCount - 1))}
+                            onClick={() => setGuestCount(Math.max(1, (Number(guestCount) || 1) - 1))}
                             className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Minus className="w-4 h-4" />
                           </button>
                           <input
-                            type="number"
-                            min={1}
-                            max={50}
-                            value={guestCount}
-                            onChange={(e) => setGuestCount(Math.max(1, parseInt(e.target.value) || 1))}
-                            className={`w-16 py-1 px-2 text-center rounded-lg ${isLight ? 'bg-stone-100 border-stone-300 text-amber-900' : 'bg-stone-950 border-stone-700 text-amber-300'} border font-bold text-sm font-mono`}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={guestCount === '' ? '' : toPersianDigits(guestCount)}
+                            onChange={(e) => {
+                              const rawVal = e.target.value;
+                              if (rawVal === '') {
+                                setGuestCount('');
+                                return;
+                              }
+                              const val = toEnglishDigits(rawVal).replace(/\D/g, '');
+                              if (val === '') {
+                                setGuestCount('');
+                                return;
+                              }
+                              const num = parseInt(val);
+                              if (isNaN(num)) {
+                                setGuestCount('');
+                              } else {
+                                setGuestCount(Math.min(50, num));
+                              }
+                            }}
+                            className={`w-16 py-1 px-2 text-center rounded-lg ${isLight ? 'bg-stone-100 border-stone-300 text-amber-900' : 'bg-stone-950 border-stone-700 text-amber-300'} border font-bold text-sm font-vazir`}
                           />
                           <button
                             type="button"
-                            onClick={() => setGuestCount(guestCount + 1)}
+                            onClick={() => setGuestCount((Number(guestCount) || 1) + 1)}
                             className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Plus className="w-4 h-4" />

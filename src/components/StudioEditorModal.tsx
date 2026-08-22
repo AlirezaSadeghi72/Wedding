@@ -1890,7 +1890,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                               updated[idx].image = e.target.value;
                               setFormData({ ...formData, loveStory: updated });
                             }}
-                            className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900 font-mono focus:border-amber-500 focus:outline-none"
+                            className="w-full px-3 py-1.5 rounded-lg bg-white border border-stone-300 text-xs text-stone-900 font-vazir focus:border-amber-500 focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1970,7 +1970,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           updated[idx].url = e.target.value;
                           setFormData({ ...formData, gallery: updated });
                         }}
-                        className="w-full px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono"
+                        className="w-full px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-vazir"
                       />
                     </div>
 
@@ -2255,7 +2255,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       <input
                         type="text"
                         dir="ltr"
-                        value={formData.giftRegistry.cardNumber || ''}
+                        value={toPersianDigits(formData.giftRegistry.cardNumber || '')}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -2263,7 +2263,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="6037-9975-..."
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-mono text-center font-bold"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-vazir text-center font-bold"
                       />
                     </div>
 
@@ -2272,7 +2272,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       <input
                         type="text"
                         dir="ltr"
-                        value={formData.giftRegistry.iban || formData.giftRegistry.ibanNumber || ''}
+                        value={toPersianDigits(formData.giftRegistry.iban || formData.giftRegistry.ibanNumber || '')}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -2280,7 +2280,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="IR000000000000000000000000"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono text-center"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-vazir text-center"
                       />
                     </div>
 
@@ -2771,7 +2771,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                                       })
                                     }
                                     placeholder="یا لینک مستقیم فایل صوتی: https://example.com/song.mp3"
-                                    className="w-full px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-300 text-stone-800 font-mono text-[11px] focus:ring-2 focus:ring-amber-500 outline-none"
+                                    className="w-full px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-300 text-stone-800 font-vazir text-[11px] focus:ring-2 focus:ring-amber-500 outline-none"
                                   />
                                 </div>
                               </div>
@@ -2933,6 +2933,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       <input
                         type={showCurrentPass ? 'text' : 'password'}
                         value={currentPasswordInput}
+                        data-no-farsi-digits="true"
                         onChange={(e) => setCurrentPasswordInput(e.target.value)}
                         placeholder="رمز عبور فعلی..."
                         className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"
@@ -2957,6 +2958,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         <input
                           type={showNewPass ? 'text' : 'password'}
                           value={newPasswordInput}
+                          data-no-farsi-digits="true"
                           onChange={(e) => setNewPasswordInput(e.target.value)}
                           placeholder="رمز عبور جدید..."
                           className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"
@@ -2979,6 +2981,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         <input
                           type={showConfirmPass ? 'text' : 'password'}
                           value={confirmPasswordInput}
+                          data-no-farsi-digits="true"
                           onChange={(e) => setConfirmPasswordInput(e.target.value)}
                           placeholder="تکرار رمز جدید..."
                           className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-stone-300 text-stone-900 text-xs focus:border-amber-500 focus:outline-none"

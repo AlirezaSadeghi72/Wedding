@@ -238,15 +238,17 @@ app.post('/api/upload', (req, res) => {
       return res.status(400).json({ success: false, error: 'فایلی ارسال نشده است' });
     }
 
-    // Extract base64 payload & MIME type
-    const matches = fileData.match(/^data:([A-Za-z0-9-+/.]+);base64,(.+)$/);
+    // Extract base64 payload & MIME type reliably without regular expression limitations
     let buffer: Buffer;
     let mime = '';
     let extension = '';
 
-    if (matches && matches.length === 3) {
-      mime = matches[1].toLowerCase();
-      buffer = Buffer.from(matches[2], 'base64');
+    if (fileData.startsWith('data:') && fileData.includes(';base64,')) {
+      const parts = fileData.split(';base64,');
+      const header = parts[0]; // e.g. "data:image/png"
+      mime = header.substring(5).toLowerCase(); // remove "data:"
+      const base64Content = parts.slice(1).join(';base64,');
+      buffer = Buffer.from(base64Content, 'base64');
     } else {
       buffer = Buffer.from(fileData, 'base64');
     }

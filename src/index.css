@@ -1,25 +1,42 @@
 @import "tailwindcss";
+@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/Vazirmatn-FD-font-face.css');
 
 @layer base {
   body {
-    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Vazirmatn FD', 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-variant-numeric: persian-digits;
+    font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1;
   }
 }
 
+input, select, textarea, button {
+  font-family: 'Vazirmatn FD', 'Vazirmatn', sans-serif !important;
+  font-variant-numeric: persian-digits !important;
+  font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1 !important;
+}
+
 .font-vazir {
-  font-family: 'Vazirmatn', sans-serif;
+  font-family: 'Vazirmatn FD', 'Vazirmatn', sans-serif;
+  font-variant-numeric: persian-digits;
+  font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1;
 }
 
 .font-amiri {
   font-family: 'Amiri', 'Vazirmatn', serif;
+  font-variant-numeric: persian-digits;
+  font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1;
 }
 
 .font-gulzar {
   font-family: 'Gulzar', 'Amiri', serif;
+  font-variant-numeric: persian-digits;
+  font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1;
 }
 
 .font-scheherazade {
   font-family: 'Scheherazade New', 'Amiri', serif;
+  font-variant-numeric: persian-digits;
+  font-feature-settings: "locl" 1, "ss01" 1, "cv11" 1;
 }
 
 .font-cinzel {

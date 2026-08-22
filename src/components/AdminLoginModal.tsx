@@ -218,15 +218,16 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={pinInput}
+                data-no-farsi-digits="true"
                 disabled={lockout.isLocked || isSubmitting}
                 onChange={(e) => {
-                  setPinInput(normalizeDigits(e.target.value));
+                  setPinInput(e.target.value);
                   setError('');
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="رمز عبور مدیریت..."
                 autoFocus
-                className={`w-full px-4 py-3 text-center text-lg tracking-widest rounded-2xl bg-amber-50/50 border focus:outline-none font-mono shadow-inner transition-colors ${
+                className={`w-full px-4 py-3 text-center text-lg tracking-widest rounded-2xl bg-amber-50/50 border focus:outline-none font-vazir shadow-inner transition-colors ${
                   lockout.isLocked
                     ? 'border-rose-300 text-stone-400 cursor-not-allowed opacity-60'
                     : 'border-amber-300 focus:border-amber-500 text-stone-900 placeholder:text-stone-400'

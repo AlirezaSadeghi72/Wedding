@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Gift, Copy, Check, Sparkles, CreditCard, HeartHandshake } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GiftRegistryData } from '../types';
+import { toPersianDigits } from '../utils/dateUtils';
 
 interface Props {
   registry?: GiftRegistryData;
@@ -102,8 +103,8 @@ export default function GiftRegistrySection({ registry, isLight }: Props) {
           {/* Card Number */}
           <div className="my-4 text-center relative z-10">
             <span className="text-[11px] text-stone-300 block mb-1">شماره کارت بانکی:</span>
-            <div className="font-mono text-xl sm:text-2xl font-bold tracking-widest text-amber-100 text-shadow-sm select-all">
-              {registry.cardNumber}
+            <div className="font-vazir text-xl sm:text-2xl font-bold tracking-widest text-amber-100 text-shadow-sm select-all">
+              {toPersianDigits(registry.cardNumber)}
             </div>
           </div>
 
