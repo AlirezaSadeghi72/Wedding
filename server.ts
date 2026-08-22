@@ -399,7 +399,7 @@ app.post('/api/rsvp', (req, res) => {
   }
 
   const attending = req.body.attending === 'no' ? 'no' : 'yes';
-  const guestCount = Math.min(Math.max(Number(req.body.guestCount) || 1, 1), 20);
+  const guestCount = Math.min(Math.max(Number(req.body.guestCount) || 1, 1), 50);
   const dietaryNotes = sanitize(req.body.dietaryNotes, 200);
   const message = sanitize(req.body.message, 500);
 

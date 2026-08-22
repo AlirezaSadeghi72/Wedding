@@ -27,6 +27,20 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [countError, setCountError] = useState('');
+
+  const maxGuestsAllowed = data.rsvpConfig?.maxGuestsPerParty || 10;
+  const predefinedButtonsCount = Math.min(6, maxGuestsAllowed);
+  const quickNumbers = Array.from({ length: predefinedButtonsCount }, (_, i) => i + 1);
+
+  const safeParseCount = (val: number | string | ''): number => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const englishDigits = toEnglishDigits(String(val)).replace(/\D/g, '');
+    return parseInt(englishDigits) || 0;
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,25 +65,39 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    let hasError = false;
+    setNameError('');
+    setPhoneError('');
+    setCountError('');
+    setErrorMsg('');
+
     if (!guestName.trim()) {
-      setErrorMsg('لطفاً نام و نام خانوادگی خود را وارد فرمایید');
-      return;
+      setNameError('لطفاً نام و نام خانوادگی خود را وارد فرمایید');
+      hasError = true;
     }
 
     const cleanedPhone = normalizePhoneNumber(phone);
 
     if (data.rsvpConfig.requirePhone && !cleanedPhone) {
-      setErrorMsg('وارد کردن شماره موبایل الزامی است');
-      return;
+      setPhoneError('وارد کردن شماره موبایل الزامی است');
+      hasError = true;
+    } else if (cleanedPhone && !isValidIranianMobile(cleanedPhone)) {
+      setPhoneError('لطفاً شماره موبایل معتبر ۱۱ رقمی وارد نمایید (مثال: ۰۹۱۲۳۴۵۶۷۸۹)');
+      hasError = true;
     }
 
-    if (cleanedPhone && !isValidIranianMobile(cleanedPhone)) {
-      setErrorMsg('لطفاً شماره موبایل معتبر ۱۱ رقمی وارد نمایید (مثال: ۰۹۱۲۳۴۵۶۷۸۹)');
+    const countNum = safeParseCount(guestCount);
+    if (attending === 'yes' && (guestCount === '' || isNaN(countNum) || countNum < 1 || countNum > maxGuestsAllowed)) {
+      setCountError(`لطفاً تعداد کل حاضرین را عددی بین ۱ تا ${toPersianDigits(maxGuestsAllowed)} وارد نمایید`);
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMsg('');
 
     try {
       const response = await fetch('/api/rsvp', {
@@ -79,7 +107,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
           guestName: guestName.trim(),
           phone: cleanedPhone,
           attending,
-          guestCount: attending === 'yes' ? (Number(guestCount) > 0 ? Number(guestCount) : 1) : 0,
+          guestCount: attending === 'yes' ? (safeParseCount(guestCount) > 0 ? safeParseCount(guestCount) : 1) : 0,
           dietaryNotes: dietaryNotes.trim(),
           songRequest: songRequest.trim(),
           message: message.trim()
@@ -160,7 +188,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
             <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-sm max-w-md leading-relaxed mb-6`}>
               {attending === 'yes'
-                ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${Number(guestCount) > 1 ? `به همراه ${toPersianDigits(Number(guestCount) - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
+                ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${safeParseCount(guestCount) > 1 ? `به همراه ${toPersianDigits(safeParseCount(guestCount) - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
                 : `با سپاس از اطلاع‌رسانی شما (${guestName}). دلتنگ حضورتان خواهیم بود و آرزوی سلامتی و بهترین‌ها را برایتان داریم.`}
             </p>
 
@@ -246,15 +274,26 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     type="text"
                     required
                     value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
+                    onChange={(e) => {
+                      setGuestName(e.target.value);
+                      if (nameError) setNameError('');
+                    }}
                     placeholder="مثلاً: دکتر علی صادقی و بانو"
                     className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
-                      isLight
+                      nameError
+                        ? 'border-rose-500 bg-rose-50/5'
+                        : isLight
                         ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
                         : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
                     } border focus:outline-none`}
                   />
                 </div>
+                {nameError && (
+                  <p className="mt-1 text-xs text-rose-500 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {nameError}
+                  </p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -269,40 +308,72 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     dir="ltr"
                     required={data.rsvpConfig.requirePhone}
                     value={toPersianDigits(phone)}
-                    onChange={(e) => setPhone(sanitizePhoneInput(e.target.value))}
+                    onChange={(e) => {
+                      setPhone(sanitizePhoneInput(e.target.value));
+                      if (phoneError) setPhoneError('');
+                    }}
                     placeholder="۰۹۱۲۳۴۵۶۷۸۹"
                     maxLength={11}
                     className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
-                      isLight
+                      phoneError
+                        ? 'border-rose-500 bg-rose-50/5'
+                        : isLight
                         ? 'bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-500'
                         : 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
                     } border focus:outline-none text-right font-vazir tracking-wider`}
                   />
                 </div>
+                {phoneError && (
+                  <p className="mt-1 text-xs text-rose-500 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {phoneError}
+                  </p>
+                )}
               </div>
 
               {/* Guest Count (if attending) */}
               {attending === 'yes' && (
-                <div className={`p-3.5 rounded-2xl ${isLight ? 'bg-amber-50/80 border-amber-300/60' : 'bg-stone-950/60 border-stone-800'} border space-y-3`}>
+                <div className={`p-3.5 rounded-2xl ${
+                  countError
+                    ? 'bg-rose-50/5 border-rose-500'
+                    : isLight 
+                    ? 'bg-amber-50/80 border-amber-300/60' 
+                    : 'bg-stone-950/60 border-stone-800'
+                } border space-y-3`}>
                   <div className="flex items-center justify-between">
-                    <label className={`text-xs ${isLight ? 'text-stone-800 font-semibold' : 'text-stone-300 font-medium'} flex items-center gap-1.5`}>
-                      <Users className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
+                    <label className={`text-xs ${
+                      countError
+                        ? 'text-rose-500 font-bold'
+                        : isLight 
+                        ? 'text-stone-800 font-semibold' 
+                        : 'text-stone-300 font-medium'
+                    } flex items-center gap-1.5`}>
+                      <Users className={`w-4 h-4 ${countError ? 'text-rose-500' : isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                       <span>تعداد کل حاضرین (به همراه خودتان):</span>
                     </label>
-                    <span className={`${isLight ? 'text-amber-800 font-black' : 'text-amber-400 font-bold'} font-cinzel text-sm`}>
-                      {toPersianDigits(guestCount || 1)} نفر
+                    <span className={`${
+                      countError
+                        ? 'text-rose-500 font-black'
+                        : isLight 
+                        ? 'text-amber-800 font-black' 
+                        : 'text-amber-400 font-bold'
+                    } font-cinzel text-sm`}>
+                      {toPersianDigits(safeParseCount(guestCount) || 1)} نفر
                     </span>
                   </div>
-
-                  {/* Predefined Quick Buttons (1 to 6) */}
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {[1, 2, 3, 4, 5, 6].map((num) => {
+ 
+                  {/* Predefined Quick Buttons */}
+                  <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${predefinedButtonsCount}, minmax(0, 1fr))` }}>
+                    {quickNumbers.map((num) => {
                       const isSelected = guestCount === num && !isCustomCountMode;
                       return (
                         <button
                           key={num}
                           type="button"
-                          onClick={() => handleSelectPredefinedCount(num)}
+                          onClick={() => {
+                            handleSelectPredefinedCount(num);
+                            if (countError) setCountError('');
+                          }}
                           className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                             isSelected
                               ? 'bg-amber-500 border-amber-400 text-stone-950 shadow-md shadow-amber-500/20'
@@ -316,36 +387,51 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       );
                     })}
                   </div>
-
+ 
                   {/* Option for custom / more than 6 guests */}
                   <div className="pt-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsCustomCountMode(true);
-                          if (Number(guestCount) <= 6) setGuestCount(7);
-                        }}
-                        className={`flex-1 py-1.5 px-3 rounded-xl border text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                          isCustomCountMode || Number(guestCount) > 6
-                            ? 'bg-amber-500/20 border-amber-400 text-amber-800 font-bold'
-                            : isLight
-                            ? 'bg-white border-stone-300 text-stone-700 hover:text-stone-900'
-                            : 'bg-stone-900 border-stone-800 text-stone-400 hover:text-stone-200'
-                        }`}
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>بیشتر از ۶ نفر (تعداد دلخواه)</span>
-                      </button>
-                    </div>
-
+                    {maxGuestsAllowed > 6 && (
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsCustomCountMode(true);
+                            if (safeParseCount(guestCount) <= 6) {
+                              setGuestCount(Math.min(7, maxGuestsAllowed));
+                            }
+                            if (countError) setCountError('');
+                          }}
+                          className={`flex-1 py-1.5 px-3 rounded-xl border text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                            isCustomCountMode || safeParseCount(guestCount) > 6
+                              ? 'bg-amber-500/20 border-amber-400 text-amber-800 font-bold'
+                              : isLight
+                              ? 'bg-white border-stone-300 text-stone-700 hover:text-stone-900'
+                              : 'bg-stone-900 border-stone-800 text-stone-400 hover:text-stone-200'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>بیشتر از ۶ نفر (تعداد دلخواه)</span>
+                        </button>
+                      </div>
+                    )}
+ 
                     {/* Numeric Stepper and Direct Input when custom mode is on or count > 6 */}
-                    {(isCustomCountMode || Number(guestCount) > 6) && (
-                      <div className={`mt-2.5 p-2.5 rounded-xl ${isLight ? 'bg-white border-amber-400/50' : 'bg-stone-900 border-amber-500/30'} border flex items-center justify-between gap-3`}>
+                    {(isCustomCountMode || safeParseCount(guestCount) > 6) && (
+                      <div className={`mt-2.5 p-2.5 rounded-xl ${
+                        countError
+                          ? 'bg-rose-50/5 border-rose-500/30'
+                          : isLight 
+                          ? 'bg-white border-amber-400/50' 
+                          : 'bg-stone-900 border-amber-500/30'
+                      } border flex items-center justify-between gap-3`}>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setGuestCount(Math.max(1, (Number(guestCount) || 1) - 1))}
+                            onClick={() => {
+                              const current = safeParseCount(guestCount);
+                              setGuestCount(Math.max(1, current - 1));
+                              if (countError) setCountError('');
+                            }}
                             className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Minus className="w-4 h-4" />
@@ -353,9 +439,9 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                           <input
                             type="text"
                             inputMode="numeric"
-                            pattern="[0-9]*"
                             value={guestCount === '' ? '' : toPersianDigits(guestCount)}
                             onChange={(e) => {
+                              if (countError) setCountError('');
                               const rawVal = e.target.value;
                               if (rawVal === '') {
                                 setGuestCount('');
@@ -370,14 +456,24 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                               if (isNaN(num)) {
                                 setGuestCount('');
                               } else {
-                                setGuestCount(Math.min(50, num));
+                                setGuestCount(Math.min(maxGuestsAllowed, num));
                               }
                             }}
-                            className={`w-16 py-1 px-2 text-center rounded-lg ${isLight ? 'bg-stone-100 border-stone-300 text-amber-900' : 'bg-stone-950 border-stone-700 text-amber-300'} border font-bold text-sm font-vazir`}
+                            className={`w-16 py-1 px-2 text-center rounded-lg ${
+                              countError
+                                ? 'bg-rose-50/10 border-rose-500 text-rose-700'
+                                : isLight 
+                                ? 'bg-stone-100 border-stone-300 text-amber-900' 
+                                : 'bg-stone-950 border-stone-700 text-amber-300'
+                            } border font-bold text-sm font-vazir`}
                           />
                           <button
                             type="button"
-                            onClick={() => setGuestCount((Number(guestCount) || 1) + 1)}
+                            onClick={() => {
+                              const current = safeParseCount(guestCount);
+                              setGuestCount(Math.min(maxGuestsAllowed, current + 1));
+                              if (countError) setCountError('');
+                            }}
                             className={`w-8 h-8 rounded-lg ${isLight ? 'bg-amber-100 hover:bg-amber-200 text-amber-900' : 'bg-stone-800 hover:bg-stone-700 text-amber-300'} flex items-center justify-center cursor-pointer font-bold`}
                           >
                             <Plus className="w-4 h-4" />
@@ -389,6 +485,12 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       </div>
                     )}
                   </div>
+                  {countError && (
+                    <p className="mt-1 text-xs text-rose-500 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {countError}
+                    </p>
+                  )}
                 </div>
               )}
 
