@@ -1,18 +1,19 @@
 # 💍 سامانه آنلاین کارت دعوت دیجیتال عروسی (Wedding Digital Invitation)
 
-سامانه‌ای مدرن، لوکس و انعطاف‌پذیر برای ساخت، سفارشی‌سازی و ارسال کارت‌های دعوت دیجیتال عروسی با پاکت متحرک، مهر و موم طرح دو حلقه، پخش موزیک اختصاصی، تایید حضور آنلاین (RSVP)، دفترچه یادبود و مسیریابی هوشمند.
+سامانه‌ای مدرن، لوکس و انعطاف‌پذیر برای ساخت، سفارشی‌سازی و ارسال کارت‌های دعوت دیجیتال عروسی با پاکت متحرک، مهر و موم دایره‌ای دو حلقه، پخش موزیک اختصاصی، تایید حضور آنلاین (RSVP)، دفترچه یادبود و مسیریابی هوشمند.
 
 ---
 
-## ✨ ویژگی‌های برجسته
+## ✨ ویژگی‌های برجسته و آخرین تغییرات
 
-- **💌 پاکت متحرک با مهر و موم دو حلقه:** بازگشایی انیمیشنی پاکت با لمس مهر و موم دو حلقه طلایی یا دلخواه.
+- **💌 پاکت متحرک با مهر دایره‌ای دو حلقه:** بازگشایی انیمیشنی و اصیل پاکت با لمس مهر و موم دایره‌ای کلاسیک با نماد طلایی دو حلقه ازدواج پیوسته.
 - **🎨 پلت رنگی شاد و گرم:** دارای ۱۵ تم متناسب با بزم‌های شادی (طلا، رزگلدی، زمردی، یاسی، مرواریدی، شامپاینی و...) بدون تم‌های تاریک یا آزاردهنده چشم.
-- **🎵 مدیریت آسان موزیک:** تنظیم عنوان موزیک، آپلود مستقیم فایل صوتی (MP3/WAV) یا قرار دادن لینک مستقیم URL با پخش خودکار.
-- **📍 مسیریابی هوشمند:** پشتیبانی کامل از نقشه و اپلیکیشن‌های نشان، بلد، اسنپ، ویز (Waze) و گوگل مپس.
+- **📍 مسیریابی هوشمند سه‌گانه:** پشتیبانی مستقیم و سریع از سه اپلیکیشن اصلی مسیریابی شامل **گوگل مپ (Google Maps)**، **مسیریاب نشان (Neshan)** و **مسیریاب بلد (Balad)**.
+- **🎵 مدیریت و پخش موزیک اختصاصی:** تنظیم عنوان موزیک، آپلود مستقیم فایل صوتی یا قرار دادن لینک مستقیم همراه با پیش‌نمایش زنده در استودیو.
 - **💌 تایید حضور (RSVP):** ثبت نام مهمانان، تعداد همراهان، ترجیحات غذایی و پیغام‌های مبارک‌باد.
-- **📖 دفترچه یادبود دیجیتال:** امکان ثبت پیام‌های تبریک مهمانان به همراه لایک و ابراز احساسات.
-- **⏳ شمارش معکوس و یادآوری تقویم:** شمارش معکوس تا روز عروسی و امکان افزودن رویداد به گوگل تقویم.
+- **📖 دفترچه یادبود دیجیتال:** امکان ثبت پیام‌های تبریک مهمانان به همراه ابراز احساسات و لایک آنلاین.
+- **⛅ هواشناسی و اطلاعات جشن:** نمایش وضعیت جوی، دما و بهترین زمان عکاسی (Golden Hour) در روز عروسی.
+- **🛠️ استودیو ویرایشگر پیشرفته:** کنترل کامل متن‌ها، عکس‌ها، آدرس‌ها، وضعیت نمایش بخش‌های مختلف و تغییر رمز عبور مدیریت با سینک لحظه‌ای.
 - **⚡ پشتیبانی کامل از موبایل و تبلت:** طراحی کاملاً واکنش‌گرا (Responsive) و بهینه‌سازی‌شده برای تمامی نمایشگرها.
 
 ---
@@ -21,9 +22,10 @@
 
 برای اجرا یا استقرار این پروژه، به موارد زیر نیاز دارید:
 
-- **Node.js:** نسخه 18.x یا بالاتر (پیشنهادی: Node 20 LTS)
-- **npm:** نسخه 9.x یا بالاتر (همراه با Node نصب می‌شود)
+- **Node.js:** نسخه 18.x یا بالاتر (پیشنهادی: Node.js 20 LTS)
+- **npm:** نسخه 9.x یا بالاتر
 - **Git:** جهت مدیریت نسخه و آپلود روی گیت‌هاب
+- **سرور لینوکس ابونتو (Ubuntu Server):** نسخه 20.04 یا 22.04 یا 24.04 LTS (برای استقرار عملیاتی)
 
 ---
 
@@ -52,9 +54,9 @@
 
 ---
 
-## 📦 اموزش خروجی گرفتن (Build for Production)
+## 📦 خروجی گرفتن برای پروداکشن (Build for Production)
 
-برای گرفتن خروجی نهایی و آماده‌سازی جهت آپلود روی سرور لینوکس:
+برای گرفتن خروجی نهایی و آماده‌سازی جهت آپلود روی سرور:
 
 ```bash
 npm run build
@@ -71,56 +73,155 @@ npm run start
 
 ---
 
-## 🐧 راهنمای جامع استقرار و آپلود روی سرور لینوکس (Linux Deployment Guide)
+## 🐧 راهنمای جامع استقرار روی سرور لینوکس ابونتو (Ubuntu Linux Deployment)
 
-برای اجرای کارت دعوت آنلاین روی سرور لینوکس (مانند Ubuntu / Debian / CentOS)، می‌توانید از روش زیر که رایج‌ترین و مطمئن‌ترین روش است استفاده کنید:
+این راهنما گام به گام مراحل نصب، کانفیگ Nginx، دریافت گواهی SSL و **تنظیم بالا آمدن اتوماتیک برنامه در صورت ریستارت شدن سرور (Auto-restart on Reboot)** را در سیستم‌عامل ابونتو (Ubuntu 20.04 / 22.04 / 24.04 LTS) توضیح می‌دهد.
 
-### روش اول: استقرار با PM2 و Nginx (پیشنهاد اصلی)
+---
 
-#### ۱. اتصال به سرور لینوکس و نصب پیش‌نیازها
-با SSH به سرور متصل شوید:
+### گام ۱: به‌روزرسانی پکیج‌های ابونتو و نصب پیش‌نیازها
+
+با SSH به سرور ابونتو متصل شوید:
 ```bash
 ssh root@YOUR_SERVER_IP
 ```
 
-نصب Node.js (نسخه 20) و PM2:
+مخازن سیستم‌عامل را به‌روزرسانی کنید:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs nginx git
-sudo npm install -y -g pm2
+sudo apt update && sudo apt upgrade -y
 ```
 
-#### ۲. انتقال پروژه به سرور
-پروژه را از ریپوزیتوری گیت‌هاب کلون کنید یا پوشه پروژه را آپلود نمایید:
+ابزارهای ضروری، Git و Nginx را نصب کنید:
+```bash
+sudo apt install -y curl git nginx ufw
+```
+
+---
+
+### گام ۲: نصب Node.js 20 LTS و PM2
+
+نصب آخرین نسخه Node.js 20 LTS از طریق NodeSource:
+```bash
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+بررسی نصب موفق Node.js و npm:
+```bash
+node -v
+npm -v
+```
+
+نصب مدیریت پروسه **PM2** به صورت سراسری (Global):
+```bash
+sudo npm install -g pm2
+```
+
+---
+
+### گام ۳: تنظیم دیوار آتشین (UFW Firewall)
+
+پورت‌های مورد نیاز (SSH, HTTP, HTTPS) را باز کنید:
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw --force enable
+```
+
+---
+
+### گام ۴: دریافت پروژه، نصب وابستگی‌ها و بیلد
+
+پروژه را در مسیر `/var/www/wedding-card` کلون کنید:
 ```bash
 cd /var/www
 git clone https://github.com/USERNAME/wedding-card.git
 cd wedding-card
 ```
 
-#### ۳. نصب وابستگی‌ها و بیلد پروژه
+نصب وابستگی‌ها و ساخت خروجی پروداکشن:
 ```bash
 npm install
 npm run build
 ```
 
-#### ۴. اجرای برنامه با PM2
-جهت اجرا و زنده نگه‌داشتن برنامه در پس‌زمینه سرور:
-```bash
-pm2 start dist/server.cjs --name "wedding-card"
-pm2 save
-pm2 startup
-```
+---
 
-با این دستور برنامه روی پورت `3000` سرور شروع به کار می‌کند.
+### گام ۵: اجرا با PM2 و تنظیم بالا آمدن اتوماتیک پس از ریست شدن سرور (Auto-Start on Reboot)
 
-#### ۵. تنظیم Nginx به عنوان Reverse Proxy
-فایل پیکربندی Nginx را بسازید:
+برای اینکه برنامه همیشه در پس‌زمینه اجرا شود و **در صورت ریستارت شدن یا خاموش و روشن شدن سرور ابونتو، به صورت خودکار بالا بیاید**، مراحل زیر را اجرا کنید:
+
+۱. اجرا کردن برنامه با PM2:
+   ```bash
+   pm2 start dist/server.cjs --name "wedding-card"
+   ```
+
+۲. ذخیره لیست پروسه‌های فعال PM2:
+   ```bash
+   pm2 save
+   ```
+
+۳. فعال‌سازی سرویس Auto-startup ابونتو:
+   ```bash
+   pm2 startup
+   ```
+
+> ⚠️ **نکته مهم:** اجرای دستور `pm2 startup` یک خروجی دستور در ترمینال به شما می‌دهد (مشابه `sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u root --hp /root`). **دقیقاً همان دستور پیشنهادی را کپی کرده و در ترمینال اجرا کنید** تا سرویس systemd ثبت شود.
+
+۴. بررسی وضعیت سرویس:
+   ```bash
+   pm2 status
+   ```
+
+---
+
+### 💡 روش جایگزین: بالا آمدن اتوماتیک با Systemd نیتیو لینوکس (Optional)
+
+اگر تمایل دارید به جای PM2 از سرویس‌دهنده خود سیستم‌عامل ابونتو (Systemd) استفاده کنید:
+
+۱. فایل سرویس جدید بسازید:
+   ```bash
+   sudo nano /etc/systemd/system/wedding-card.service
+   ```
+
+۲. محتوای زیر را درون آن قرار داده و ذخیره کنید (Ctrl+O و سپس Enter، برای خروج Ctrl+X):
+   ```ini
+   [Unit]
+   Description=Wedding Digital Invitation Node.js App
+   After=network.target
+
+   [Service]
+   Type=simple
+   User=root
+   WorkingDirectory=/var/www/wedding-card
+   ExecStart=/usr/bin/node dist/server.cjs
+   Restart=always
+   RestartSec=10
+   Environment=NODE_ENV=production PORT=3000
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+
+۳. سرویس را فعال و روشن کنید:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable wedding-card
+   sudo systemctl start wedding-card
+   ```
+
+با این کار، سرویس سیستم‌عامل مسئولیت بالا آوردن اتوماتیک پروژه در هر ریستارت را بر عهده می‌گیرد.
+
+---
+
+### گام ۶: تنظیم Nginx به عنوان Reverse Proxy
+
+یک فایل کانفیگ برای دامنه‌تان در Nginx بسازید:
 ```bash
 sudo nano /etc/nginx/sites-available/wedding-card
 ```
 
-محتوای زیر را درون آن قرار دهید (دامنه خود را جایگزین کنید):
+کدهای زیر را قرار داده و `your-domain.com` را با دامنه خود جایگزین کنید:
 ```nginx
 server {
     listen 80;
@@ -135,130 +236,100 @@ server {
         proxy_cache_bypass $http_upgrade;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     client_max_body_size 50M;
 }
 ```
 
-فعال‌سازی تنظیمات و ریستارت Nginx:
+فعال‌سازی کانفیگ و تست Nginx:
 ```bash
 sudo ln -s /etc/nginx/sites-available/wedding-card /etc/nginx/sites-enabled/
 sudo nginx -t
+sudo systemctl enable nginx
 sudo systemctl restart nginx
 ```
 
-#### ۶. فعال‌سازی HTTPS و گواهی SSL رایگان (Let's Encrypt)
+---
+
+### گام ۷: فعال‌سازی HTTPS و گواهی رایگان SSL (Let's Encrypt)
+
+نصب Certbot و گرفتن گواهی SSL:
 ```bash
-sudo apt-get install certbot python3-certbot-nginx -y
+sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com -d www.your-domain.com
 ```
 
-تبریک! کارت دعوت دیجیتال شما اکنون با پروتکل امن HTTPS روی دامنه‌تان فعال است.
-
----
-
-### روش دوم: استقرار با Docker (اختیاری)
-
-اگر ترجیح می‌دهید از داکر استفاده کنید، یک فایل `Dockerfile` با محتوای زیر بسازید:
-
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["node", "dist/server.cjs"]
-```
-
-سپس بیلد و اجرا کنید:
+تست تمدید خودکار گواهی SSL:
 ```bash
-docker build -t wedding-card .
-docker run -d -p 3000:3000 --name wedding-app wedding-card
+sudo certbot renew --dry-run
 ```
 
 ---
 
-## ⚙️ راهنمای کامل تنظیمات گیت و آپلود در GitHub (Git Configuration Guide)
+### گام ۸: تست سلامت و بالا آمدن اتوماتیک سرور
 
-برای قرار دادن پروژه در مخزن (Repository) گیت‌هاب خود، مراحل زیر را گام‌به‌گام انجام دهید:
-
-### ۱. مقداردهی اولیه‌ گیت (در صورت نیاز)
-در ترمینال سیستم خود در پوشه اصلی پروژه وارد کنید:
+برای اطمینان از اینکه همه چیز پس از ریستارت ابونتو خودکار بالا می‌آید، سرور را ریستارت کنید:
 ```bash
-git init
+sudo reboot
 ```
 
-### ۲. پیکربندی نام و ایمیل در گیت
-```bash
-git config user.name "نام شما"
-git config user.email "your-email@example.com"
-```
-
-### ۳. بررسی وضعیت فایل‌ها و افزودن به Staging
-```bash
-git status
-git add .
-```
-
-### ۴. ثبت کامیت تغییرات
-```bash
-git commit -m "Initial commit: Wedding Digital Invitation with Warm Themes and Ring Seal"
-```
-
-### ۵. تنظیم شاخه اصلی روی main
-```bash
-git branch -M main
-```
-
-### ۶. اتصال به ریپوزیتوری GitHub
-ابتدا یک ریپوزیتوری جدید در [GitHub](https://github.com/new) بسازید (بدون افزودن README اولیه). سپس لینک آن را جایگزین کنید:
-```bash
-git remote add origin https://github.com/USERNAME/REPOSITORY-NAME.git
-```
-
-### ۷. پوش کردن کدها به GitHub
-```bash
-git push -u origin main
-```
-
-اگر بعداً تغییراتی ایجاد کردید، برای به‌روزرسانی در گیت‌هاب کافیست دستورات زیر را بزنید:
-```bash
-git add .
-git commit -m "توضیح تغییرات جدید"
-git push
-```
+پس از ۱ دقیقه، مجدداً وارد سرور شده یا آدرس سایت خود را در مرورگر باز کنید (`https://your-domain.com`). برنامه بدون نیاز به هیچ دستوری باید کاملاً آنلاین و در دسترس باشد!
 
 ---
 
-## 📂 ساختار کلی پوشه‌های پروژه
+## ⚙️ راهنمای کامل گیت و آپلود در GitHub
+
+برای قرار دادن یا به‌روزرسانی پروژه در مخزن GitHub:
+
+۱. مقداردهی و بررسی وضعیت گیت:
+   ```bash
+   git init
+   git status
+   ```
+
+۲. افزودن تغییرات و ثبت کامیت:
+   ```bash
+   git add .
+   git commit -m "Update: Ring seal, 3-map navigation, and auto-start deployment guide"
+   ```
+
+۳. اتصال به مخزن گیت‌هاب و پاش کردن کدها:
+   ```bash
+   git branch -M main
+   git remote add origin https://github.com/USERNAME/REPOSITORY-NAME.git
+   git push -u origin main
+   ```
+
+---
+
+## 📂 ساختار پوشه‌های پروژه
 
 ```
-├── dist/                   # پوشه خروجی نهایی بیلد شده
+├── dist/                   # خروجی پروداکشن (تولیدشده با npm run build)
 │   ├── index.html
-│   ├── server.cjs          # بک‌اند کامپایل‌شده
-│   └── assets/             # فایل‌های استاتیک فرانت‌اند
+│   └── server.cjs          # سرور بک‌اند کامل و باندل‌شده
 ├── src/
 │   ├── components/         # کامپوننت‌های رابط کاربری
-│   │   ├── WeddingEnvelope.tsx    # پاکت متحرک با مهر دو حلقه
-│   │   ├── StudioEditorModal.tsx  # مدال ویرایشگر کارت
-│   │   ├── MusicPlayer.tsx        # پخش‌کننده صوتی
+│   │   ├── WeddingEnvelope.tsx    # پاکت متحرک با مهر دایره‌ای دو حلقه
+│   │   ├── StudioEditorModal.tsx  # مدال استودیو تنظیمات و ویرایشگر
+│   │   ├── WeddingCardView.tsx    # نمای اصلی کارت دعوت
+│   │   ├── AudioPlayerFloating.tsx# موزیک پلیر
+│   │   ├── WeatherSection.tsx     # بخش هواشناسی جشن
 │   │   └── ...
 │   ├── data/
 │   │   ├── themes.ts       # ۱۵ تم رنگی شاد و گرم
 │   │   └── defaultWedding.ts
-│   ├── types.ts            # تایپ‌های TypeScript
-│   └── App.tsx             # کامپوننت اصلی
-├── server.ts               # سرور Express و APIها
-├── package.json            # اسکریپت‌ها و وابستگی‌ها
-├── README.md               # راهنمای کامل پروژه
-└── .gitignore              # فایل‌های نادیده‌گرفته‌شده در گیت
+│   ├── types.ts            # تایپ‌های تعاریف پروژه
+│   └── App.tsx             # کامپوننت ریشه
+├── server.ts               # سرور Express
+├── package.json            # وابستگی‌ها و اسکریپت‌های اجرایی
+└── README.md               # راهنمای کامل پروژه و استقرار
 ```
 
 ---
 
-## 💖 پشتیبانی و توسعه
+## 💖 پشتیبانی و بهره‌برداری
 
-این پروژه آماده نصب، شخصی‌سازی و بهره‌برداری کامل جهت برگزاری جشن‌های عروسی شاد و باشکوه است. در صورت نیاز به توسعه امکانات بیشتر، می‌توانید بخش‌های جدیدی به پوشه `src/components/` اضافه نمایید.
+این پروژه به کامل‌ترین شکل ممکن تست گردیده و آماده بهره‌برداری برای مراسم‌های عقد و عروسی است.
