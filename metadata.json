@@ -1,0 +1,6 @@
+{
+  "name": "سامانه کارت دعوت دیجیتال عروسی",
+  "description": "طراحی و ارسال کارت دعوت هوشمند و لوکس عروسی با پاکت متحرک، مهر و موم اختصاصی، اشعار فارسی، موقعیت مکانی و تایید حضور (RSVP)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
