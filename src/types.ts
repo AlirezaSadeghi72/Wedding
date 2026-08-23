@@ -172,8 +172,8 @@ export interface WeddingCardData {
     hall?: string;
     city: string;
     address: string;
-    lat: number;
-    lng: number;
+    lat: number | string;
+    lng: number | string;
     googleMapsUrl?: string;
     neshanUrl?: string;
     baladUrl?: string;

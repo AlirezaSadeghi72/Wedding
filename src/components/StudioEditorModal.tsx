@@ -2195,32 +2195,36 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 <div>
                   <label className="block text-xs text-stone-700 font-semibold mb-1">عرض جغرافیایی (Latitude):</label>
                   <input
-                    type="number"
-                    step="0.0001"
-                    value={formData.venue.lat}
+                    type="text"
+                    dir="ltr"
+                    data-no-farsi-digits="true"
+                    value={formData.venue.lat !== undefined && formData.venue.lat !== null ? String(formData.venue.lat) : ''}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        venue: { ...formData.venue, lat: parseFloat(e.target.value) || 0 }
+                        venue: { ...formData.venue, lat: e.target.value }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
+                    placeholder="35.7335"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono focus:border-amber-500 focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs text-stone-700 font-semibold mb-1">طول جغرافیایی (Longitude):</label>
                   <input
-                    type="number"
-                    step="0.0001"
-                    value={formData.venue.lng}
+                    type="text"
+                    dir="ltr"
+                    data-no-farsi-digits="true"
+                    value={formData.venue.lng !== undefined && formData.venue.lng !== null ? String(formData.venue.lng) : ''}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        venue: { ...formData.venue, lng: parseFloat(e.target.value) || 0 }
+                        venue: { ...formData.venue, lng: e.target.value }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
+                    placeholder="51.0825"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono focus:border-amber-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -2238,7 +2242,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <input
                       type="text"
                       dir="ltr"
-                      value={formData.venue.googleMapsUrl || ''}
+                      data-no-farsi-digits="true"
+                      value={formData.venue.googleMapsUrl ?? ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -2246,7 +2251,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="https://maps.google.com/..."
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none font-sans"
                     />
                   </div>
 
@@ -2255,7 +2260,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <input
                       type="text"
                       dir="ltr"
-                      value={formData.venue.neshanUrl || ''}
+                      data-no-farsi-digits="true"
+                      value={formData.venue.neshanUrl ?? ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -2263,7 +2269,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="https://nshn.ir/..."
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none font-sans"
                     />
                   </div>
 
@@ -2272,7 +2278,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <input
                       type="text"
                       dir="ltr"
-                      value={formData.venue.baladUrl || ''}
+                      data-no-farsi-digits="true"
+                      value={formData.venue.baladUrl ?? ''}
                       onChange={(e) =>
                         setFormData({
                           ...formData,
@@ -2280,7 +2287,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         })
                       }
                       placeholder="https://balad.ir/..."
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 focus:border-amber-500 focus:outline-none font-sans"
                     />
                   </div>
                 </div>
@@ -2324,7 +2331,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       <input
                         type="text"
                         dir="ltr"
-                        value={toPersianDigits(formData.giftRegistry.cardNumber || '')}
+                        data-no-farsi-digits="true"
+                        value={formData.giftRegistry.cardNumber || ''}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -2332,7 +2340,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="6037-9975-..."
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-vazir text-center font-bold"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-mono text-center font-bold"
                       />
                     </div>
 
@@ -2341,7 +2349,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       <input
                         type="text"
                         dir="ltr"
-                        value={toPersianDigits(formData.giftRegistry.iban || formData.giftRegistry.ibanNumber || '')}
+                        data-no-farsi-digits="true"
+                        value={formData.giftRegistry.iban || formData.giftRegistry.ibanNumber || ''}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -2349,7 +2358,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                           })
                         }
                         placeholder="IR000000000000000000000000"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-vazir text-center"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900 font-mono text-center font-bold"
                       />
                     </div>
 

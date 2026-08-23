@@ -55,6 +55,22 @@ function sanitize(input: any, maxLen = 500): string {
 
 const rsvpsFilePath = path.join(backupsDir, 'rsvps_store.json');
 const guestbookFilePath = path.join(backupsDir, 'guestbook_store.json');
+const photoLikesFilePath = path.join(backupsDir, 'photo_likes_store.json');
+const guestbookReactionsFilePath = path.join(backupsDir, 'guestbook_reactions_store.json');
+
+// SSE Real-Time Event Stream Clients
+const sseClients = new Set<express.Response>();
+
+export function broadcastSSE(type: string, payload: any) {
+  const message = `data: ${JSON.stringify({ type, payload })}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(message);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
 
 // Initial seed data
 const initialRsvpsSeed = [
@@ -361,9 +377,25 @@ const initialSettingsSeed = {
   ]
 };
 
+const initialPhotoLikesSeed = {
+  counts: {
+    'gal-1': 18,
+    'gal-2': 14,
+    'gal-3': 26,
+    'gal-4': 21
+  },
+  likedBy: {} as Record<string, string[]>
+};
+
+const initialGuestbookReactionsSeed = {
+  reactedBy: {} as Record<string, string[]>
+};
+
 let rsvpList = loadRSVPs();
 let guestbookList = loadGuestbook();
 let settingsData = loadSettings();
+let photoLikesData = loadPhotoLikes();
+let guestbookReactionsData = loadGuestbookReactions();
 
 function saveSettingsToFile(settingsObj: any) {
   try {
@@ -455,6 +487,72 @@ function loadGuestbook() {
   return initial;
 }
 
+function savePhotoLikesToFile(dataObj: any) {
+  try {
+    const dir = path.dirname(photoLikesFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(photoLikesFilePath, JSON.stringify(dataObj, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving photo likes to disk:', err);
+  }
+}
+
+function savePhotoLikes() {
+  savePhotoLikesToFile(photoLikesData);
+}
+
+function loadPhotoLikes() {
+  try {
+    if (fs.existsSync(photoLikesFilePath)) {
+      const data = fs.readFileSync(photoLikesFilePath, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object' && parsed.counts) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading photo likes from disk:', err);
+  }
+  const initial = { ...initialPhotoLikesSeed };
+  savePhotoLikesToFile(initial);
+  return initial;
+}
+
+function saveGuestbookReactionsToFile(dataObj: any) {
+  try {
+    const dir = path.dirname(guestbookReactionsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(guestbookReactionsFilePath, JSON.stringify(dataObj, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving guestbook reactions to disk:', err);
+  }
+}
+
+function saveGuestbookReactions() {
+  saveGuestbookReactionsToFile(guestbookReactionsData);
+}
+
+function loadGuestbookReactions() {
+  try {
+    if (fs.existsSync(guestbookReactionsFilePath)) {
+      const data = fs.readFileSync(guestbookReactionsFilePath, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object' && parsed.reactedBy) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Error reading guestbook reactions from disk:', err);
+  }
+  const initial = { ...initialGuestbookReactionsSeed };
+  saveGuestbookReactionsToFile(initial);
+  return initial;
+}
+
 // Lazy Google Gen AI helper
 let aiClient: GoogleGenAI | null = null;
 function getAi(): GoogleGenAI {
@@ -476,6 +574,31 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// SSE Real-Time Event Stream
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  sseClients.add(res);
+  res.write(`data: ${JSON.stringify({ type: 'CONNECTED', payload: { time: Date.now(), totalClients: sseClients.size } })}\n\n`);
+
+  const keepAliveInterval = setInterval(() => {
+    try {
+      res.write(': keep-alive\n\n');
+    } catch {
+      clearInterval(keepAliveInterval);
+      sseClients.delete(res);
+    }
+  }, 20000);
+
+  req.on('close', () => {
+    clearInterval(keepAliveInterval);
+    sseClients.delete(res);
+  });
+});
+
 // Wedding settings endpoints
 app.get('/api/settings', (req, res) => {
   try {
@@ -493,6 +616,7 @@ app.post('/api/settings', (req, res) => {
     }
     settingsData = { ...settingsData, ...updated };
     saveSettings();
+    broadcastSSE('SETTINGS_UPDATED', settingsData);
     res.json({ success: true, data: settingsData });
   } catch (err) {
     res.status(500).json({ success: false, error: 'خطا در ذخیره‌سازی تنظیمات کارت دعوت' });
@@ -766,7 +890,68 @@ app.post('/api/rsvp/reset', (req, res) => {
   res.json({ success: true, message: 'تاییده‌های حضور با موفقیت بروزرسانی شد', data: rsvpList });
 });
 
-// Guestbook Endpoints with Sanitization
+// Gallery Photo Likes Endpoints with 1-Like-Per-Session Limit & Live Sync
+app.get('/api/gallery/likes', (req, res) => {
+  try {
+    res.json({ success: true, data: photoLikesData.counts || {} });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'خطا در دریافت لایک‌های گالری' });
+  }
+});
+
+app.post('/api/gallery/:id/like', (req, res) => {
+  try {
+    const photoId = sanitize(req.params.id, 100);
+    const sessionId = sanitize(req.body.sessionId, 100);
+
+    if (!photoId) {
+      return res.status(400).json({ success: false, error: 'شناسه عکس نامعتبر است' });
+    }
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'شناسه نشست (Session ID) الزامی است' });
+    }
+
+    if (!photoLikesData.likedBy) {
+      photoLikesData.likedBy = {};
+    }
+    if (!photoLikesData.likedBy[photoId]) {
+      photoLikesData.likedBy[photoId] = [];
+    }
+
+    // Check if this session has already liked this photo
+    if (photoLikesData.likedBy[photoId].includes(sessionId)) {
+      return res.status(200).json({
+        success: false,
+        alreadyLiked: true,
+        message: 'شما قبلاً این عکس را پسندیده‌اید',
+        likes: photoLikesData.counts[photoId] || 0
+      });
+    }
+
+    // Register like
+    photoLikesData.likedBy[photoId].push(sessionId);
+    photoLikesData.counts[photoId] = (photoLikesData.counts[photoId] || 0) + 1;
+    savePhotoLikes();
+
+    // Broadcast in real-time to all open clients/tabs
+    broadcastSSE('PHOTO_LIKES_UPDATED', {
+      photoId,
+      likes: photoLikesData.counts[photoId],
+      counts: photoLikesData.counts
+    });
+
+    res.json({
+      success: true,
+      alreadyLiked: false,
+      likes: photoLikesData.counts[photoId]
+    });
+  } catch (error) {
+    console.error('Gallery Like Error:', error);
+    res.status(500).json({ success: false, error: 'خطا در ثبت پسند عکس' });
+  }
+});
+
+// Guestbook Endpoints with Sanitization, Session-Restricted Reactions & Live SSE Broadcast
 app.get('/api/guestbook', (req, res) => {
   res.json({ success: true, data: guestbookList });
 });
@@ -791,6 +976,10 @@ app.post('/api/guestbook', (req, res) => {
 
   guestbookList.unshift(newEntry);
   saveGuestbook();
+
+  // Broadcast new entry to all open connected clients in real-time
+  broadcastSSE('GUESTBOOK_NEW_ENTRY', newEntry);
+
   res.json({ success: true, data: newEntry });
 });
 
@@ -800,6 +989,7 @@ app.delete('/api/guestbook/:id', (req, res) => {
   const decodedId = decodeURIComponent(id);
   guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
   saveGuestbook();
+  broadcastSSE('GUESTBOOK_ENTRY_DELETED', { id: decodedId, list: guestbookList });
   res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
 });
 
@@ -808,6 +998,7 @@ app.post('/api/guestbook/:id/delete', (req, res) => {
   const decodedId = decodeURIComponent(id);
   guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
   saveGuestbook();
+  broadcastSSE('GUESTBOOK_ENTRY_DELETED', { id: decodedId, list: guestbookList });
   res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
 });
 
@@ -815,6 +1006,7 @@ app.post('/api/guestbook/:id/delete', (req, res) => {
 app.delete('/api/guestbook', (req, res) => {
   guestbookList = [];
   saveGuestbook();
+  broadcastSSE('GUESTBOOK_RESET', guestbookList);
   res.json({ success: true, message: 'تمام پیام‌های یادبود و نظرات با موفقیت حذف شدند' });
 });
 
@@ -826,24 +1018,64 @@ app.post('/api/guestbook/reset', (req, res) => {
     guestbookList = [];
   }
   saveGuestbook();
+  broadcastSSE('GUESTBOOK_RESET', guestbookList);
   res.json({ success: true, message: 'پیام‌های یادبود با موفقیت بروزرسانی شد', data: guestbookList });
 });
 
 app.post('/api/guestbook/:id/reaction', (req, res) => {
   const { id } = req.params;
-  const { type } = req.body; // 'likes' | 'flowers' | 'esfand'
+  const type = req.body.type as 'likes' | 'flowers' | 'esfand';
+  const sessionId = sanitize(req.body.sessionId, 100);
 
-  const entry = guestbookList.find((g) => g.id === id || g.id === decodeURIComponent(id));
-  if (entry) {
-    if (type === 'flowers') entry.flowers = (entry.flowers || 0) + 1;
-    else if (type === 'esfand') entry.esfand = (entry.esfand || 0) + 1;
-    else entry.likes = (entry.likes || 0) + 1;
-
-    saveGuestbook();
-    return res.json({ success: true, data: entry });
+  if (!sessionId) {
+    return res.status(400).json({ success: false, error: 'شناسه نشست الزامی است' });
+  }
+  if (!['likes', 'flowers', 'esfand'].includes(type)) {
+    return res.status(400).json({ success: false, error: 'نوع واکنش نامعتبر است' });
   }
 
-  res.status(404).json({ success: false, error: 'پیام یافت نشد' });
+  const entry = guestbookList.find((g) => g.id === id || g.id === decodeURIComponent(id));
+  if (!entry) {
+    return res.status(404).json({ success: false, error: 'پیام یافت نشد' });
+  }
+
+  if (!guestbookReactionsData.reactedBy) {
+    guestbookReactionsData.reactedBy = {};
+  }
+  const reactionKey = `${entry.id}_${type}`;
+  if (!guestbookReactionsData.reactedBy[reactionKey]) {
+    guestbookReactionsData.reactedBy[reactionKey] = [];
+  }
+
+  // Check if this session already reacted
+  if (guestbookReactionsData.reactedBy[reactionKey].includes(sessionId)) {
+    return res.status(200).json({
+      success: false,
+      alreadyReacted: true,
+      message: 'شما قبلاً این واکنش را برای این پیام ثبت کرده‌اید',
+      data: entry
+    });
+  }
+
+  // Register session reaction
+  guestbookReactionsData.reactedBy[reactionKey].push(sessionId);
+  saveGuestbookReactions();
+
+  if (type === 'flowers') entry.flowers = (entry.flowers || 0) + 1;
+  else if (type === 'esfand') entry.esfand = (entry.esfand || 0) + 1;
+  else entry.likes = (entry.likes || 0) + 1;
+
+  saveGuestbook();
+
+  // Broadcast in real-time to all connected clients
+  broadcastSSE('GUESTBOOK_REACTION_UPDATED', {
+    entryId: entry.id,
+    type,
+    count: entry[type],
+    entry
+  });
+
+  return res.json({ success: true, alreadyReacted: false, data: entry });
 });
 
 // Server Backup Endpoints

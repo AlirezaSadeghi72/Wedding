@@ -3,6 +3,13 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Heart, Eye, X, ChevronRight, ChevronLeft, Maximize2 } from 'lucide-react';
 import { GalleryPhoto } from '../types';
+import { toPersianDigits } from '../utils/dateUtils';
+import {
+  getSessionId,
+  hasLikedPhoto,
+  recordLikedPhoto,
+  subscribeToLiveEvents
+} from '../utils/sessionSync';
 
 interface Props {
   photos?: GalleryPhoto[];
@@ -12,6 +19,46 @@ interface Props {
 export default function PhotoGallerySection({ photos, isLight }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [likes, setLikes] = useState<Record<string, number>>({});
+  const [likedPhotoIds, setLikedPhotoIds] = useState<Set<string>>(new Set());
+
+  // Load initial likes from server and check session liked status
+  useEffect(() => {
+    fetch('/api/gallery/likes')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          setLikes(data.data);
+        }
+      })
+      .catch(() => {});
+
+    // Initial local check for session
+    if (photos && photos.length > 0) {
+      const initialLiked = new Set<string>();
+      photos.forEach((p) => {
+        if (hasLikedPhoto(p.id)) {
+          initialLiked.add(p.id);
+        }
+      });
+      setLikedPhotoIds(initialLiked);
+    }
+
+    // Subscribe to real-time updates from server
+    const unsubscribe = subscribeToLiveEvents((event) => {
+      if (event.type === 'PHOTO_LIKES_UPDATED' && event.payload) {
+        const { photoId, likes: count, counts } = event.payload;
+        if (counts) {
+          setLikes(counts);
+        } else if (photoId && typeof count === 'number') {
+          setLikes((prev) => ({ ...prev, [photoId]: count }));
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [photos]);
 
   // Prevent background scroll and add Keyboard controls (Esc, Arrow keys)
   useEffect(() => {
@@ -39,9 +86,34 @@ export default function PhotoGallerySection({ photos, isLight }: Props) {
 
   if (!photos || photos.length === 0) return null;
 
-  const handleLike = (e: MouseEvent, id: string) => {
+  const handleLike = async (e: MouseEvent, id: string) => {
     e.stopPropagation();
+
+    // Enforce 1 like per session restriction
+    if (likedPhotoIds.has(id) || hasLikedPhoto(id)) {
+      return;
+    }
+
+    const sessionId = getSessionId();
+    recordLikedPhoto(id);
+    setLikedPhotoIds((prev) => new Set(prev).add(id));
+
+    // Optimistic UI update
     setLikes((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+
+    try {
+      const res = await fetch(`/api/gallery/${encodeURIComponent(id)}/like`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      });
+      const data = await res.json();
+      if (data.success && typeof data.likes === 'number') {
+        setLikes((prev) => ({ ...prev, [id]: data.likes }));
+      }
+    } catch {
+      // Fallback stays optimistic
+    }
   };
 
   const handleNext = (e?: MouseEvent) => {
@@ -85,7 +157,8 @@ export default function PhotoGallerySection({ photos, isLight }: Props) {
       {/* Photo Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-xl mx-auto px-3 sm:px-4">
         {photos.map((item, idx) => {
-          const itemLikes = likes[item.id] || 0;
+          const itemLikes = likes[item.id] ?? 0;
+          const isLikedByMe = likedPhotoIds.has(item.id);
 
           return (
             <motion.div
@@ -122,10 +195,19 @@ export default function PhotoGallerySection({ photos, isLight }: Props) {
                     <button
                       type="button"
                       onClick={(e) => handleLike(e, item.id)}
-                      className="px-2.5 py-1 rounded-full bg-stone-900/80 hover:bg-rose-950/90 border border-stone-700 hover:border-rose-500/50 text-stone-200 hover:text-rose-300 text-xs flex items-center gap-1 backdrop-blur-sm transition-colors cursor-pointer"
+                      title={isLikedByMe ? 'شما این عکس را پسندیده‌اید' : 'پسندیدن عکس (یکبار برای هر کاربر)'}
+                      className={`px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5 backdrop-blur-sm transition-all cursor-pointer select-none ${
+                        isLikedByMe
+                          ? 'bg-rose-600/90 text-white border border-rose-400/80 shadow-md shadow-rose-950/40 font-bold scale-105'
+                          : 'bg-stone-900/80 hover:bg-rose-950/90 border border-stone-700 hover:border-rose-500/50 text-stone-200 hover:text-rose-300'
+                      }`}
                     >
-                      <Heart className={`w-3.5 h-3.5 ${itemLikes > 0 ? 'fill-rose-500 text-rose-500' : ''}`} />
-                      <span>{itemLikes > 0 ? itemLikes : 'پسند'}</span>
+                      <Heart
+                        className={`w-3.5 h-3.5 transition-transform ${
+                          isLikedByMe ? 'fill-white text-white scale-110' : 'text-stone-300'
+                        }`}
+                      />
+                      <span className="font-mono text-[11px]">{toPersianDigits(itemLikes)}</span>
                     </button>
                   </div>
 
@@ -157,15 +239,45 @@ export default function PhotoGallerySection({ photos, isLight }: Props) {
               onClick={(e) => e.stopPropagation()}
               className="relative w-full max-w-3xl max-h-[92vh] flex flex-col items-center justify-center my-auto"
             >
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setSelectedIdx(null)}
-                className="absolute -top-12 left-0 sm:left-2 p-2.5 rounded-full bg-stone-800/90 hover:bg-amber-500 hover:text-stone-950 text-white transition-all cursor-pointer shadow-xl z-20"
-                title="بستن (Esc)"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {/* Top Bar with Like & Close */}
+              <div className="absolute -top-12 inset-x-0 flex items-center justify-between px-1 sm:px-2 z-20">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    if (photos[selectedIdx]) {
+                      handleLike(e, photos[selectedIdx].id);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-lg ${
+                    photos[selectedIdx] && likedPhotoIds.has(photos[selectedIdx].id)
+                      ? 'bg-rose-600 text-white border border-rose-400 font-bold'
+                      : 'bg-stone-800/90 hover:bg-rose-900 text-stone-200 border border-stone-700'
+                  }`}
+                >
+                  <Heart
+                    className={`w-4 h-4 ${
+                      photos[selectedIdx] && likedPhotoIds.has(photos[selectedIdx].id)
+                        ? 'fill-white text-white'
+                        : ''
+                    }`}
+                  />
+                  <span>
+                    {photos[selectedIdx]
+                      ? toPersianDigits(likes[photos[selectedIdx].id] ?? 0)
+                      : '۰'}{' '}
+                    پسند
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedIdx(null)}
+                  className="p-2.5 rounded-full bg-stone-800/90 hover:bg-amber-500 hover:text-stone-950 text-white transition-all cursor-pointer shadow-xl"
+                  title="بستن (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
               {/* Main Photo Card */}
               <div className="relative w-full rounded-2xl overflow-hidden border border-amber-500/50 shadow-2xl bg-stone-950 flex flex-col max-h-[80vh]">
@@ -199,7 +311,7 @@ export default function PhotoGallerySection({ photos, isLight }: Props) {
                 </button>
 
                 <span className="text-xs text-stone-300 font-mono font-medium px-3 py-1 rounded-full bg-stone-900 border border-stone-800">
-                  {selectedIdx + 1} / {photos.length}
+                  {toPersianDigits(selectedIdx + 1)} / {toPersianDigits(photos.length)}
                 </span>
 
                 <button

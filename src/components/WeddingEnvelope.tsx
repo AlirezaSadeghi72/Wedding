@@ -198,8 +198,51 @@ export default function WeddingEnvelope({
       </motion.div>
 
       {/* Interactive 3D Stage Container */}
-      <div className="flex-1 w-full max-w-xl z-20 flex items-center justify-center shrink-0 min-h-0 py-1 sm:py-2">
+      <div className="flex-1 w-full max-w-xl z-20 flex flex-col items-center justify-center shrink-0 min-h-0 py-1 sm:py-2">
         
+        {/* Floating Animated Call to Action Banner above the envelope */}
+        <AnimatePresence>
+          {!sealBroken && animStage === 'idle' && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 12, scale: 0.9 }}
+              animate={{
+                opacity: 1,
+                y: [0, -5, 0],
+                scale: [1, 1.03, 1]
+              }}
+              exit={{ opacity: 0, scale: 0.8, y: -10 }}
+              transition={{
+                y: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
+                scale: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
+                opacity: { duration: 0.3 }
+              }}
+              onClick={handleOpenEnvelope}
+              className="z-30 mb-2 sm:mb-3 px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-amber-950 font-bold text-xs sm:text-sm shadow-[0_6px_20px_rgba(217,119,6,0.45)] border-2 border-white flex items-center gap-2 cursor-pointer transition-transform hover:scale-105 active:scale-95"
+            >
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-900 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-950"></span>
+              </span>
+              <span className="font-vazir font-extrabold tracking-wide">برای بازگشایی پاکت لمس کنید</span>
+              <motion.span
+                animate={{
+                  y: [0, -3, 0],
+                  rotate: [0, -12, 12, 0]
+                }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 1.5,
+                  ease: 'easeInOut'
+                }}
+                className="text-sm inline-block"
+              >
+                👆
+              </motion.span>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
         {/* Envelope & Card Wrapper */}
         <div className="relative w-full max-w-[340px] sm:max-w-[460px] md:max-w-[500px] h-[min(48vh,330px)] sm:h-[330px] md:h-[350px] mx-auto flex items-center justify-center [perspective:1400px]">
           
@@ -425,17 +468,17 @@ export default function WeddingEnvelope({
                 whileHover={{ scale: 1.04, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleOpenEnvelope}
-                className="group relative w-full max-w-sm sm:max-w-md flex items-center justify-between gap-2.5 sm:gap-3.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl sm:rounded-full bg-white/95 hover:bg-white text-stone-900 border-2 border-amber-400 shadow-[0_8px_30px_rgba(217,119,6,0.25)] hover:shadow-[0_10px_35px_rgba(217,119,6,0.38)] cursor-pointer transition-all overflow-hidden"
+                className="group relative w-full max-w-sm sm:max-w-md flex items-center justify-between gap-2.5 sm:gap-3.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl sm:rounded-full bg-white/95 hover:bg-white text-stone-900 border-2 border-amber-400 shadow-[0_8px_30px_rgba(217,119,6,0.35)] hover:shadow-[0_12px_40px_rgba(217,119,6,0.5)] ring-2 ring-amber-400/60 ring-offset-2 ring-offset-amber-50 cursor-pointer transition-all overflow-hidden gold-sheen"
                 title="برای بازگشایی دعوت‌نامه لمس کنید"
               >
                 {/* Subtle Background Sheen */}
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-100/40 via-transparent to-amber-100/40 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-200/40 via-amber-100/20 to-amber-200/40 pointer-events-none" />
 
                 {/* Right Side (RTL): 3D Wax Seal Badge styled matching the settings */}
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 z-10">
                   {/* Real 3D Wax Seal Icon with Pulsing Halo */}
                   <div className="relative shrink-0">
-                    <div className="absolute -inset-1 rounded-full bg-amber-400/30 blur-sm animate-pulse pointer-events-none" />
+                    <div className="absolute -inset-1.5 rounded-full bg-amber-400/40 blur-md animate-pulse pointer-events-none" />
                     <div
                       className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full border-2 border-white/90 p-0.5 flex items-center justify-center shadow-lg transition-transform group-hover:rotate-6 ${getSealColorClasses(
                         sealColor
@@ -451,13 +494,21 @@ export default function WeddingEnvelope({
 
                   {/* Text Details */}
                   <div className="text-right min-w-0">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <span className="text-xs sm:text-sm font-bold font-vazir text-stone-900 truncate group-hover:text-amber-700 transition-colors">
                         {data.waxSeal?.sealText || 'بازگشایی دعوت‌نامه'}
                       </span>
-                      <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
+                      <span className="px-2 py-0.5 rounded-full bg-amber-500 text-stone-950 font-bold text-[10px] sm:text-[11px] shrink-0 animate-pulse flex items-center gap-1 shadow-sm">
+                        <span>لمس کنید</span>
+                        <motion.span
+                          animate={{ y: [0, -2, 0] }}
+                          transition={{ repeat: Infinity, duration: 1 }}
+                        >
+                          👆
+                        </motion.span>
+                      </span>
                     </div>
-                    <span className="text-[10px] sm:text-[11px] font-medium text-stone-500 truncate block font-vazir">
+                    <span className="text-[10px] sm:text-[11px] font-medium text-stone-600 truncate block font-vazir mt-0.5">
                       {guideText}
                     </span>
                   </div>

@@ -534,52 +534,86 @@ export default function WeddingCardView({
                   مسیریابی هوشمند تالار:
                 </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {/* Google Maps */}
-                  <a
-                    href={data.venue.googleMapsUrl || `https://maps.google.com/?q=${data.venue.lat},${data.venue.lng}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`py-2 px-2.5 rounded-xl ${
-                      isLight
-                        ? 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-950 font-medium'
-                        : 'bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                    <span>گوگل مپ (Google Maps)</span>
-                  </a>
+                {(() => {
+                  const resolveNavUrl = (customUrl?: string, defaultUrl?: string): string => {
+                    const trimmed = customUrl ? String(customUrl).trim() : '';
+                    if (trimmed) {
+                      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+                        return trimmed;
+                      }
+                      return `https://${trimmed}`;
+                    }
+                    return defaultUrl || '#';
+                  };
 
-                  {/* Neshan */}
-                  <a
-                    href={data.venue.neshanUrl || `https://nshn.ir`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`py-2 px-2.5 rounded-xl ${
-                      isLight
-                        ? 'bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-950 font-medium'
-                        : 'bg-blue-950/50 hover:bg-blue-900/60 border border-blue-500/40 text-blue-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span>مسیریاب نشان (Neshan)</span>
-                  </a>
+                  const latRaw = data.venue.lat !== undefined && data.venue.lat !== null ? String(data.venue.lat).trim() : '';
+                  const lngRaw = data.venue.lng !== undefined && data.venue.lng !== null ? String(data.venue.lng).trim() : '';
+                  const hasCoords = latRaw !== '' && lngRaw !== '';
 
-                  {/* Balad */}
-                  <a
-                    href={data.venue.baladUrl || `https://balad.ir`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`py-2 px-2.5 rounded-xl ${
-                      isLight
-                        ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium'
-                        : 'bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
-                    } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                  >
-                    <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>مسیریاب بلد (Balad)</span>
-                  </a>
-                </div>
+                  const googleMapsUrl = resolveNavUrl(
+                    data.venue.googleMapsUrl,
+                    hasCoords ? `https://maps.google.com/?q=${latRaw},${lngRaw}` : 'https://maps.google.com'
+                  );
+
+                  const neshanUrl = resolveNavUrl(
+                    data.venue.neshanUrl,
+                    hasCoords ? `https://neshan.org/maps/@${latRaw},${lngRaw},16z` : 'https://nshn.ir'
+                  );
+
+                  const baladUrl = resolveNavUrl(
+                    data.venue.baladUrl,
+                    hasCoords ? `https://balad.ir/location?latitude=${latRaw}&longitude=${lngRaw}` : 'https://balad.ir'
+                  );
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* Google Maps */}
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-950 font-medium'
+                            : 'bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span>گوگل مپ (Google Maps)</span>
+                      </a>
+
+                      {/* Neshan */}
+                      <a
+                        href={neshanUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-950 font-medium'
+                            : 'bg-blue-950/50 hover:bg-blue-900/60 border border-blue-500/40 text-blue-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <span>مسیریاب نشان (Neshan)</span>
+                      </a>
+
+                      {/* Balad */}
+                      <a
+                        href={baladUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium'
+                            : 'bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>مسیریاب بلد (Balad)</span>
+                      </a>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
