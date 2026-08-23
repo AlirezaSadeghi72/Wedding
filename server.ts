@@ -205,7 +205,7 @@ const initialSettingsSeed = {
     monogram: 'P & N',
     iconType: 'rings',
     envelopeStyle: 'classic_cream',
-    ribbonStyle: 'gold_cross',
+    ribbonStyle: 'none',
     sealShape: 'round',
     sealText: 'بازگشایی دعوت‌نامه',
     guideText: 'برای گشودن پاکت روی مهر و موم لمس کنید'

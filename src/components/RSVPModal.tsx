@@ -148,7 +148,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
   return typeof document !== 'undefined'
     ? createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-stone-900/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-2.5 sm:p-4 bg-stone-900/60 backdrop-blur-md">
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -157,36 +157,36 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               isLight
                 ? 'bg-[#FFFDF7] border border-amber-300/80 text-stone-900'
                 : 'bg-stone-900 border border-amber-500/40 text-stone-100'
-            } p-5 sm:p-7 md:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto custom-scrollbar my-auto`}
+            } p-3.5 sm:p-6 md:p-8 shadow-2xl overflow-hidden max-h-[92vh] overflow-y-auto custom-scrollbar my-auto`}
           >
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className={`absolute top-4 left-4 sm:top-5 sm:left-5 p-2 rounded-full ${
+              className={`absolute top-3 left-3 sm:top-5 sm:left-5 p-1.5 sm:p-2 rounded-full ${
                 isLight
                   ? 'bg-stone-200 hover:bg-stone-300 text-stone-700'
                   : 'bg-stone-800/80 hover:bg-stone-700 text-stone-400 hover:text-white'
               } transition-colors cursor-pointer`}
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
         {isSuccess ? (
-          <div className="py-8 text-center flex flex-col items-center">
-            <div className={`w-16 h-16 rounded-full ${
+          <div className="py-6 sm:py-8 text-center flex flex-col items-center">
+            <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full ${
               isLight
                 ? 'bg-emerald-100 border-2 border-emerald-500 text-emerald-700 shadow-md'
                 : 'bg-emerald-950 border-2 border-emerald-400 text-emerald-400 shadow-lg shadow-emerald-900/50'
-            } flex items-center justify-center mb-4`}>
-              <Check className="w-8 h-8" />
+            } flex items-center justify-center mb-3 sm:mb-4`}>
+              <Check className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
 
-            <h3 className={`text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-200'} mb-2`}>
+            <h3 className={`text-xl sm:text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-200'} mb-2`}>
               {attending === 'yes' ? 'با سپاس، حضور شما با موفقیت ثبت شد!' : 'پیام شما با موفقیت ثبت گردید'}
             </h3>
 
-            <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-sm max-w-md leading-relaxed mb-6`}>
+            <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-xs sm:text-sm max-w-md leading-relaxed mb-5`}>
               {attending === 'yes'
                 ? `مشتاقانه چشم‌انتظار دیدار روی ماه شما (${guestName}) ${safeParseCount(guestCount) > 1 ? `به همراه ${toPersianDigits(safeParseCount(guestCount) - 1)} نفر همراه محترم` : ''} در این بزم پر از شادی و خاطره هستیم.`
                 : `با سپاس از اطلاع‌رسانی شما (${guestName}). دلتنگ حضورتان خواهیم بود و آرزوی سلامتی و بهترین‌ها را برایتان داریم.`}
@@ -194,33 +194,33 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
 
             <button
               onClick={handleReset}
-              className="px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-semibold text-sm shadow-lg transition-all cursor-pointer"
+              className="px-5 sm:px-6 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-semibold text-xs sm:text-sm shadow-lg transition-all cursor-pointer"
             >
               بستن پنجره
             </button>
           </div>
         ) : (
           <div>
-            <div className="text-center mb-6">
-              <span className={`text-xs uppercase tracking-widest ${isLight ? 'text-amber-700 font-bold' : 'text-amber-400'} block mb-1`}>
+            <div className="text-center mb-3 sm:mb-5">
+              <span className={`text-[10px] sm:text-xs uppercase tracking-widest ${isLight ? 'text-amber-700 font-bold' : 'text-amber-400'} block mb-0.5`}>
                 تایید حضور آنلاین (RSVP)
               </span>
-              <h2 className={`text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'}`}>
+              <h2 className={`text-lg sm:text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'}`}>
                 اعلام حضور در جشن عروسی
               </h2>
-              <p className={`text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-1`}>
+              <p className={`text-[11px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
                 مهلت تایید حضور: {data.rsvpConfig.deadlineDate}
               </p>
             </div>
 
             {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 text-red-200 text-xs flex items-center gap-2">
+              <div className="mb-3 p-2.5 rounded-xl bg-red-950/60 border border-red-500/50 text-red-200 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-sm">
+            <form onSubmit={handleSubmit} className="space-y-3 text-xs sm:text-sm">
               {/* Attendance Choice */}
               <div>
                 <label className={`block text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/90'} mb-1.5 font-medium`}>

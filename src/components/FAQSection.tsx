@@ -18,9 +18,9 @@ export default function FAQSection({ faqs, isLight }: Props) {
   };
 
   return (
-    <div className={`my-14 pt-10 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/80'} max-w-xl mx-auto`}>
+    <div className={`my-8 sm:my-14 pt-6 sm:pt-10 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/80'} max-w-xl mx-auto w-full`}>
       {/* Section Header */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-6 sm:mb-8 px-2">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -35,7 +35,7 @@ export default function FAQSection({ faqs, isLight }: Props) {
           <span>راهنمای مهمانان</span>
         </motion.div>
 
-        <h3 className={`text-2xl sm:text-3xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-stone-100'} mb-2`}>
+        <h3 className={`text-xl sm:text-3xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-stone-100'} mb-1.5`}>
           پرسش‌های متداول و نکات مهم
         </h3>
         <p className={`text-xs sm:text-sm ${isLight ? 'text-stone-600' : 'text-stone-400'} font-light`}>
@@ -44,7 +44,7 @@ export default function FAQSection({ faqs, isLight }: Props) {
       </div>
 
       {/* Accordion List */}
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3 px-1 sm:px-0">
         {faqs.map((item, idx) => {
           const isOpen = openId === item.id;
 
@@ -55,7 +55,7 @@ export default function FAQSection({ faqs, isLight }: Props) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: idx * 0.08 }}
-              className={`rounded-2xl border ${
+              className={`rounded-xl sm:rounded-2xl border ${
                 isLight
                   ? 'border-amber-600/20 bg-white/90 shadow-sm hover:border-amber-500'
                   : 'border-stone-800 bg-stone-950/60 hover:border-amber-500/30'
@@ -63,22 +63,22 @@ export default function FAQSection({ faqs, isLight }: Props) {
             >
               <button
                 onClick={() => toggle(item.id)}
-                className="w-full p-4 sm:p-5 flex items-center justify-between text-right gap-3 cursor-pointer select-none"
+                className="w-full p-3.5 sm:p-5 flex items-center justify-between text-right gap-3 cursor-pointer select-none"
               >
-                <span className={`font-bold text-sm sm:text-base font-amiri ${isLight ? 'text-stone-900' : 'text-stone-100'}`}>
+                <span className={`font-bold text-xs sm:text-base font-amiri ${isLight ? 'text-stone-900' : 'text-stone-100'}`}>
                   {item.question}
                 </span>
 
                 <motion.div
                   animate={{ rotate: isOpen ? 180 : 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`p-1.5 rounded-full ${
+                  className={`p-1 sm:p-1.5 rounded-full ${
                     isLight
                       ? 'bg-amber-100 text-amber-800 border border-amber-300'
                       : 'bg-stone-900 text-amber-400 border border-stone-700/80'
                   } flex-shrink-0`}
                 >
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </motion.div>
               </button>
 
@@ -91,7 +91,7 @@ export default function FAQSection({ faqs, isLight }: Props) {
                     transition={{ duration: 0.3 }}
                     className="overflow-hidden"
                   >
-                    <div className={`p-4 sm:p-5 pt-0 text-xs sm:text-sm ${
+                    <div className={`p-3.5 sm:p-5 pt-0 text-xs sm:text-sm ${
                       isLight ? 'text-stone-700 border-t border-stone-100 font-normal' : 'text-stone-300 border-t border-stone-900/60 font-light'
                     } leading-relaxed`}>
                       {item.answer}

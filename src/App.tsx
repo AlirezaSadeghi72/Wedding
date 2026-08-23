@@ -145,33 +145,35 @@ export default function App() {
     <div className={`relative min-h-screen bg-[#FFFDF7] text-stone-900 font-vazir selection:bg-amber-400 selection:text-stone-950 overflow-x-hidden w-full transition-colors duration-500 ${isAdminAuthenticated ? 'pt-12 sm:pt-14' : ''}`}>
       {/* Top Fixed Sticky Control Header ONLY for Authenticated Admin */}
       {isAdminAuthenticated && (
-        <header className="fixed top-0 inset-x-0 z-50 w-full bg-[#FFFDF7]/95 border-b border-amber-300/80 shadow-md backdrop-blur-xl px-2.5 py-2 sm:px-6 sm:py-2.5 flex items-center justify-between text-xs sm:text-sm text-stone-900">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-amber-950 font-amiri text-xs sm:text-sm">
-              پنل مدیریت کارت عروسی
+        <header className="fixed top-0 inset-x-0 z-50 w-full h-12 sm:h-14 bg-[#FFFDF7]/95 border-b border-amber-300/80 shadow-md backdrop-blur-xl px-2 sm:px-6 flex items-center justify-between text-xs text-stone-900 overflow-x-auto no-scrollbar gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-amber-950 font-amiri text-xs sm:text-sm whitespace-nowrap">
+              <span className="hidden sm:inline">پنل مدیریت کارت عروسی</span>
+              <span className="sm:hidden">پنل مدیریت</span>
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Theme Selection Modal Toggle */}
             <button
               onClick={() => setIsThemeSelectorOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-100/90 hover:bg-amber-200/90 text-amber-950 border border-amber-300 cursor-pointer transition-all text-xs font-bold shadow-sm"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-100/90 hover:bg-amber-200/90 text-amber-950 border border-amber-300 cursor-pointer transition-all text-xs font-bold shadow-sm whitespace-nowrap"
               title="انتخاب تم و رنگ‌بندی کارت"
             >
-              <Palette className="w-3.5 h-3.5 text-amber-700" />
-              <span>انتخاب تم</span>
+              <Palette className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span className="hidden sm:inline">انتخاب تم</span>
+              <span className="sm:hidden">تم</span>
             </button>
 
             {/* Studio Customize Button */}
             <button
               id="studio-editor-toggle-btn"
               onClick={() => setIsStudioOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-stone-800 border border-amber-200 cursor-pointer transition-all text-xs shadow-sm"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-amber-50 text-stone-800 border border-amber-200 cursor-pointer transition-all text-xs shadow-sm whitespace-nowrap"
               title="ویرایش متون، عکس‌ها و تنظیمات کارت"
             >
-              <Sliders className="w-3.5 h-3.5 text-amber-600" />
+              <Sliders className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span className="hidden sm:inline">استودیو ویرایش</span>
               <span className="sm:hidden">ویرایش</span>
             </button>
@@ -180,10 +182,10 @@ export default function App() {
             <button
               id="rsvp-manager-toggle-btn"
               onClick={() => setIsRsvpManagerOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-stone-800 border border-emerald-300/80 transition-colors cursor-pointer text-xs shadow-sm"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-emerald-50 text-stone-800 border border-emerald-300/80 transition-colors cursor-pointer text-xs shadow-sm whitespace-nowrap"
               title="مدیریت لیست مهمانان، تایید حضورها و نظرات"
             >
-              <Users className="w-3.5 h-3.5 text-emerald-600" />
+              <Users className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
               <span className="hidden sm:inline">مهمانان و نظرات</span>
               <span className="sm:hidden">مهمانان</span>
             </button>
@@ -191,17 +193,17 @@ export default function App() {
             {/* Toggle Envelope / Card view */}
             <button
               onClick={() => setIsOpened(!isOpened)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 transition-colors cursor-pointer text-xs shadow-sm"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-white hover:bg-amber-50 text-amber-900 border border-amber-200 transition-colors cursor-pointer text-xs shadow-sm whitespace-nowrap"
               title={isOpened ? 'مشاهده پاکت نامه' : 'مشاهده کارت دعوت'}
             >
-              <Eye className="w-3.5 h-3.5 text-amber-600" />
+              <Eye className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span className="hidden md:inline">{isOpened ? 'نمای پاکت' : 'نمای کارت'}</span>
             </button>
 
             {/* Logout Button */}
             <button
               onClick={handleAdminLogout}
-              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-sm"
+              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer shadow-sm shrink-0"
               title="خروج از پنل مدیریت"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -218,22 +220,23 @@ export default function App() {
               key="envelope"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.6 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
             >
               <WeddingEnvelope
                 data={weddingData}
                 onOpen={() => setIsOpened(true)}
                 isOpened={isOpened}
+                isAdminAuthenticated={isAdminAuthenticated}
               />
             </motion.div>
           ) : (
             <motion.div
               key="card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
             >
               <WeddingCardView
                 data={weddingData}

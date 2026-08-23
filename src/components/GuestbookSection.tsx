@@ -153,22 +153,22 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
   const isAdmin = getIsAdminSessionValid();
 
   return (
-    <div id="guestbook-section" className="w-full max-w-2xl mx-auto my-12 px-4 select-none">
-      <div className={`rounded-3xl ${
+    <div id="guestbook-section" className="w-full max-w-2xl mx-auto my-8 sm:my-12 px-2 sm:px-4 select-none">
+      <div className={`rounded-2xl sm:rounded-3xl ${
         isLight
           ? 'bg-white/95 border border-amber-600/30 shadow-xl'
           : 'bg-stone-900/80 border border-amber-500/30 shadow-2xl'
-      } p-6 md:p-8 backdrop-blur-xl`}>
+      } p-4 sm:p-6 md:p-8 backdrop-blur-xl`}>
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className={`inline-flex items-center justify-center p-3 rounded-full ${
+        <div className="text-center mb-5 sm:mb-8 px-1">
+          <div className={`inline-flex items-center justify-center p-2.5 sm:p-3 rounded-full ${
             isLight
               ? 'bg-amber-100 border border-amber-300 text-amber-800'
               : 'bg-amber-500/10 border border-amber-500/20 text-amber-300'
-          } mb-3`}>
-            <MessageCircleHeart className="w-6 h-6" />
+          } mb-2 sm:mb-3`}>
+            <MessageCircleHeart className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <h3 className={`text-2xl md:text-3xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-1`}>
+          <h3 className={`text-xl sm:text-3xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-1`}>
             دفترچه یادبود و شادباش مهمانان
           </h3>
           <p className={`text-xs md:text-sm ${isLight ? 'text-stone-600' : 'text-stone-400'}`}>
@@ -177,14 +177,14 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
         </div>
 
         {/* Input Form */}
-        <form onSubmit={handleSubmit} className={`mb-8 p-4 rounded-2xl ${
+        <form onSubmit={handleSubmit} className={`mb-6 sm:mb-8 p-3 sm:p-4 rounded-xl sm:rounded-2xl ${
           isLight
             ? 'bg-stone-50 border border-stone-200'
             : 'bg-stone-950/60 border border-stone-800'
-        } space-y-3`}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        } space-y-2.5 sm:space-y-3`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
             <div>
-              <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300'} mb-1 font-medium`}>
+              <label className={`block text-[11px] sm:text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300'} mb-1 font-medium`}>
                 نام شما / خانواده گرامی:
               </label>
               <input
@@ -192,8 +192,8 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
                 required
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder="مثلاً: خانواده دکتر حسینی"
-                className={`w-full px-3.5 py-2 rounded-xl ${
+                placeholder="مثلاً: خانواده حسینی"
+                className={`w-full px-3 py-2 rounded-xl ${
                   isLight
                     ? 'bg-white border border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-600'
                     : 'bg-stone-900 border border-stone-700 text-stone-100 placeholder:text-stone-500 focus:border-amber-400'
@@ -201,14 +201,14 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
               />
             </div>
             <div className="flex items-end">
-              <span className={`text-[11px] ${isLight ? 'text-amber-800' : 'text-amber-400/80'} pb-2`}>
+              <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-amber-800' : 'text-amber-400/80'} pb-1`}>
                 پیام شما بلافاصله در دیوار خاطرات نمایش داده می‌شود
               </span>
             </div>
           </div>
 
           <div>
-            <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300'} mb-1 font-medium`}>
+            <label className={`block text-[11px] sm:text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300'} mb-1 font-medium`}>
               متن شادباش و آرزوی قشنگ شما:
             </label>
             <textarea
@@ -217,7 +217,7 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="عروس و داماد نازنین، پیوند آسمانی‌تان مبارک و شادکام باشید..."
-              className={`w-full px-3.5 py-2 rounded-xl ${
+              className={`w-full px-3 py-2 rounded-xl ${
                 isLight
                   ? 'bg-white border border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-amber-600'
                   : 'bg-stone-900 border border-stone-700 text-stone-100 placeholder:text-stone-600 focus:border-amber-400'
@@ -236,14 +236,14 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
         </form>
 
         {/* Wishes Feed */}
-        <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+        <div className="space-y-3 sm:space-y-4 max-h-96 overflow-y-auto pr-1">
           <AnimatePresence>
             {entries.map((entry) => (
               <motion.div
                 key={entry.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`p-4 rounded-2xl border transition-all ${
+                className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all ${
                   justAddedId === entry.id
                     ? isLight
                       ? 'bg-amber-50 border-amber-500 shadow-md'
@@ -253,9 +253,9 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
                       : 'bg-stone-950/40 border-stone-800/80 hover:border-stone-700'
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-7 h-7 rounded-full ${
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full ${
                       isLight
                         ? 'bg-amber-200 text-amber-900 border border-amber-400'
                         : 'bg-amber-500/20 text-amber-300 border border-amber-400/40'
@@ -281,15 +281,15 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
                   </div>
                 </div>
 
-                <p className={`text-xs ${isLight ? 'text-stone-800 font-normal' : 'text-stone-300 font-light'} leading-relaxed mb-3`}>
+                <p className={`text-xs ${isLight ? 'text-stone-800 font-normal' : 'text-stone-300 font-light'} leading-relaxed mb-2 sm:mb-3`}>
                   {entry.message}
                 </p>
 
                 {/* Reaction Actions */}
-                <div className={`flex items-center gap-2 pt-2 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/60'} text-[11px] text-stone-400`}>
+                <div className={`flex items-center gap-1.5 sm:gap-2 pt-2 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/60'} text-[10px] sm:text-[11px] text-stone-400`}>
                   <button
                     onClick={() => handleReaction(entry.id, 'likes')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                    className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full ${
                       isLight
                         ? 'bg-white hover:bg-rose-50 text-stone-700 hover:text-rose-700 border border-stone-200'
                         : 'bg-stone-900 hover:bg-rose-950/60 hover:text-rose-300 border border-stone-800'
@@ -301,7 +301,7 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
 
                   <button
                     onClick={() => handleReaction(entry.id, 'flowers')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                    className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full ${
                       isLight
                         ? 'bg-white hover:bg-emerald-50 text-stone-700 hover:text-emerald-700 border border-stone-200'
                         : 'bg-stone-900 hover:bg-emerald-950/60 hover:text-emerald-300 border border-stone-800'
@@ -313,7 +313,7 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
 
                   <button
                     onClick={() => handleReaction(entry.id, 'esfand')}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full ${
+                    className={`flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full ${
                       isLight
                         ? 'bg-white hover:bg-blue-50 text-stone-700 hover:text-blue-700 border border-stone-200'
                         : 'bg-stone-900 hover:bg-blue-950/60 hover:text-blue-300 border border-stone-800'

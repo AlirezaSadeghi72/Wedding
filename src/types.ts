@@ -1,29 +1,8 @@
-export type ThemeId =
-  | 'sunlight_blossom'
-  | 'sunflower_lavender'
-  | 'honey_citrus'
-  | 'golden_forest'
-  | 'indigo_sun'
-  | 'plum_honey'
-  | 'emerald'
-  | 'gold'
-  | 'rosegold'
-  | 'azure'
-  | 'noir'
-  | 'ruby'
-  | 'olive'
-  | 'lavender'
-  | 'ivory'
-  | 'bronze'
-  | 'pearl_silver'
-  | 'persian_sunset'
-  | 'yazd_termeh'
-  | 'imperial_orchid'
-  | 'midnight_starlight';
+export type ThemeId = 'sunlight_blossom';
 
-export type SealColor = 'red' | 'gold' | 'emerald' | 'navy' | 'black' | 'silver' | 'burgundy' | 'rose_gold';
-export type EnvelopeStyle = 'classic_cream' | 'royal_gold' | 'emerald_palace' | 'deep_burgundy' | 'midnight_navy' | 'pearl_white';
-export type RibbonStyle = 'gold_cross' | 'satin_red' | 'emerald_velvet' | 'royal_navy' | 'none';
+export type SealColor = 'gold' | 'emerald' | 'navy' | 'red' | 'burgundy' | 'rose_gold' | 'silver' | 'black';
+export type EnvelopeStyle = 'classic_cream';
+export type RibbonStyle = 'none' | 'gold_cross' | 'satin_red' | 'emerald_velvet' | 'royal_navy';
 export type SealShape = 'round' | 'flower' | 'octagon' | 'shield';
 
 export interface WaxSealConfig {

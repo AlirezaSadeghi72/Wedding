@@ -47,7 +47,10 @@ import {
   SkipBack,
   Disc,
   VolumeX,
-  Radio
+  Radio,
+  Crown,
+  Flower2,
+  Bird
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 import { normalizeDigits, verifyPasswordSecurely } from '../utils/security';
@@ -1220,7 +1223,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-amber-950 font-amiri flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-amber-600" />
-                    پیش‌نمایش زنده پاکت و مهر و موم:
+                    پیش‌نمایش زنده پاکت و دکمه مهر و موم:
                   </span>
                   <span className="text-[11px] text-stone-500 font-mono">
                     {formData.brideName} & {formData.groomName}
@@ -1242,8 +1245,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     }`} />
                   )}
 
-                  {/* Circular Wax Seal Button Preview with Two Interlocking Rings */}
-                  <div className={`relative z-10 w-20 h-20 rounded-full border-2 flex flex-col items-center justify-center p-1 shadow-lg ${
+                  {/* Circular Wax Seal Button Preview with Live Icon */}
+                  <div className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex flex-col items-center justify-center p-1 shadow-lg ${
                     formData.waxSeal.color === 'gold'
                       ? 'bg-gradient-to-br from-amber-400 via-amber-600 to-amber-800 text-amber-950 border-amber-300'
                       : formData.waxSeal.color === 'emerald'
@@ -1260,62 +1263,102 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       ? 'bg-gradient-to-br from-rose-300 via-rose-500 to-amber-600 text-rose-950 border-rose-300'
                       : 'bg-gradient-to-br from-red-600 via-rose-800 to-red-950 text-red-100 border-rose-400'
                   }`}>
-                    <div className="w-full h-full rounded-full border border-white/40 flex flex-col items-center justify-center p-1 shadow-inner">
-                      <div className="flex items-center -space-x-2 my-auto drop-shadow-md">
-                        <div className="w-6 h-6 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
-                          <div className="absolute -top-1 w-1 h-1 rounded-full bg-white shadow-sm" />
+                    <div className="w-full h-full rounded-full border border-white/40 flex flex-col items-center justify-center p-0.5 shadow-inner">
+                      {formData.waxSeal.iconType === 'monogram' ? (
+                        <span className="font-cinzel text-xs font-bold tracking-wider leading-none">
+                          {formData.waxSeal.monogram || 'P & N'}
+                        </span>
+                      ) : formData.waxSeal.iconType === 'heart' ? (
+                        <Heart className="w-5 h-5 fill-current" />
+                      ) : formData.waxSeal.iconType === 'crown' ? (
+                        <Crown className="w-5 h-5 fill-current" />
+                      ) : formData.waxSeal.iconType === 'floral' ? (
+                        <Flower2 className="w-5 h-5 stroke-[2]" />
+                      ) : formData.waxSeal.iconType === 'bird' ? (
+                        <Bird className="w-5 h-5 stroke-[2]" />
+                      ) : (
+                        <div className="flex items-center -space-x-1.5 my-auto drop-shadow-md">
+                          <div className="w-4 h-4 rounded-full border-[2px] border-current relative flex items-center justify-center shrink-0">
+                            <div className="absolute -top-0.5 w-1 h-1 rounded-full bg-white shadow-xs" />
+                          </div>
+                          <div className="w-4 h-4 rounded-full border-[2px] border-current relative flex items-center justify-center shrink-0">
+                            <div className="absolute -top-0.5 w-1 h-1 rounded-full bg-white shadow-xs" />
+                          </div>
                         </div>
-                        <div className="w-6 h-6 rounded-full border-[2.5px] border-current relative flex items-center justify-center">
-                          <div className="absolute -top-1 w-1 h-1 rounded-full bg-white shadow-sm" />
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
 
-                  <p className="text-[11px] text-amber-800 font-bold mt-2.5 z-10">
+                  <p className="text-xs text-stone-900 font-bold mt-2 z-10 font-vazir">
+                    {formData.waxSeal.sealText || 'بازگشایی دعوت‌نامه'}
+                  </p>
+                  <p className="text-[11px] text-amber-800 font-medium z-10">
                     {formData.waxSeal.guideText || 'برای گشودن پاکت روی مهر و موم لمس کنید'}
                   </p>
                 </div>
               </div>
 
-              {/* 1. Envelope Paper Style */}
+              {/* 1. Wax Seal Symbol / Icon */}
               <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
                 <label className="block text-xs font-bold text-stone-900">
-                  ۱. تم رنگی و جنس کاغذ پاکت اولیه:
+                  ۱. نماد یا طرح داخل مهر و موم (Wax Seal Icon):
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {[
-                    { id: 'classic_cream', name: 'کرم عاجی و طلاکوب', desc: 'کلاسیک و سنتی', color: 'bg-[#FFFDF7] border-amber-300 text-stone-900' },
-                    { id: 'royal_gold', name: 'طلایی سلطنتی درخشان', desc: 'طلاکوب فاخر', color: 'bg-amber-100 border-amber-400 text-amber-950' },
-                    { id: 'emerald_palace', name: 'زمردی شاهانه', desc: 'سبز زمردین کاخ', color: 'bg-emerald-900 border-emerald-400 text-emerald-100' },
-                    { id: 'deep_burgundy', name: 'یاقوتی و زرشکی', desc: 'سرخ شرابی اعلا', color: 'bg-rose-950 border-rose-500 text-rose-100' },
-                    { id: 'midnight_navy', name: 'سرمه‌ای شبانه', desc: 'آبی تیره ستاره‌باران', color: 'bg-sky-950 border-sky-400 text-sky-100' },
-                    { id: 'pearl_white', name: 'سفید مرواریدی', desc: 'ساتن مروارید و رزگلد', color: 'bg-slate-50 border-slate-300 text-slate-900' }
-                  ].map((styleItem) => {
-                    const isSelected = (formData.waxSeal.envelopeStyle || 'classic_cream') === styleItem.id;
+                    { id: 'rings', name: 'دو حلقه الماس‌نشان (پیش‌فرض)', icon: '💍' },
+                    { id: 'monogram', name: 'حروف اول اسامی (Monogram)', icon: '🔤' },
+                    { id: 'heart', name: 'قلب عاشقانه', icon: '❤️' },
+                    { id: 'crown', name: 'تاج شاهانه و ملکی', icon: '👑' },
+                    { id: 'floral', name: 'گل شکوفه بهاری', icon: '🌸' },
+                    { id: 'bird', name: 'پرنده مهر و وصال', icon: '🕊️' }
+                  ].map((iconItem) => {
+                    const isSelected = (formData.waxSeal.iconType || 'rings') === iconItem.id;
                     return (
                       <button
-                        key={styleItem.id}
+                        key={iconItem.id}
                         type="button"
                         onClick={() =>
                           setFormData({
                             ...formData,
-                            waxSeal: { ...formData.waxSeal, envelopeStyle: styleItem.id as any }
+                            waxSeal: { ...formData.waxSeal, iconType: iconItem.id as any }
                           })
                         }
-                        className={`p-3 rounded-2xl border text-right transition-all cursor-pointer ${styleItem.color} ${
-                          isSelected ? 'ring-2 ring-amber-500 shadow-md scale-[1.02]' : 'opacity-85 hover:opacity-100'
+                        className={`p-2.5 rounded-xl border text-xs text-right transition-all cursor-pointer flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-amber-100 border-amber-500 font-bold text-amber-950 ring-1 ring-amber-500'
+                            : 'bg-stone-50 border-stone-200 text-stone-700 hover:bg-stone-100'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold font-amiri">{styleItem.name}</span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                        </div>
-                        <span className="text-[10px] opacity-75 block mt-0.5">{styleItem.desc}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span>{iconItem.icon}</span>
+                          <span>{iconItem.name}</span>
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-amber-700 shrink-0" />}
                       </button>
                     );
                   })}
                 </div>
+
+                {formData.waxSeal.iconType === 'monogram' && (
+                  <div className="pt-2">
+                    <label className="block text-[11px] font-semibold text-stone-700 mb-1">
+                      متن مونوگرام اسامی انگلیسی (نمایش در مهر):
+                    </label>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      value={formData.waxSeal.monogram || 'P & N'}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          waxSeal: { ...formData.waxSeal, monogram: e.target.value }
+                        })
+                      }
+                      placeholder="P & N"
+                      className="w-full px-3 py-2 rounded-xl bg-stone-50 border border-stone-300 text-xs font-mono font-bold text-stone-900 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* 2. Wax Seal Color */}
@@ -1393,34 +1436,44 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 </div>
               </div>
 
-              {/* 4. Guidance Text */}
+              {/* 4. Button Text and Guidance */}
               <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
                 <label className="block text-xs font-bold text-stone-900">
-                  ۴. متن راهنمای لمس و بازگشایی پاکت:
+                  ۴. متون دکمه و راهنمای بازگشایی کارت:
                 </label>
 
-                <div>
-                  <input
-                    type="text"
-                    value={formData.waxSeal.guideText || ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        waxSeal: {
-                          ...formData.waxSeal,
-                          sealShape: 'round',
-                          iconType: 'rings',
-                          sealText: '',
-                          guideText: e.target.value
-                        }
-                      })
-                    }
-                    placeholder="برای گشودن پاکت روی مهر و موم لمس کنید"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
-                  />
-                  <p className="text-[11px] text-stone-500 mt-1.5">
-                    این متن به صورت انیمیشن زیر مهر دایره‌ای دوحلقه نمایش داده می‌شود.
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] text-stone-600 mb-1">عنوان دکمه بازگشایی:</label>
+                    <input
+                      type="text"
+                      value={formData.waxSeal.sealText || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          waxSeal: { ...formData.waxSeal, sealText: e.target.value }
+                        })
+                      }
+                      placeholder="بازگشایی دعوت‌نامه"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] text-stone-600 mb-1">متن راهنمای زیر دکمه:</label>
+                    <input
+                      type="text"
+                      value={formData.waxSeal.guideText || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          waxSeal: { ...formData.waxSeal, guideText: e.target.value }
+                        })
+                      }
+                      placeholder="برای گشودن پاکت روی مهر و موم لمس کنید"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-stone-50 border border-stone-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2074,7 +2127,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {/* TAB 7: VENUE & NAVIGATION */}
           {activeTab === 'venue' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-stone-700 font-semibold mb-1">نام باغ تالار / عمارت:</label>
                   <input
@@ -2086,7 +2139,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         venue: { ...formData.venue, name: e.target.value }
                       })
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
@@ -2102,7 +2155,23 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       })
                     }
                     placeholder="سالن رویال و باغ اختصاصی"
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-stone-700 font-semibold mb-1">شهر برگزاری:</label>
+                  <input
+                    type="text"
+                    value={formData.venue.city || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        venue: { ...formData.venue, city: e.target.value }
+                      })
+                    }
+                    placeholder="تهران / شیراز"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-stone-900 focus:outline-none focus:border-amber-500"
                   />
                 </div>
               </div>
