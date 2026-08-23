@@ -17,7 +17,7 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { WeddingCardData } from '../types';
+import { WeddingCardData, SectionKey, getEffectiveSectionsOrder } from '../types';
 import { getTheme } from '../data/themes';
 import { calculateTimeLeft, toPersianDigits, generateIcsCalendar, downloadCalendarFile, TimeLeft } from '../utils/dateUtils';
 import { copyToClipboard } from '../utils/clipboard';
@@ -143,9 +143,490 @@ export default function WeddingCardView({
       case 'palace_arch':
         return 'border-4 border-amber-300/60 rounded-t-[50px] rounded-b-2xl shadow-2xl';
       case 'golden_emboss':
-        return 'border-2 border-amber-400 shadow-[0_0_35px_rgba(245,158,11,0.3)]';
+        return 'border-2 border-amber-400 shadow-[0_0_35px_rgba(251,191,36,0.25)]';
       default:
         return 'border border-amber-500/40 shadow-2xl';
+    }
+  };
+
+  const effectiveOrder = getEffectiveSectionsOrder(data.sectionsOrder);
+
+  const renderSection = (sectionKey: SectionKey) => {
+    switch (sectionKey) {
+      case 'parents':
+        if (data.sectionVisibility?.parents === false) return null;
+        return (
+          <div key="parents" className={`my-3 pt-1.5 text-xs sm:text-sm ${isLight ? 'text-stone-600' : 'text-stone-400'} font-light flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap`}>
+            <span>خانواده‌های محترم</span>
+            <span className={`${isLight ? 'text-emerald-900 font-semibold' : 'text-amber-300/90 font-medium'}`}>{data.brideFamily}</span>
+            <span>و</span>
+            <span className={`${isLight ? 'text-emerald-900 font-semibold' : 'text-amber-300/90 font-medium'}`}>{data.groomFamily}</span>
+          </div>
+        );
+
+      case 'poem':
+        if (data.sectionVisibility?.poem === false) return null;
+        return (
+          <div key="poem" className={`my-5 sm:my-8 p-3.5 sm:p-6 rounded-2xl ${
+            isLight
+              ? 'bg-emerald-50/80 border border-amber-600/30'
+              : 'bg-stone-950/50 border border-amber-500/20'
+          } relative shadow-sm`}>
+            <div className={`${isLight ? 'text-amber-600/30' : 'text-amber-400/30'} text-2xl sm:text-3xl font-serif absolute -top-3.5 sm:-top-4 right-3 sm:right-4`}>“</div>
+            <div className={`space-y-1.5 sm:space-y-2 ${isLight ? 'text-emerald-950 font-semibold' : 'text-amber-100'} font-amiri text-sm sm:text-lg leading-relaxed sm:leading-loose`}>
+              <p className="font-medium">{data.poem.verse1}</p>
+              <p className="font-medium">{data.poem.verse2}</p>
+            </div>
+            {data.poem.poet && (
+              <span className={`block text-left text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400/80'} mt-2 sm:mt-3 font-scheherazade font-semibold`}>
+                — {data.poem.poet}
+              </span>
+            )}
+            <div className={`${isLight ? 'text-amber-600/30' : 'text-amber-400/30'} text-2xl sm:text-3xl font-serif absolute -bottom-5 sm:-bottom-6 left-3 sm:left-4`}>”</div>
+          </div>
+        );
+
+      case 'dateAndSchedule':
+        if (data.sectionVisibility?.dateAndSchedule === false) return null;
+        return (
+          <div key="dateAndSchedule" className={`my-5 sm:my-8 p-3.5 sm:p-6 rounded-2xl ${
+            isLight
+              ? 'bg-gradient-to-br from-amber-100/70 via-white to-emerald-50/80 border border-amber-500/50 shadow-md text-stone-900'
+              : 'bg-gradient-to-br from-amber-950/40 via-stone-900/60 to-stone-950/90 border border-amber-400/40 shadow-xl text-stone-100'
+          }`}>
+            <div className={`flex flex-col sm:flex-row items-center justify-around gap-3 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse ${isLight ? 'divide-stone-200' : 'divide-stone-800'}`}>
+              {/* Solar Persian Date */}
+              <div className="flex flex-col items-center px-2 sm:px-4 w-full sm:w-auto">
+                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-1 font-medium flex items-center gap-1`}>
+                  <Calendar className="w-3.5 h-3.5" />
+                  تاریخ مراسم
+                </span>
+                <span className={`font-bold text-base sm:text-xl font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-white'}`}>
+                  {data.solarDate.dayOfWeek} {data.solarDate.day} {data.solarDate.month} {data.solarDate.year}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
+                  مصادف با ۱۸ سپتامبر ۲۰۲۵
+                </span>
+              </div>
+
+              {/* Time Slot */}
+              <div className="flex flex-col items-center px-2 sm:px-4 pt-2.5 sm:pt-0 w-full sm:w-auto">
+                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-1 font-medium flex items-center gap-1`}>
+                  <Clock className="w-3.5 h-3.5" />
+                  ساعت برگزاری
+                </span>
+                <span className={`font-bold text-base sm:text-xl font-cinzel ${isLight ? 'text-amber-900' : 'text-amber-200'}`}>
+                  {data.eventTime}
+                </span>
+                <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
+                  پذیرایی و آغاز مراسم
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'countdown':
+        if (data.sectionVisibility?.countdown === false) return null;
+        return (
+          <div key="countdown" className="my-5 sm:my-8">
+            <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-400/90'} block mb-2.5 sm:mb-3 font-medium`}>
+              شمارش معکوس تا وصال و آغاز جشن
+            </span>
+
+            {timeLeft.isPast ? (
+              <div className={`p-3.5 sm:p-4 rounded-xl ${
+                isLight
+                  ? 'bg-emerald-100 border border-emerald-400 text-emerald-950'
+                  : 'bg-emerald-950/50 border border-emerald-500/40 text-emerald-200'
+              } text-xs sm:text-sm font-semibold`}>
+                ✨ جشن با شکوه وصال در حال برگزاری یا سپری شده است ✨
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-3 max-w-md mx-auto" dir="ltr">
+                {/* 1. Days */}
+                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
+                  isLight
+                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
+                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
+                } flex flex-col items-center justify-center`}>
+                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
+                    {toPersianDigits(timeLeft.days)}
+                  </span>
+                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>روز</span>
+                </div>
+
+                {/* 2. Hours */}
+                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
+                  isLight
+                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
+                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
+                } flex flex-col items-center justify-center`}>
+                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
+                    {toPersianDigits(timeLeft.hours)}
+                  </span>
+                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>ساعت</span>
+                </div>
+
+                {/* 3. Minutes */}
+                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
+                  isLight
+                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
+                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
+                } flex flex-col items-center justify-center`}>
+                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
+                    {toPersianDigits(timeLeft.minutes)}
+                  </span>
+                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>دقیقه</span>
+                </div>
+
+                {/* 4. Seconds */}
+                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
+                  isLight
+                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
+                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
+                } flex flex-col items-center justify-center`}>
+                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-amber-700 animate-pulse' : 'text-amber-400 animate-pulse'}`}>
+                    {toPersianDigits(timeLeft.seconds)}
+                  </span>
+                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>ثانیه</span>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'timeline':
+        if (data.sectionVisibility?.timeline === false || !data.timeline || data.timeline.length === 0) return null;
+        return (
+          <div key="timeline" className={`my-8 sm:my-10 pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'}`}>
+            <h3 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950' : 'text-amber-200'} mb-4 sm:mb-6 flex items-center justify-center gap-2`}>
+              <Sparkles className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
+              کنداکتور و برنامه زمان‌بندی جشن
+            </h3>
+
+            <div className="space-y-3 sm:space-y-4 max-w-lg mx-auto text-right">
+              {data.timeline.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className={`flex items-start gap-2.5 sm:gap-3.5 p-2.5 sm:p-3 rounded-2xl ${
+                    isLight
+                      ? 'bg-emerald-50/70 border border-emerald-200/80 hover:border-amber-500/50 shadow-sm'
+                      : 'bg-stone-950/40 border border-stone-800/80 hover:border-amber-500/30'
+                  } transition-colors`}
+                >
+                  <div className={`w-14 sm:w-16 shrink-0 text-center py-1 px-1.5 sm:px-2 rounded-lg ${
+                    isLight
+                      ? 'bg-amber-100 border border-amber-400/60 text-amber-900 font-bold'
+                      : 'bg-amber-500/10 border border-amber-400/30 text-amber-300 font-bold'
+                  } font-cinzel text-[11px] sm:text-xs`}>
+                    {item.time}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className={`font-bold text-xs sm:text-sm ${isLight ? 'text-stone-900' : 'text-stone-100'} font-amiri truncate`}>
+                      {item.title}
+                    </h4>
+                    {item.description && (
+                      <p className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5 font-light`}>
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'venueMap':
+        if (data.sectionVisibility?.venueMap === false) return null;
+        return (
+          <div key="venueMap" className={`my-8 sm:my-10 pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'}`}>
+            <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl ${
+              isLight
+                ? 'bg-emerald-50/70 border border-amber-600/40 text-stone-900 shadow-md'
+                : 'bg-stone-950/70 border border-amber-500/30 text-stone-100'
+            } text-right`}>
+              <div className={`flex items-center gap-2 ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-2`}>
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs uppercase font-medium">مکان برگزاری مراسم</span>
+              </div>
+
+              <h4 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-stone-100'} mb-1`}>
+                {data.venue.name} {data.venue.hall && `(${data.venue.hall})`}
+              </h4>
+
+              <p className={`text-xs sm:text-sm ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} leading-relaxed mb-3 sm:mb-4`}>
+                {data.venue.address}
+              </p>
+
+              {/* Copy Address Button */}
+              <button
+                onClick={handleCopyAddress}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${
+                  isLight
+                    ? 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 shadow-sm'
+                    : 'bg-stone-800 hover:bg-stone-700 text-stone-300'
+                } text-xs mb-3 sm:mb-4 transition-colors cursor-pointer`}
+              >
+                {copiedAddress ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                    <span className="text-emerald-600 font-medium">آدرس کپی شد</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>کپی نشانی تالار</span>
+                  </>
+                )}
+              </button>
+
+              {/* Navigation Buttons Grid - 3 Map Apps */}
+              <div className={`pt-3 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/80'}`}>
+                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/80'} block mb-2 font-medium`}>
+                  مسیریابی هوشمند تالار:
+                </span>
+
+                {(() => {
+                  const resolveNavUrl = (customUrl?: string, defaultUrl?: string): string => {
+                    const trimmed = customUrl ? String(customUrl).trim() : '';
+                    if (trimmed) {
+                      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+                        return trimmed;
+                      }
+                      return `https://${trimmed}`;
+                    }
+                    return defaultUrl || '#';
+                  };
+
+                  const latRaw = data.venue.lat !== undefined && data.venue.lat !== null ? String(data.venue.lat).trim() : '';
+                  const lngRaw = data.venue.lng !== undefined && data.venue.lng !== null ? String(data.venue.lng).trim() : '';
+                  const hasCoords = latRaw !== '' && lngRaw !== '';
+
+                  const googleMapsUrl = resolveNavUrl(
+                    data.venue.googleMapsUrl,
+                    hasCoords ? `https://maps.google.com/?q=${latRaw},${lngRaw}` : 'https://maps.google.com'
+                  );
+
+                  const neshanUrl = resolveNavUrl(
+                    data.venue.neshanUrl,
+                    hasCoords ? `https://neshan.org/maps/@${latRaw},${lngRaw},16z` : 'https://nshn.ir'
+                  );
+
+                  const baladUrl = resolveNavUrl(
+                    data.venue.baladUrl,
+                    hasCoords ? `https://balad.ir/location?latitude=${latRaw}&longitude=${lngRaw}` : 'https://balad.ir'
+                  );
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {/* Google Maps */}
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-950 font-medium'
+                            : 'bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span>گوگل مپ (Google Maps)</span>
+                      </a>
+
+                      {/* Neshan */}
+                      <a
+                        href={neshanUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-950 font-medium'
+                            : 'bg-blue-950/50 hover:bg-blue-900/60 border border-blue-500/40 text-blue-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <span>مسیریاب نشان (Neshan)</span>
+                      </a>
+
+                      {/* Balad */}
+                      <a
+                        href={baladUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`py-2 px-2.5 rounded-xl ${
+                          isLight
+                            ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium'
+                            : 'bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
+                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>مسیریاب بلد (Balad)</span>
+                      </a>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'weather':
+        if (data.sectionVisibility?.weather === false) return null;
+        return <div key="weather"><WeatherSection weather={data.weather} isLight={isLight} /></div>;
+
+      case 'loveStory':
+        if (data.sectionVisibility?.loveStory === false) return null;
+        return <div key="loveStory"><LoveStorySection milestones={data.loveStory} isLight={isLight} /></div>;
+
+      case 'gallery':
+        if (data.sectionVisibility?.gallery === false) return null;
+        return <div key="gallery"><PhotoGallerySection photos={data.gallery} isLight={isLight} /></div>;
+
+      case 'giftRegistry':
+        if (data.sectionVisibility?.giftRegistry === false) return null;
+        return <div key="giftRegistry"><GiftRegistrySection registry={data.giftRegistry} isLight={isLight} /></div>;
+
+      case 'faqs':
+        if (data.sectionVisibility?.faqs === false) return null;
+        return <div key="faqs"><FAQSection faqs={data.faqs} isLight={isLight} /></div>;
+
+      case 'rsvp':
+        if (data.sectionVisibility?.rsvp === false || data.rsvpConfig.enabled === false) return null;
+        return (
+          <div key="rsvp" id="rsvp-section-anchor" className={`my-8 sm:my-10 p-4 sm:p-6 rounded-2xl sm:rounded-3xl ${
+            isLight
+              ? 'bg-gradient-to-r from-amber-100 via-emerald-50 to-amber-100 border border-amber-500/60 shadow-lg text-emerald-950'
+              : 'bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-600/20 border border-amber-400/50 shadow-2xl text-amber-100'
+          }`}>
+            <h4 className={`text-lg sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-1.5 sm:mb-2`}>
+              تایید حضور در جشن (RSVP)
+            </h4>
+            <p className={`text-xs ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} mb-4 sm:mb-5 max-w-md mx-auto leading-relaxed`}>
+              لطفاً جهت برنامه‌ریزی بهتر و تدارک پذیرایی شایسته، حضور خود را تا تاریخ {data.rsvpConfig.deadlineDate} اعلام فرمایید.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-md mx-auto">
+              <motion.button
+                id="rsvp-open-btn"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsRsvpOpen(true)}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs sm:text-sm shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4 text-stone-950" />
+                <span>ثبت و اعلام تایید حضور</span>
+              </motion.button>
+
+              {onReopenEnvelope && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onReopenEnvelope}
+                  className="w-full sm:w-auto px-5 py-3 rounded-full bg-white hover:bg-amber-50 text-amber-950 font-bold text-xs sm:text-sm border border-amber-300/90 shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Eye className="w-4 h-4 text-amber-600" />
+                  <span>مشاهده مجدد پاکت</span>
+                </motion.button>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'calendarAndShare':
+        if (data.sectionVisibility?.calendarAndShare === false) return null;
+        return (
+          <div key="calendarAndShare" className={`pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'} grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 text-xs`}>
+            {/* Add to Calendar */}
+            <button
+              onClick={handleAddToCalendar}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
+                isLight
+                  ? 'bg-white hover:bg-emerald-50 text-stone-800 hover:text-emerald-950 border border-stone-300 shadow-sm'
+                  : 'bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-300 border border-stone-800'
+              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
+            >
+              <CalendarCheck className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
+              <span>افزودن به تقویم</span>
+            </button>
+
+            {/* Share WhatsApp */}
+            <button
+              onClick={handleShareWhatsApp}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
+                isLight
+                  ? 'bg-white hover:bg-emerald-50 text-stone-800 hover:text-emerald-700 border border-stone-300 shadow-sm'
+                  : 'bg-stone-900 hover:bg-emerald-950/60 text-stone-300 hover:text-emerald-300 border border-stone-800'
+              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>ارسال در واتساپ</span>
+            </button>
+
+            {/* Share Telegram */}
+            <button
+              onClick={handleShareTelegram}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
+                isLight
+                  ? 'bg-white hover:bg-sky-50 text-stone-800 hover:text-sky-700 border border-stone-300 shadow-sm'
+                  : 'bg-stone-900 hover:bg-sky-950/60 text-stone-300 hover:text-sky-300 border border-stone-800'
+              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
+            >
+              <Share2 className="w-3.5 h-3.5 text-sky-500" />
+              <span>ارسال در تلگرام</span>
+            </button>
+
+            {/* Copy Link */}
+            <button
+              onClick={handleCopyLink}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
+                isLight
+                  ? 'bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 shadow-sm'
+                  : 'bg-stone-900 hover:bg-stone-800 text-stone-300 border border-stone-800'
+              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
+            >
+              {copiedLink ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-600 font-medium">کپی شد</span>
+                </>
+              ) : (
+                <>
+                  <Copy className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
+                  <span>کپی لینک</span>
+                </>
+              )}
+            </button>
+
+            {/* Reopen Envelope */}
+            {onReopenEnvelope && (
+              <button
+                onClick={onReopenEnvelope}
+                className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
+                  isLight
+                    ? 'bg-white hover:bg-stone-100 text-stone-600 hover:text-stone-900 border border-stone-300 shadow-sm'
+                    : 'bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-white border border-stone-800'
+                } transition-colors cursor-pointer text-[11px] sm:text-xs`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>مشاهده مجدد پاکت</span>
+              </button>
+            )}
+          </div>
+        );
+
+      case 'guestbook':
+        if (data.sectionVisibility?.guestbook === false) return null;
+        return (
+          <div key="guestbook" className="w-full my-6">
+            <GuestbookSection cardId={data.id} isLight={isLight} />
+          </div>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -287,490 +768,37 @@ export default function WeddingCardView({
           <div className={`w-20 sm:w-24 h-0.5 ${isLight ? 'bg-gradient-to-r from-transparent via-amber-600/60 to-transparent' : 'bg-gradient-to-r from-transparent via-amber-400/60 to-transparent'} mt-1.5 sm:mt-2`} />
         </div>
 
-        {/* Couple Names - Luxury Typography */}
-        <div className="my-4 sm:my-6 space-y-1.5 sm:space-y-2">
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-6">
-            <span className={`font-scheherazade text-3xl sm:text-5xl md:text-6xl ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100 font-bold'} drop-shadow-sm`}>
+        {/* Couple Names in Grand Calligraphy */}
+        <div className="my-4 sm:my-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-4 font-amiri">
+            <span className={`text-2xl sm:text-4xl md:text-5xl font-bold ${
+              isLight ? 'text-amber-950 font-black' : 'text-amber-200'
+            } drop-shadow-sm`}>
               {data.brideName}
             </span>
-            <span className={`font-vibes text-2xl sm:text-4xl ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>&</span>
-            <span className={`font-scheherazade text-3xl sm:text-5xl md:text-6xl ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100 font-bold'} drop-shadow-sm`}>
+            <span className={`text-lg sm:text-2xl ${isLight ? 'text-amber-700/80 font-bold' : 'text-amber-400/80'} font-scheherazade my-0.5 sm:my-0`}>
+              &
+            </span>
+            <span className={`text-2xl sm:text-4xl md:text-5xl font-bold ${
+              isLight ? 'text-amber-950 font-black' : 'text-amber-200'
+            } drop-shadow-sm`}>
               {data.groomName}
             </span>
           </div>
-
-          {/* Families Honorifics */}
-          {data.sectionVisibility?.parents !== false && (
-            <div className={`pt-1.5 text-xs sm:text-sm ${isLight ? 'text-stone-600' : 'text-stone-400'} font-light flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap`}>
-              <span>خانواده‌های محترم</span>
-              <span className={`${isLight ? 'text-emerald-900 font-semibold' : 'text-amber-300/90 font-medium'}`}>{data.brideFamily}</span>
-              <span>و</span>
-              <span className={`${isLight ? 'text-emerald-900 font-semibold' : 'text-amber-300/90 font-medium'}`}>{data.groomFamily}</span>
-            </div>
-          )}
         </div>
 
-        {/* Persian Poetic Verse Section */}
-        {data.sectionVisibility?.poem !== false && (
-          <div className={`my-5 sm:my-8 p-3.5 sm:p-6 rounded-2xl ${
-            isLight
-              ? 'bg-emerald-50/80 border border-amber-600/30'
-              : 'bg-stone-950/50 border border-amber-500/20'
-          } relative shadow-sm`}>
-            <div className={`${isLight ? 'text-amber-600/30' : 'text-amber-400/30'} text-2xl sm:text-3xl font-serif absolute -top-3.5 sm:-top-4 right-3 sm:right-4`}>“</div>
-            <div className={`space-y-1.5 sm:space-y-2 ${isLight ? 'text-emerald-950 font-semibold' : 'text-amber-100'} font-amiri text-sm sm:text-lg leading-relaxed sm:leading-loose`}>
-              <p className="font-medium">{data.poem.verse1}</p>
-              <p className="font-medium">{data.poem.verse2}</p>
-            </div>
-            {data.poem.poet && (
-              <span className={`block text-left text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400/80'} mt-2 sm:mt-3 font-scheherazade font-semibold`}>
-                — {data.poem.poet}
-              </span>
-            )}
-            <div className={`${isLight ? 'text-amber-600/30' : 'text-amber-400/30'} text-2xl sm:text-3xl font-serif absolute -bottom-5 sm:-bottom-6 left-3 sm:left-4`}>”</div>
-          </div>
-        )}
+        {/* Invitation Text / Warm Greeting */}
+        <div className="my-4 sm:my-6 max-w-lg mx-auto">
+          <p className={`text-xs sm:text-sm md:text-base leading-relaxed sm:leading-loose ${
+            isLight ? 'text-stone-700 font-normal' : 'text-stone-200 font-light'
+          } font-vazir`}>
+            {data.invitationBody}
+          </p>
+        </div>
 
-        {/* Invitation Body Statement */}
-        <p className={`text-xs sm:text-sm md:text-base ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} leading-relaxed max-w-lg mx-auto mb-5 sm:mb-8`}>
-          {data.invitationBody}
-        </p>
-
-        {/* Date & Time Luxury Badge */}
-        {data.sectionVisibility?.dateAndSchedule !== false && (
-          <div className={`my-5 sm:my-8 p-3.5 sm:p-6 rounded-2xl ${
-            isLight
-              ? 'bg-gradient-to-br from-amber-100/70 via-white to-emerald-50/80 border border-amber-500/50 shadow-md text-stone-900'
-              : 'bg-gradient-to-br from-amber-950/40 via-stone-900/60 to-stone-950/90 border border-amber-400/40 shadow-xl text-stone-100'
-          }`}>
-            <div className={`flex flex-col sm:flex-row items-center justify-around gap-3 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse ${isLight ? 'divide-stone-200' : 'divide-stone-800'}`}>
-              {/* Solar Persian Date */}
-              <div className="flex flex-col items-center px-2 sm:px-4 w-full sm:w-auto">
-                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-1 font-medium flex items-center gap-1`}>
-                  <Calendar className="w-3.5 h-3.5" />
-                  تاریخ مراسم
-                </span>
-                <span className={`font-bold text-base sm:text-xl font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-white'}`}>
-                  {data.solarDate.dayOfWeek} {data.solarDate.day} {data.solarDate.month} {data.solarDate.year}
-                </span>
-                <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
-                  مصادف با ۱۸ سپتامبر ۲۰۲۵
-                </span>
-              </div>
-
-              {/* Time Slot */}
-              <div className="flex flex-col items-center px-2 sm:px-4 pt-2.5 sm:pt-0 w-full sm:w-auto">
-                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-1 font-medium flex items-center gap-1`}>
-                  <Clock className="w-3.5 h-3.5" />
-                  ساعت برگزاری
-                </span>
-                <span className={`font-bold text-base sm:text-xl font-cinzel ${isLight ? 'text-amber-900' : 'text-amber-200'}`}>
-                  {data.eventTime}
-                </span>
-                <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
-                  پذیرایی و آغاز مراسم
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Live Countdown Timer Section */}
-        {data.sectionVisibility?.countdown !== false && (
-          <div className="my-5 sm:my-8">
-            <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-400/90'} block mb-2.5 sm:mb-3 font-medium`}>
-              شمارش معکوس تا وصال و آغاز جشن
-            </span>
-
-            {timeLeft.isPast ? (
-              <div className={`p-3.5 sm:p-4 rounded-xl ${
-                isLight
-                  ? 'bg-emerald-100 border border-emerald-400 text-emerald-950'
-                  : 'bg-emerald-950/50 border border-emerald-500/40 text-emerald-200'
-              } text-xs sm:text-sm font-semibold`}>
-                ✨ جشن با شکوه وصال در حال برگزاری یا سپری شده است ✨
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 gap-1.5 sm:gap-3 max-w-md mx-auto" dir="ltr">
-                {/* 1. Days */}
-                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
-                  isLight
-                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
-                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
-                } flex flex-col items-center justify-center`}>
-                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
-                    {toPersianDigits(timeLeft.days)}
-                  </span>
-                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>روز</span>
-                </div>
-
-                {/* 2. Hours */}
-                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
-                  isLight
-                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
-                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
-                } flex flex-col items-center justify-center`}>
-                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
-                    {toPersianDigits(timeLeft.hours)}
-                  </span>
-                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>ساعت</span>
-                </div>
-
-                {/* 3. Minutes */}
-                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
-                  isLight
-                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
-                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
-                } flex flex-col items-center justify-center`}>
-                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-emerald-950 font-black' : 'text-amber-300'}`}>
-                    {toPersianDigits(timeLeft.minutes)}
-                  </span>
-                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>دقیقه</span>
-                </div>
-
-                {/* 4. Seconds */}
-                <div className={`p-1.5 sm:p-3.5 rounded-xl sm:rounded-2xl ${
-                  isLight
-                    ? 'bg-emerald-50/90 border border-amber-600/40 shadow-sm'
-                    : 'bg-stone-950/85 border border-amber-500/35 shadow-inner'
-                } flex flex-col items-center justify-center`}>
-                  <span className={`text-base sm:text-2xl md:text-3xl font-bold font-cinzel ${isLight ? 'text-amber-700 animate-pulse' : 'text-amber-400 animate-pulse'}`}>
-                    {toPersianDigits(timeLeft.seconds)}
-                  </span>
-                  <span className={`text-[9px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-300'} font-vazir mt-0.5 sm:mt-1`}>ثانیه</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Ceremony Timeline / Program */}
-        {data.sectionVisibility?.timeline !== false && data.timeline && data.timeline.length > 0 && (
-          <div className={`my-8 sm:my-10 pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'}`}>
-            <h3 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950' : 'text-amber-200'} mb-4 sm:mb-6 flex items-center justify-center gap-2`}>
-              <Sparkles className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
-              کنداکتور و برنامه زمان‌بندی جشن
-            </h3>
-
-            <div className="space-y-3 sm:space-y-4 max-w-lg mx-auto text-right">
-              {data.timeline.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className={`flex items-start gap-2.5 sm:gap-3.5 p-2.5 sm:p-3 rounded-2xl ${
-                    isLight
-                      ? 'bg-emerald-50/70 border border-emerald-200/80 hover:border-amber-500/50 shadow-sm'
-                      : 'bg-stone-950/40 border border-stone-800/80 hover:border-amber-500/30'
-                  } transition-colors`}
-                >
-                  <div className={`w-14 sm:w-16 shrink-0 text-center py-1 px-1.5 sm:px-2 rounded-lg ${
-                    isLight
-                      ? 'bg-amber-100 border border-amber-400/60 text-amber-900 font-bold'
-                      : 'bg-amber-500/10 border border-amber-400/30 text-amber-300 font-bold'
-                  } font-cinzel text-[11px] sm:text-xs`}>
-                    {item.time}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className={`font-bold text-xs sm:text-sm ${isLight ? 'text-stone-900' : 'text-stone-100'} font-amiri truncate`}>
-                      {item.title}
-                    </h4>
-                    {item.description && (
-                      <p className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5 font-light`}>
-                        {item.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Venue & Interactive Navigation Card */}
-        {data.sectionVisibility?.venueMap !== false && (
-          <div className={`my-8 sm:my-10 pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'}`}>
-            <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-3xl ${
-              isLight
-                ? 'bg-emerald-50/70 border border-amber-600/40 text-stone-900 shadow-md'
-                : 'bg-stone-950/70 border border-amber-500/30 text-stone-100'
-            } text-right`}>
-              <div className={`flex items-center gap-2 ${isLight ? 'text-amber-800' : 'text-amber-400'} mb-2`}>
-                <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-xs uppercase font-medium">مکان برگزاری مراسم</span>
-              </div>
-
-              <h4 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-stone-100'} mb-1`}>
-                {data.venue.name} {data.venue.hall && `(${data.venue.hall})`}
-              </h4>
-
-              <p className={`text-xs sm:text-sm ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} leading-relaxed mb-3 sm:mb-4`}>
-                {data.venue.address}
-              </p>
-
-              {/* Copy Address Button */}
-              <button
-                onClick={handleCopyAddress}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${
-                  isLight
-                    ? 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 shadow-sm'
-                    : 'bg-stone-800 hover:bg-stone-700 text-stone-300'
-                } text-xs mb-3 sm:mb-4 transition-colors cursor-pointer`}
-              >
-                {copiedAddress ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="text-emerald-600 font-medium">آدرس کپی شد</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>کپی نشانی تالار</span>
-                  </>
-                )}
-              </button>
-
-              {/* Navigation Buttons Grid - 3 Map Apps */}
-              <div className={`pt-3 border-t ${isLight ? 'border-stone-200' : 'border-stone-800/80'}`}>
-                <span className={`text-[11px] sm:text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/80'} block mb-2 font-medium`}>
-                  مسیریابی هوشمند تالار:
-                </span>
-
-                {(() => {
-                  const resolveNavUrl = (customUrl?: string, defaultUrl?: string): string => {
-                    const trimmed = customUrl ? String(customUrl).trim() : '';
-                    if (trimmed) {
-                      if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
-                        return trimmed;
-                      }
-                      return `https://${trimmed}`;
-                    }
-                    return defaultUrl || '#';
-                  };
-
-                  const latRaw = data.venue.lat !== undefined && data.venue.lat !== null ? String(data.venue.lat).trim() : '';
-                  const lngRaw = data.venue.lng !== undefined && data.venue.lng !== null ? String(data.venue.lng).trim() : '';
-                  const hasCoords = latRaw !== '' && lngRaw !== '';
-
-                  const googleMapsUrl = resolveNavUrl(
-                    data.venue.googleMapsUrl,
-                    hasCoords ? `https://maps.google.com/?q=${latRaw},${lngRaw}` : 'https://maps.google.com'
-                  );
-
-                  const neshanUrl = resolveNavUrl(
-                    data.venue.neshanUrl,
-                    hasCoords ? `https://neshan.org/maps/@${latRaw},${lngRaw},16z` : 'https://nshn.ir'
-                  );
-
-                  const baladUrl = resolveNavUrl(
-                    data.venue.baladUrl,
-                    hasCoords ? `https://balad.ir/location?latitude=${latRaw}&longitude=${lngRaw}` : 'https://balad.ir'
-                  );
-
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {/* Google Maps */}
-                      <a
-                        href={googleMapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`py-2 px-2.5 rounded-xl ${
-                          isLight
-                            ? 'bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-950 font-medium'
-                            : 'bg-red-950/50 hover:bg-red-900/60 border border-red-500/40 text-red-200'
-                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                      >
-                        <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                        <span>گوگل مپ (Google Maps)</span>
-                      </a>
-
-                      {/* Neshan */}
-                      <a
-                        href={neshanUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`py-2 px-2.5 rounded-xl ${
-                          isLight
-                            ? 'bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-950 font-medium'
-                            : 'bg-blue-950/50 hover:bg-blue-900/60 border border-blue-500/40 text-blue-200'
-                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                      >
-                        <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                        <span>مسیریاب نشان (Neshan)</span>
-                      </a>
-
-                      {/* Balad */}
-                      <a
-                        href={baladUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`py-2 px-2.5 rounded-xl ${
-                          isLight
-                            ? 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 font-medium'
-                            : 'bg-emerald-950/50 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-200'
-                        } text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm`}
-                      >
-                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>مسیریاب بلد (Balad)</span>
-                      </a>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Weather Forecast Section */}
-        {data.sectionVisibility?.weather !== false && (
-          <WeatherSection weather={data.weather} isLight={isLight} />
-        )}
-
-        {/* Our Love Story Section */}
-        {data.sectionVisibility?.loveStory !== false && (
-          <LoveStorySection milestones={data.loveStory} isLight={isLight} />
-        )}
-
-        {/* Photo Gallery Moments */}
-        {data.sectionVisibility?.gallery !== false && (
-          <PhotoGallerySection photos={data.gallery} isLight={isLight} />
-        )}
-
-        {/* Gift & Shādbāsh Registry */}
-        {data.sectionVisibility?.giftRegistry !== false && (
-          <GiftRegistrySection registry={data.giftRegistry} isLight={isLight} />
-        )}
-
-        {/* FAQs & Guest Guide */}
-        {data.sectionVisibility?.faqs !== false && (
-          <FAQSection faqs={data.faqs} isLight={isLight} />
-        )}
-
-        {/* Interactive RSVP Action Trigger */}
-        {data.sectionVisibility?.rsvp !== false && data.rsvpConfig.enabled !== false && (
-          <div id="rsvp-section-anchor" className={`my-8 sm:my-10 p-4 sm:p-6 rounded-2xl sm:rounded-3xl ${
-            isLight
-              ? 'bg-gradient-to-r from-amber-100 via-emerald-50 to-amber-100 border border-amber-500/60 shadow-lg text-emerald-950'
-              : 'bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-600/20 border border-amber-400/50 shadow-2xl text-amber-100'
-          }`}>
-            <h4 className={`text-lg sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-1.5 sm:mb-2`}>
-              تایید حضور در جشن (RSVP)
-            </h4>
-            <p className={`text-xs ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} mb-4 sm:mb-5 max-w-md mx-auto leading-relaxed`}>
-              لطفاً جهت برنامه‌ریزی بهتر و تدارک پذیرایی شایسته، حضور خود را تا تاریخ {data.rsvpConfig.deadlineDate} اعلام فرمایید.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-md mx-auto">
-              <motion.button
-                id="rsvp-open-btn"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setIsRsvpOpen(true)}
-                className="w-full sm:w-auto px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs sm:text-sm shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <CheckCircle2 className="w-4 h-4 text-stone-950" />
-                <span>ثبت و اعلام تایید حضور</span>
-              </motion.button>
-
-              {onReopenEnvelope && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={onReopenEnvelope}
-                  className="w-full sm:w-auto px-5 py-3 rounded-full bg-white hover:bg-amber-50 text-amber-950 font-bold text-xs sm:text-sm border border-amber-300/90 shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                >
-                  <Eye className="w-4 h-4 text-amber-600" />
-                  <span>مشاهده مجدد پاکت</span>
-                </motion.button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Quick Utility Actions Bar */}
-        {data.sectionVisibility?.calendarAndShare !== false && (
-          <div className={`pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'} grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 text-xs`}>
-            {/* Add to Calendar */}
-            <button
-              onClick={handleAddToCalendar}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
-                isLight
-                  ? 'bg-white hover:bg-emerald-50 text-stone-800 hover:text-emerald-950 border border-stone-300 shadow-sm'
-                  : 'bg-stone-900 hover:bg-stone-800 text-stone-300 hover:text-amber-300 border border-stone-800'
-              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
-            >
-              <CalendarCheck className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
-              <span>افزودن به تقویم</span>
-            </button>
-
-            {/* Share WhatsApp */}
-            <button
-              onClick={handleShareWhatsApp}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
-                isLight
-                  ? 'bg-white hover:bg-emerald-50 text-stone-800 hover:text-emerald-700 border border-stone-300 shadow-sm'
-                  : 'bg-stone-900 hover:bg-emerald-950/60 text-stone-300 hover:text-emerald-300 border border-stone-800'
-              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
-            >
-              <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>ارسال در واتساپ</span>
-            </button>
-
-            {/* Share Telegram */}
-            <button
-              onClick={handleShareTelegram}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
-                isLight
-                  ? 'bg-white hover:bg-sky-50 text-stone-800 hover:text-sky-700 border border-stone-300 shadow-sm'
-                  : 'bg-stone-900 hover:bg-sky-950/60 text-stone-300 hover:text-sky-300 border border-stone-800'
-              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
-            >
-              <Share2 className="w-3.5 h-3.5 text-sky-500" />
-              <span>ارسال در تلگرام</span>
-            </button>
-
-            {/* Copy Link */}
-            <button
-              onClick={handleCopyLink}
-              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
-                isLight
-                  ? 'bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 shadow-sm'
-                  : 'bg-stone-900 hover:bg-stone-800 text-stone-300 border border-stone-800'
-              } transition-colors cursor-pointer text-[11px] sm:text-xs`}
-            >
-              {copiedLink ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-600 font-medium">کپی شد</span>
-                </>
-              ) : (
-                <>
-                  <Copy className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
-                  <span>کپی لینک</span>
-                </>
-              )}
-            </button>
-
-            {/* Reopen Envelope */}
-            {onReopenEnvelope && (
-              <button
-                onClick={onReopenEnvelope}
-                className={`col-span-2 sm:col-span-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl ${
-                  isLight
-                    ? 'bg-white hover:bg-stone-100 text-stone-600 hover:text-stone-900 border border-stone-300 shadow-sm'
-                    : 'bg-stone-900 hover:bg-stone-800 text-stone-400 hover:text-white border border-stone-800'
-                } transition-colors cursor-pointer text-[11px] sm:text-xs`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>مشاهده مجدد پاکت</span>
-              </button>
-            )}
-          </div>
-        )}
+        {/* Dynamic Reorderable Sections */}
+        {effectiveOrder.map((sectionKey) => renderSection(sectionKey))}
       </motion.div>
-
-      {/* Guestbook Section */}
-      {data.sectionVisibility?.guestbook !== false && (
-        <GuestbookSection cardId={data.id} isLight={isLight} />
-      )}
 
       {/* Footer copyright and discreet admin login */}
       <footer className={`mt-8 mb-6 sm:mb-10 text-center text-xs ${isLight ? 'text-stone-600' : 'text-stone-500'} font-light space-y-2 select-none`}>

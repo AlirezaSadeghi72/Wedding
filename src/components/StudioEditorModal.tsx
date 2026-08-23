@@ -50,7 +50,10 @@ import {
   Radio,
   Crown,
   Flower2,
-  Bird
+  Bird,
+  ArrowUp,
+  ArrowDown,
+  GripVertical
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 import { normalizeDigits, verifyPasswordSecurely } from '../utils/security';
@@ -66,7 +69,10 @@ import {
   MusicTrack,
   OverallBorderStyle,
   OverallFontPairing,
-  OverallAmbientEffect
+  OverallAmbientEffect,
+  SectionKey,
+  DEFAULT_SECTIONS_ORDER,
+  getEffectiveSectionsOrder
 } from '../types';
 import {
   THEMES,
@@ -764,105 +770,129 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     onClose();
   };
 
-  // Section items metadata list for the Switcher
-  const SECTION_SWITCHES = [
+  const currentSectionsOrder = getEffectiveSectionsOrder(formData.sectionsOrder);
+
+  const handleMoveSection = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= currentSectionsOrder.length) return;
+
+    const newOrder = [...currentSectionsOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+
+    setFormData((prev) => ({
+      ...prev,
+      sectionsOrder: newOrder
+    }));
+  };
+
+  const handleResetSectionsOrder = () => {
+    setFormData((prev) => ({
+      ...prev,
+      sectionsOrder: [...DEFAULT_SECTIONS_ORDER]
+    }));
+  };
+
+  // Section metadata map for dynamic order rendering
+  const SECTION_MAP: Record<SectionKey, {
+    title: string;
+    desc: string;
+    icon: any;
+    targetTab: TabType;
+  }> = {
+    parents: {
+      title: 'اسامی والدین و خانواده‌ها',
+      desc: 'خانواده‌های محترم عروس و داماد',
+      icon: Users,
+      targetTab: 'basics'
+    },
+    poem: {
+      title: 'بیت شعر و گیومه خوشامدگویی',
+      desc: 'بیت آغازین حافظ، سعدی، مولانا یا شعر سفارشی',
+      icon: BookOpen,
+      targetTab: 'text_ai'
+    },
+    dateAndSchedule: {
+      title: 'باکس تاریخ شمسی، میلادی و ساعت',
+      desc: 'نشان تقویم لوکس با روز هفته و بازه ساعت',
+      icon: Calendar,
+      targetTab: 'basics'
+    },
+    countdown: {
+      title: 'شمارش معکوس زنده تا روز جشن',
+      desc: 'تایمر دیجیتال روز، ساعت، دقیقه و ثانیه',
+      icon: Clock,
+      targetTab: 'basics'
+    },
+    timeline: {
+      title: 'کنداکتور و برنامه زمان‌بندی روز جشن',
+      desc: 'ساعات ورود، عقد، صرف شام و پایکوبی',
+      icon: Sparkles,
+      targetTab: 'timeline'
+    },
+    venueMap: {
+      title: 'تالار، آدرس و دکمه‌های مسیریابی هوشمند',
+      desc: 'لینک‌های مستقیم نشان، بلد، گوگل مپ و کپی آدرس',
+      icon: MapPin,
+      targetTab: 'venue'
+    },
+    weather: {
+      title: 'پیش‌بینی آب‌وهوا و ساعت عکاسی طلایی',
+      desc: 'دمای تخمینی تالار و غروب آفتاب',
+      icon: Sun,
+      targetTab: 'gift_faq'
+    },
+    loveStory: {
+      title: 'تایم‌لاین داستان آشنایی (Love Story)',
+      desc: 'خط زمانی رویدادهای عاشقانه و تصاویر خاطره‌انگیز',
+      icon: Heart,
+      targetTab: 'story'
+    },
+    gallery: {
+      title: 'آلبوم و گالری عکس‌های عروس و داماد',
+      desc: 'امکان آپلود عکس یا درج لینک با لایت‌باکس تمام‌صفحه',
+      icon: ImageIcon,
+      targetTab: 'gallery'
+    },
+    giftRegistry: {
+      title: 'کارت هدیه و شادباش نقدی',
+      desc: 'کپی آسان شماره کارت بانکی و شبا',
+      icon: Gift,
+      targetTab: 'gift_faq'
+    },
+    faqs: {
+      title: 'پرسش‌های متداول و راهنمای مهمانان',
+      desc: 'آکاردئون پاسخ به سوالات پارکینگ، اقامت و ورود',
+      icon: HelpCircle,
+      targetTab: 'gift_faq'
+    },
+    rsvp: {
+      title: 'فرم ثبت و اعلام حضور (RSVP)',
+      desc: 'مهلت پاسخ، تعداد نفرات بیش از ۶ نفر و تایید حضور',
+      icon: CheckCircle2,
+      targetTab: 'music_rsvp'
+    },
+    guestbook: {
+      title: 'دفتر یادبود دیجیتال و تبریکات',
+      desc: 'امکان ثبت پیام یادگاری، دود کردن اسپند و گل',
+      icon: Heart,
+      targetTab: 'basics'
+    },
+    calendarAndShare: {
+      title: 'دکمه‌های اشتراک و تقویم ICS',
+      desc: 'افزودن به تقویم، واتساپ، تلگرام و کپی لینک',
+      icon: Share2,
+      targetTab: 'basics'
+    }
+  };
+
+  const GLOBAL_SWITCHES = [
     {
       key: 'envelope' as keyof SectionVisibility,
       title: 'پاکت، انیمیشن باز شدن و مهر موم',
       desc: 'صفحه اولیه پاکت نامه با موم و نام مهمان',
       icon: Eye,
-      targetTab: 'theme' as TabType
-    },
-    {
-      key: 'poem' as keyof SectionVisibility,
-      title: 'بیت شعر و گیومه خوشامدگویی',
-      desc: 'بیت آغازین حافظ، سعدی، مولانا یا شعر سفارشی',
-      icon: BookOpen,
-      targetTab: 'text_ai' as TabType
-    },
-    {
-      key: 'parents' as keyof SectionVisibility,
-      title: 'اسامی والدین و خانواده‌ها',
-      desc: 'خانواده‌های محترم عروس و داماد',
-      icon: Users,
-      targetTab: 'basics' as TabType
-    },
-    {
-      key: 'countdown' as keyof SectionVisibility,
-      title: 'شمارش معکوس زنده تا روز جشن',
-      desc: 'تایمر دیجیتال روز، ساعت، دقیقه و ثانیه',
-      icon: Clock,
-      targetTab: 'basics' as TabType
-    },
-    {
-      key: 'dateAndSchedule' as keyof SectionVisibility,
-      title: 'باکس تاریخ شمسی، میلادی و ساعت',
-      desc: 'نشان تقویم لوکس با روز هفته و بازه ساعت',
-      icon: Calendar,
-      targetTab: 'basics' as TabType
-    },
-    {
-      key: 'timeline' as keyof SectionVisibility,
-      title: 'کنداکتور و برنامه زمان‌بندی روز جشن',
-      desc: 'ساعات ورود، عقد، صرف شام و پایکوبی',
-      icon: Sparkles,
-      targetTab: 'timeline' as TabType
-    },
-    {
-      key: 'venueMap' as keyof SectionVisibility,
-      title: 'تالار، آدرس و دکمه‌های اسنپ و مسیریابی',
-      desc: 'لینک‌های مستقیم اسنپ، بلد، نشان، گوگل مپ و ویز',
-      icon: MapPin,
-      targetTab: 'venue' as TabType
-    },
-    {
-      key: 'weather' as keyof SectionVisibility,
-      title: 'پیش‌بینی آب‌وهوا و ساعت عکاسی طلایی',
-      desc: 'دمای تخمینی تالار و غروب آفتاب',
-      icon: Sun,
-      targetTab: 'gift_faq' as TabType
-    },
-    {
-      key: 'loveStory' as keyof SectionVisibility,
-      title: 'تایم‌لاین داستان آشنایی (Love Story)',
-      desc: 'خط زمانی رویدادهای عاشقانه و تصاویر خاطره‌انگیز',
-      icon: Heart,
-      targetTab: 'story' as TabType
-    },
-    {
-      key: 'gallery' as keyof SectionVisibility,
-      title: 'آلبوم و گالری عکس‌های عروس و داماد',
-      desc: 'امکان آپلود عکس یا درج لینک با لایت‌باکس تمام‌صفحه',
-      icon: ImageIcon,
-      targetTab: 'gallery' as TabType
-    },
-    {
-      key: 'giftRegistry' as keyof SectionVisibility,
-      title: 'کارت هدیه و شادباش نقدی',
-      desc: 'کپی آسان شماره کارت بانکی و شبا',
-      icon: Gift,
-      targetTab: 'gift_faq' as TabType
-    },
-    {
-      key: 'faqs' as keyof SectionVisibility,
-      title: 'پرسش‌های متداول و راهنمای مهمانان',
-      desc: 'آکاردئون پاسخ به سوالات پارکینگ، اقامت و ورود',
-      icon: HelpCircle,
-      targetTab: 'gift_faq' as TabType
-    },
-    {
-      key: 'rsvp' as keyof SectionVisibility,
-      title: 'فرم ثبت و اعلام حضور (RSVP)',
-      desc: 'مهلت پاسخ، تعداد نفرات بیش از ۶ نفر و دریافت شماره',
-      icon: CheckCircle2,
-      targetTab: 'music_rsvp' as TabType
-    },
-    {
-      key: 'guestbook' as keyof SectionVisibility,
-      title: 'دفتر یادبود دیجیتال و تبریکات',
-      desc: 'امکان ثبت پیام یادگاری، دود کردن اسپند و گل',
-      icon: Heart,
-      targetTab: 'basics' as TabType
+      targetTab: 'envelope' as TabType
     },
     {
       key: 'musicPlayer' as keyof SectionVisibility,
@@ -870,13 +900,6 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
       desc: 'مدیریت لیست آهنگ، آپلود فایل صوتی، ولوم و سینت',
       icon: Music,
       targetTab: 'music_rsvp' as TabType
-    },
-    {
-      key: 'calendarAndShare' as keyof SectionVisibility,
-      title: 'دکمه‌های اشتراک و تقویم ICS',
-      desc: 'افزودن به تقویم، واتساپ، تلگرام و کپی لینک',
-      icon: Share2,
-      targetTab: 'basics' as TabType
     }
   ];
 
@@ -1090,113 +1113,273 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               </button>
             </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 max-h-[calc(92vh-140px)]">
+            {/* Modal Scrollable Body */}
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 max-h-[calc(92vh-140px)]">
 
-          {/* TAB 0: MASTER SECTION SWITCHER & VISIBILITY DASHBOARD */}
-          {activeTab === 'sections' && (
-            <div className="space-y-6">
-              {/* Header and Quick Actions */}
-              <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-bold text-amber-950 font-amiri flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-amber-700" />
-                    مدیریت و سوئیچ بخش‌های کارت دعوت
-                  </h3>
-                  <p className="text-xs text-stone-600 mt-0.5">
-                    هر بخشی که تمایل دارید در کارت به مهمانان نمایش داده شود را روشن و در غیر این‌صورت خاموش نمایید.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleAllSections(true)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-900 text-xs font-bold cursor-pointer transition-colors"
-                  >
-                    فعال‌سازی همه
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleAllSections(false)}
-                    className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 text-xs cursor-pointer transition-colors"
-                  >
-                    غیرفعال‌سازی همه
-                  </button>
-                </div>
-              </div>
-
-              {/* Sections Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {SECTION_SWITCHES.map((item) => {
-                  const isEnabled = currentVisibility[item.key];
-                  const Icon = item.icon;
-                  return (
-                    <div
-                      key={item.key}
-                      className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                        isEnabled
-                          ? 'bg-amber-50/50 border-amber-300 shadow-sm'
-                          : 'bg-stone-50/80 border-stone-200 opacity-60'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`p-2 rounded-xl border mt-0.5 shrink-0 ${
-                            isEnabled
-                              ? 'bg-amber-100 text-amber-800 border-amber-300'
-                              : 'bg-stone-100 text-stone-400 border-stone-300'
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-stone-900">{item.title}</span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
-                                isEnabled
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-stone-200 text-stone-600'
-                              }`}
-                            >
-                              {isEnabled ? 'فعال' : 'غیرفعال'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-stone-600 mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab(item.targetTab)}
-                          className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 text-[11px] cursor-pointer transition-colors border border-stone-200"
-                          title="ویرایش مستقیم این بخش"
-                        >
-                          ویرایش
-                        </button>
-
-                        {/* Toggle Switch */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleSection(item.key)}
-                          className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
-                            isEnabled ? 'bg-amber-500 justify-end' : 'bg-stone-300 justify-start'
-                          }`}
-                        >
-                          <motion.div
-                            layout
-                            className="w-4 h-4 rounded-full shadow-md bg-white"
-                          />
-                        </button>
-                      </div>
+              {/* TAB 0: MASTER SECTION SWITCHER & REORDERING DASHBOARD */}
+              {activeTab === 'sections' && (
+                <div className="space-y-6">
+                  {/* Header and Quick Actions */}
+                  <div className="p-4 rounded-2xl bg-amber-50/80 border border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-amber-950 font-amiri flex items-center gap-2">
+                        <Sliders className="w-4 h-4 text-amber-700" />
+                        مدیریت و ترتیب نمایش بخش‌های کارت دعوت
+                      </h3>
+                      <p className="text-xs text-stone-600 mt-0.5">
+                        با استفاده از دکمه‌های بالا و پایین می‌توانید ترتیب نمایش هر بخش را تغییر دهید و با سوئیچ فعال/غیرفعال آن را پنهان یا نمایان سازید.
+                      </p>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleResetSectionsOrder}
+                        className="px-2.5 py-1.5 rounded-xl bg-white hover:bg-stone-100 border border-amber-300 text-amber-950 text-xs font-medium cursor-pointer transition-colors flex items-center gap-1"
+                        title="بازنشانی به چیدمان استاندارد"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+                        <span>ترتیب پیش‌فرض</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAllSections(true)}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-900 text-xs font-bold cursor-pointer transition-colors"
+                      >
+                        فعال‌سازی همه
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAllSections(false)}
+                        className="px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-700 text-xs cursor-pointer transition-colors"
+                      >
+                        غیرفعال‌سازی همه
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Dynamic Reorderable Sections List */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-amber-950 font-amiri flex items-center gap-1.5">
+                        <GripVertical className="w-4 h-4 text-amber-600" />
+                        ترتیب لود شدن بخش‌های اصلی کارت (از بالا به پایین):
+                      </span>
+                      <span className="text-[11px] text-stone-500">
+                        {toPersianDigits(currentSectionsOrder.length)} بخش قابل جابجایی
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {currentSectionsOrder.map((sectionKey, index) => {
+                        const meta = SECTION_MAP[sectionKey] || {
+                          title: sectionKey,
+                          desc: '',
+                          icon: LayoutGrid,
+                          targetTab: 'basics' as TabType
+                        };
+                        const Icon = meta.icon;
+                        const isEnabled = currentVisibility[sectionKey] !== false;
+                        const isFirst = index === 0;
+                        const isLast = index === currentSectionsOrder.length - 1;
+
+                        return (
+                          <motion.div
+                            key={sectionKey}
+                            layout
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className={`p-3 sm:p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-2.5 sm:gap-3 ${
+                              isEnabled
+                                ? 'bg-amber-50/60 border-amber-300/90 shadow-sm hover:border-amber-400'
+                                : 'bg-stone-50/80 border-stone-200 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                              {/* Order Position Badge */}
+                              <div className="flex flex-col items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-amber-100/90 border border-amber-300 text-amber-900 font-bold text-xs sm:text-sm shrink-0">
+                                {toPersianDigits(index + 1)}
+                              </div>
+
+                              {/* Section Icon */}
+                              <div
+                                className={`p-2 rounded-xl border shrink-0 ${
+                                  isEnabled
+                                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                    : 'bg-stone-100 text-stone-400 border-stone-300'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+
+                              {/* Titles and Descriptions */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-xs sm:text-sm text-stone-900 truncate">
+                                    {meta.title}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                                      isEnabled
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : 'bg-stone-200 text-stone-600'
+                                    }`}
+                                  >
+                                    {isEnabled ? 'فعال' : 'غیرفعال'}
+                                  </span>
+                                </div>
+                                {meta.desc && (
+                                  <p className="text-[11px] text-stone-500 mt-0.5 truncate hidden sm:block">
+                                    {meta.desc}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Controls: Move Up/Down + Direct Edit + Toggle Switch */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                              {/* Move Up Button */}
+                              <button
+                                type="button"
+                                disabled={isFirst}
+                                onClick={() => handleMoveSection(index, 'up')}
+                                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
+                                  isFirst
+                                    ? 'opacity-30 border-stone-200 text-stone-400 cursor-not-allowed bg-stone-50'
+                                    : 'bg-white hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm cursor-pointer hover:scale-105 active:scale-95'
+                                }`}
+                                title="انتقال به بالا"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
+
+                              {/* Move Down Button */}
+                              <button
+                                type="button"
+                                disabled={isLast}
+                                onClick={() => handleMoveSection(index, 'down')}
+                                className={`p-1.5 sm:p-2 rounded-xl border transition-all ${
+                                  isLast
+                                    ? 'opacity-30 border-stone-200 text-stone-400 cursor-not-allowed bg-stone-50'
+                                    : 'bg-white hover:bg-amber-100 border-amber-300 text-amber-900 shadow-sm cursor-pointer hover:scale-105 active:scale-95'
+                                }`}
+                                title="انتقال به پایین"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              </button>
+
+                              {/* Direct Tab Edit Button */}
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(meta.targetTab)}
+                                className="px-2 py-1.5 rounded-lg bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 text-[11px] cursor-pointer transition-colors border border-stone-200 hidden xs:inline-block"
+                                title="ویرایش مستقیم محتوای این بخش"
+                              >
+                                ویرایش
+                              </button>
+
+                              {/* Toggle Switch */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSection(sectionKey as keyof SectionVisibility)}
+                                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
+                                  isEnabled ? 'bg-amber-500 justify-end' : 'bg-stone-300 justify-start'
+                                }`}
+                                title={isEnabled ? 'غیرفعال کردن این بخش' : 'فعال کردن این بخش'}
+                              >
+                                <motion.div
+                                  layout
+                                  className="w-4 h-4 rounded-full shadow-md bg-white"
+                                />
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Header & Floating Components */}
+                  <div className="pt-4 border-t border-amber-200/80 space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs font-bold text-amber-950 font-amiri flex items-center gap-1.5">
+                        <Sliders className="w-4 h-4 text-amber-600" />
+                        بخش‌های سربرگ و شناور اختصاصی:
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {GLOBAL_SWITCHES.map((item) => {
+                        const isEnabled = currentVisibility[item.key] !== false;
+                        const Icon = item.icon;
+                        return (
+                          <div
+                            key={item.key}
+                            className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                              isEnabled
+                                ? 'bg-amber-50/50 border-amber-300 shadow-sm'
+                                : 'bg-stone-50/80 border-stone-200 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={`p-2 rounded-xl border mt-0.5 shrink-0 ${
+                                  isEnabled
+                                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                    : 'bg-stone-100 text-stone-400 border-stone-300'
+                                }`}
+                              >
+                                <Icon className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-xs text-stone-900">{item.title}</span>
+                                  <span
+                                    className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                                      isEnabled
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : 'bg-stone-200 text-stone-600'
+                                    }`}
+                                  >
+                                    {isEnabled ? 'فعال' : 'غیرفعال'}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-stone-600 mt-0.5">{item.desc}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(item.targetTab)}
+                                className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-amber-100 text-stone-700 hover:text-amber-900 text-[11px] cursor-pointer transition-colors border border-stone-200"
+                                title="ویرایش مستقیم این بخش"
+                              >
+                                ویرایش
+                              </button>
+
+                              {/* Toggle Switch */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleSection(item.key)}
+                                className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
+                                  isEnabled ? 'bg-amber-500 justify-end' : 'bg-stone-300 justify-start'
+                                }`}
+                              >
+                                <motion.div
+                                  layout
+                                  className="w-4 h-4 rounded-full shadow-md bg-white"
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
 
           {/* TAB: ENVELOPE THEMES & WAX SEAL CUSTOMIZATION */}
           {activeTab === 'envelope' && (

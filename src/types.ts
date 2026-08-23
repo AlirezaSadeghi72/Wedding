@@ -126,6 +126,64 @@ export interface SectionVisibility {
   musicPlayer: boolean;
 }
 
+export type SectionKey =
+  | 'parents'
+  | 'poem'
+  | 'dateAndSchedule'
+  | 'countdown'
+  | 'timeline'
+  | 'venueMap'
+  | 'weather'
+  | 'loveStory'
+  | 'gallery'
+  | 'giftRegistry'
+  | 'faqs'
+  | 'rsvp'
+  | 'calendarAndShare'
+  | 'guestbook';
+
+export const DEFAULT_SECTIONS_ORDER: SectionKey[] = [
+  'parents',
+  'poem',
+  'dateAndSchedule',
+  'countdown',
+  'timeline',
+  'venueMap',
+  'weather',
+  'loveStory',
+  'gallery',
+  'giftRegistry',
+  'faqs',
+  'rsvp',
+  'calendarAndShare',
+  'guestbook'
+];
+
+export function getEffectiveSectionsOrder(sectionsOrder?: (SectionKey | string)[]): SectionKey[] {
+  if (!sectionsOrder || !Array.isArray(sectionsOrder) || sectionsOrder.length === 0) {
+    return [...DEFAULT_SECTIONS_ORDER];
+  }
+  const validKeys = new Set(DEFAULT_SECTIONS_ORDER);
+  const result: SectionKey[] = [];
+  const added = new Set<string>();
+
+  for (const k of sectionsOrder) {
+    if (validKeys.has(k as SectionKey) && !added.has(k)) {
+      result.push(k as SectionKey);
+      added.add(k);
+    }
+  }
+
+  for (const k of DEFAULT_SECTIONS_ORDER) {
+    if (!added.has(k)) {
+      result.push(k);
+      added.add(k);
+    }
+  }
+
+  return result;
+}
+
 export interface MusicTrack {
   id: string;
   title: string;
@@ -158,6 +216,7 @@ export interface WeddingCardData {
   overallStyle?: OverallStyleConfig;
   invitationTitle: string;
   sectionVisibility?: Partial<SectionVisibility>;
+  sectionsOrder?: SectionKey[] | string[];
   poem: {
     verse1: string;
     verse2: string;

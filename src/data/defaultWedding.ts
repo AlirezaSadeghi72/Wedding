@@ -1,4 +1,4 @@
-import { WeddingCardData, GuestbookEntry } from '../types';
+import { WeddingCardData, GuestbookEntry, DEFAULT_SECTIONS_ORDER } from '../types';
 
 export const DEFAULT_WEDDING_DATA: WeddingCardData = {
   id: 'wedding-parsa-negar',
@@ -14,6 +14,7 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     headerLayout: 'centered_crest'
   },
   invitationTitle: 'به نام پیوند دهنده جان‌ها و دل‌ها',
+  sectionsOrder: [...DEFAULT_SECTIONS_ORDER],
   sectionVisibility: {
     envelope: true,
     poem: true,

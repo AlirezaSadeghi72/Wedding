@@ -227,17 +227,17 @@ export default function WeddingEnvelope({
               <span className="font-vazir font-extrabold tracking-wide">برای بازگشایی پاکت لمس کنید</span>
               <motion.span
                 animate={{
-                  y: [0, -3, 0],
-                  rotate: [0, -12, 12, 0]
+                  y: [0, 4, 0],
+                  rotate: [0, -8, 8, 0]
                 }}
                 transition={{
                   repeat: Infinity,
                   duration: 1.5,
                   ease: 'easeInOut'
                 }}
-                className="text-sm inline-block"
+                className="text-base inline-block"
               >
-                👆
+                👇
               </motion.span>
             </motion.button>
           )}
