@@ -52,23 +52,24 @@ app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 const isProduction = process.env.NODE_ENV === 'production';
 const distDir = path.join(process.cwd(), 'dist');
 
-// Dynamic directories configuration:
-// Dynamic files (stores, backups, uploads) are kept in dist/ (or custom env overrides)
-// so that root source files remain clean and git updates never cause merge conflicts.
-const rootBackupsDir = path.join(process.cwd(), 'backups');
-const rootPublicDir = path.join(process.cwd(), 'public');
-const rootUploadsDir = path.join(rootPublicDir, 'uploads');
-
+// Storage directory strategy:
+// 1. We keep durable data in the persistent `/data` (or `/backups`) directory in project root or custom environment path.
+// 2. This ensures `npm run build` (which wipes/recreates `dist/`) NEVER deletes or resets saved wedding settings or uploads!
+// 3. Optional environment variables BACKUPS_DIR and UPLOADS_DIR take priority if provided.
+const persistentDataDir = path.join(process.cwd(), 'data');
+const legacyBackupsDir = path.join(process.cwd(), 'backups');
 const distBackupsDir = path.join(distDir, 'backups');
+
+const persistentUploadsDir = path.join(process.cwd(), 'uploads');
+const legacyPublicUploadsDir = path.join(process.cwd(), 'public', 'uploads');
 const distUploadsDir = path.join(distDir, 'uploads');
-const distPublicDir = path.join(distDir, 'public');
 
-export const backupsDir = process.env.BACKUPS_DIR || distBackupsDir;
-export const uploadsDir = process.env.UPLOADS_DIR || distUploadsDir;
-export const publicDir = isProduction && fs.existsSync(distPublicDir) ? distPublicDir : rootPublicDir;
+export const backupsDir = process.env.BACKUPS_DIR || persistentDataDir;
+export const uploadsDir = process.env.UPLOADS_DIR || persistentUploadsDir;
+export const publicDir = isProduction && fs.existsSync(path.join(distDir, 'public')) ? path.join(distDir, 'public') : path.join(process.cwd(), 'public');
 
-// Ensure runtime directories exist
-[distDir, backupsDir, uploadsDir, publicDir].forEach((dir) => {
+// Ensure all persistent and build runtime directories exist
+[distDir, backupsDir, uploadsDir, publicDir, persistentDataDir, persistentUploadsDir].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     try {
       fs.mkdirSync(dir, { recursive: true });
@@ -78,37 +79,30 @@ export const publicDir = isProduction && fs.existsSync(distPublicDir) ? distPubl
   }
 });
 
-// Auto-migrate legacy root /backups to the active backups directory if not already copied
-if (fs.existsSync(rootBackupsDir) && rootBackupsDir !== backupsDir) {
+// Helper function to safely migrate/sync files from one directory to another if missing in target
+function copyMissingFiles(sourceDir: string, targetDir: string) {
+  if (!fs.existsSync(sourceDir) || sourceDir === targetDir) return;
   try {
-    const files = fs.readdirSync(rootBackupsDir);
+    const files = fs.readdirSync(sourceDir);
     for (const file of files) {
-      const src = path.join(rootBackupsDir, file);
-      const dest = path.join(backupsDir, file);
+      const src = path.join(sourceDir, file);
+      const dest = path.join(targetDir, file);
       if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
         fs.copyFileSync(src, dest);
       }
     }
   } catch (e) {
-    console.warn('Backup auto-migration note:', e);
+    console.warn(`File migration note (${sourceDir} -> ${targetDir}):`, e);
   }
 }
 
-// Auto-migrate legacy root public/uploads to the active uploads directory if not already copied
-if (fs.existsSync(rootUploadsDir) && rootUploadsDir !== uploadsDir) {
-  try {
-    const files = fs.readdirSync(rootUploadsDir);
-    for (const file of files) {
-      const src = path.join(rootUploadsDir, file);
-      const dest = path.join(uploadsDir, file);
-      if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
-        fs.copyFileSync(src, dest);
-      }
-    }
-  } catch (e) {
-    console.warn('Uploads auto-migration note:', e);
-  }
-}
+// Ensure all existing settings and backups from previous locations are safely preserved in backupsDir
+copyMissingFiles(legacyBackupsDir, backupsDir);
+copyMissingFiles(distBackupsDir, backupsDir);
+
+// Ensure all existing uploads from previous locations are safely preserved in uploadsDir
+copyMissingFiles(legacyPublicUploadsDir, uploadsDir);
+copyMissingFiles(distUploadsDir, uploadsDir);
 
 // Serve uploaded files and public assets statically (NOTE: backups is NOT statically served for security)
 app.use('/uploads', express.static(uploadsDir, {
@@ -119,16 +113,18 @@ app.use('/uploads', express.static(uploadsDir, {
   }
 }));
 
-// Fallback serve legacy root uploads if present
-if (rootUploadsDir !== uploadsDir && fs.existsSync(rootUploadsDir)) {
-  app.use('/uploads', express.static(rootUploadsDir, {
-    dotfiles: 'ignore',
-    setHeaders: (res) => {
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-    }
-  }));
-}
+// Fallback serve legacy uploads locations if present
+[legacyPublicUploadsDir, distUploadsDir].forEach((dirPath) => {
+  if (dirPath !== uploadsDir && fs.existsSync(dirPath)) {
+    app.use('/uploads', express.static(dirPath, {
+      dotfiles: 'ignore',
+      setHeaders: (res) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    }));
+  }
+});
 
 app.use('/public', express.static(publicDir, {
   dotfiles: 'ignore',

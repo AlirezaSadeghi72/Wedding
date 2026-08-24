@@ -7,8 +7,17 @@ class WeddingAudioPlayer {
   private timer: number | null = null;
   private customAudio: HTMLAudioElement | null = null;
   private currentTrack: MusicTrack | null = null;
+  private currentTrackIndex: number = 0;
+  private hasOpenedEnvelopeThisSession: boolean = false;
+  private isUserExplicitlyMuted: boolean = false;
   private onEndedCallback: (() => void) | null = null;
   private volume: number = 0.8;
+
+  constructor() {
+    // When the browser refreshes or loads freshly, mute flag and envelope state reset to clean defaults
+    this.isUserExplicitlyMuted = false;
+    this.hasOpenedEnvelopeThisSession = false;
+  }
 
   public init() {
     if (!this.ctx) {
@@ -20,9 +29,34 @@ class WeddingAudioPlayer {
     }
   }
 
+  public getHasOpenedEnvelope(): boolean {
+    return this.hasOpenedEnvelopeThisSession;
+  }
+
+  public markEnvelopeOpened(): void {
+    this.hasOpenedEnvelopeThisSession = true;
+  }
+
+  public isUserMuted(): boolean {
+    return this.isUserExplicitlyMuted;
+  }
+
+  public setUserMuted(muted: boolean): void {
+    this.isUserExplicitlyMuted = muted;
+  }
+
+  public getCurrentTrackIndex(): number {
+    return this.currentTrackIndex;
+  }
+
+  public setCurrentTrackIndex(idx: number): void {
+    this.currentTrackIndex = Math.max(0, idx);
+  }
+
   public playTrack(track: MusicTrack, onEnded?: () => void) {
     this.currentTrack = track;
     this.onEndedCallback = onEnded || null;
+    this.setUserMuted(false);
 
     const audioUrl = track.url || track.audioUrl;
     if (audioUrl && audioUrl.trim().length > 0) {
@@ -34,9 +68,10 @@ class WeddingAudioPlayer {
   }
 
   public playPreset(preset: 'romantic_piano' | 'traditional_oud' | 'gentle_acoustic' | 'celestial_harp' = 'romantic_piano') {
-    this.stop();
+    this.stop(false);
     this.init();
     this.isPlaying = true;
+    this.setUserMuted(false);
 
     // Beautiful relaxing pentatonic & Persian Shur/Esfahan romantic progression chords
     const scales = {
@@ -128,7 +163,7 @@ class WeddingAudioPlayer {
   }
 
   public playCustomAudio(url: string, onEnded?: () => void) {
-    this.stop();
+    this.stop(false);
     if (this.customAudio) {
       this.customAudio.pause();
     }
@@ -146,10 +181,14 @@ class WeddingAudioPlayer {
       // Browser autoplay fallback
     });
     this.isPlaying = true;
+    this.setUserMuted(false);
   }
 
-  public stop() {
+  public stop(userAction: boolean = false) {
     this.isPlaying = false;
+    if (userAction) {
+      this.setUserMuted(true);
+    }
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
@@ -181,4 +220,5 @@ class WeddingAudioPlayer {
 }
 
 export const weddingAudio = new WeddingAudioPlayer();
+
 

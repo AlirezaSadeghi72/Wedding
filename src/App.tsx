@@ -16,6 +16,7 @@ import ThemeSelectorModal from './components/ThemeSelectorModal';
 import AudioPlayerFloating from './components/AudioPlayerFloating';
 import AdminLoginModal from './components/AdminLoginModal';
 import { getIsAdminSessionValid, saveAdminSession, clearAdminSession, getAdminAuthHeaders } from './utils/security';
+import { subscribeToLiveEvents } from './utils/sessionSync';
 
 export default function App() {
   const [weddingData, setWeddingData] = useState<WeddingCardData>(() => {
@@ -30,7 +31,7 @@ export default function App() {
     return DEFAULT_WEDDING_DATA;
   });
 
-  // Fetch wedding settings from server on mount
+  // Fetch wedding settings from server on mount & listen to real-time live changes
   useEffect(() => {
     fetch('/api/settings')
       .then((res) => res.json())
@@ -47,6 +48,26 @@ export default function App() {
       .catch((err) => {
         console.error('Failed to load settings from server:', err);
       });
+
+    // Real-time synchronization: when settings or theme are saved, update instantly for all viewers
+    const unsubscribe = subscribeToLiveEvents((event) => {
+      if (event.type === 'SETTINGS_UPDATED' && event.payload) {
+        const incomingSettings = event.payload as WeddingCardData;
+        setWeddingData((prev) => ({
+          ...prev,
+          ...incomingSettings
+        }));
+        try {
+          localStorage.setItem('wedding_card_data', JSON.stringify(incomingSettings));
+        } catch {
+          // Ignore
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const [isOpened, setIsOpened] = useState(false);

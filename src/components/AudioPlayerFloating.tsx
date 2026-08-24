@@ -32,9 +32,9 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
   const [isPlaying, setIsPlaying] = useState(() => weddingAudio.getIsPlaying());
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [volume, setVolume] = useState<number>(() => {
-    return data.music?.volume ? Math.round(data.music.volume * 100) : 80;
+    return Math.round(weddingAudio.getVolume() * 100);
   });
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(() => weddingAudio.getCurrentTrackIndex() || 0);
   const [autoNext, setAutoNext] = useState(true);
 
   // Build combined playlist strictly synchronized with data.music settings
@@ -90,7 +90,7 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
   const safeIndex = Math.min(Math.max(0, currentTrackIndex), Math.max(0, playlist.length - 1));
   const currentTrack = playlist[safeIndex] || playlist[0];
 
-  // Sync currentTrackIndex on mount with whatever track is already playing in the global engine
+  // Sync currentTrackIndex on mount with whatever track is already playing/chosen in the global engine
   useEffect(() => {
     const runningTrack = weddingAudio.getCurrentTrack();
     if (runningTrack) {
@@ -101,6 +101,12 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
       );
       if (idx !== -1) {
         setCurrentTrackIndex(idx);
+        weddingAudio.setCurrentTrackIndex(idx);
+      }
+    } else {
+      const savedIdx = weddingAudio.getCurrentTrackIndex();
+      if (savedIdx >= 0 && savedIdx < playlist.length) {
+        setCurrentTrackIndex(savedIdx);
       }
     }
   }, [playlist]);
@@ -139,9 +145,10 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
     if (!playlist || playlist.length === 0) return;
     const nextIdx = (index + playlist.length) % playlist.length;
     setCurrentTrackIndex(nextIdx);
+    weddingAudio.setCurrentTrackIndex(nextIdx);
     const track = playlist[nextIdx];
 
-    weddingAudio.stop();
+    weddingAudio.setUserMuted(false);
     weddingAudio.setVolume(volume / 100);
 
     const onTrackEnd = () => {
@@ -156,37 +163,40 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
     setIsPlaying(true);
   }, [playlist, volume, autoNext]);
 
-  // React to updates in data.music settings (if currently playing, re-apply track changes)
+  // React to updates in data.music settings (if currently playing, re-apply track changes only if active track source changed)
   useEffect(() => {
     if (isPlaying) {
       const runningTrack = weddingAudio.getCurrentTrack();
       if (runningTrack && currentTrack) {
-        // If the URL or synthPreset or title changed in settings, refresh current playing track
+        // If the URL or synthPreset changed on active track
         const currentUrl = currentTrack.url || currentTrack.audioUrl;
         const runningUrl = runningTrack.url || runningTrack.audioUrl;
-        if (currentUrl !== runningUrl || currentTrack.synthPreset !== runningTrack.synthPreset) {
+        if (currentUrl !== runningUrl || (currentTrack.synthPreset && currentTrack.synthPreset !== runningTrack.synthPreset)) {
           playTrackAtIndex(safeIndex);
         }
       }
     }
-  }, [data.music?.audioUrl, data.music?.synthPreset, data.music?.title, safeIndex, isPlaying, currentTrack, playTrackAtIndex]);
+  }, [data.music?.audioUrl, data.music?.synthPreset, safeIndex, isPlaying, currentTrack, playTrackAtIndex]);
 
   const togglePlay = () => {
     if (isPlaying) {
-      weddingAudio.stop();
+      weddingAudio.stop(true);
       setIsPlaying(false);
     } else {
+      weddingAudio.setUserMuted(false);
       playTrackAtIndex(safeIndex);
     }
   };
 
   const handleNext = (e?: MouseEvent) => {
     e?.stopPropagation();
+    weddingAudio.setUserMuted(false);
     playTrackAtIndex(safeIndex + 1);
   };
 
   const handlePrev = (e?: MouseEvent) => {
     e?.stopPropagation();
+    weddingAudio.setUserMuted(false);
     playTrackAtIndex(safeIndex - 1);
   };
 

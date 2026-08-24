@@ -92,12 +92,37 @@ export default function WeddingEnvelope({
     if (isOpening) return;
     setIsOpening(true);
 
-    // 1. Play romantic wedding audio
-    if (data.music?.enabled && !weddingAudio.getIsPlaying()) {
-      if (data.music.audioUrl) {
-        weddingAudio.playCustomAudio(data.music.audioUrl);
+    const isFirstTimeOpenThisSession = !weddingAudio.getHasOpenedEnvelope();
+    weddingAudio.markEnvelopeOpened();
+
+    // 1. Play romantic wedding audio:
+    // - On first open (or full refresh): always play enabled wedding music from track 0
+    // - On subsequent opens (when user goes back to envelope and re-opens): respect user's mute / chosen track / volume
+    if (data.music?.enabled) {
+      if (isFirstTimeOpenThisSession) {
+        // Fresh session opening: ensure unmuted and start initial track smoothly
+        weddingAudio.setUserMuted(false);
+        const initialTracks = data.music.playlist?.length ? data.music.playlist : (data.music.tracks?.length ? data.music.tracks : []);
+        if (initialTracks.length > 0) {
+          weddingAudio.setCurrentTrackIndex(0);
+          weddingAudio.playTrack(initialTracks[0]);
+        } else if (data.music.audioUrl) {
+          weddingAudio.playCustomAudio(data.music.audioUrl);
+        } else {
+          weddingAudio.playPreset(data.music.synthPreset);
+        }
       } else {
-        weddingAudio.playPreset(data.music.synthPreset);
+        // Subsequent envelope view: continue current state unless user muted it
+        if (!weddingAudio.getIsPlaying() && !weddingAudio.isUserMuted()) {
+          const runningTrack = weddingAudio.getCurrentTrack();
+          if (runningTrack) {
+            weddingAudio.playTrack(runningTrack);
+          } else if (data.music.audioUrl) {
+            weddingAudio.playCustomAudio(data.music.audioUrl);
+          } else {
+            weddingAudio.playPreset(data.music.synthPreset);
+          }
+        }
       }
     }
 
