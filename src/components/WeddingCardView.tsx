@@ -300,7 +300,7 @@ export default function WeddingCardView({
         if (data.sectionVisibility?.timeline === false || !data.timeline || data.timeline.length === 0) return null;
         return (
           <div key="timeline" className={`my-8 sm:my-10 pt-5 sm:pt-6 border-t ${isLight ? 'border-stone-200' : 'border-stone-800'}`}>
-            <h3 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950' : 'text-amber-200'} mb-4 sm:mb-6 flex items-center justify-center gap-2`}>
+            <h3 className={`text-base sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-200'} mb-4 sm:mb-6 flex items-center justify-center gap-2`}>
               <Sparkles className={`w-4 h-4 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
               کنداکتور و برنامه زمان‌بندی جشن
             </h3>
@@ -309,25 +309,25 @@ export default function WeddingCardView({
               {data.timeline.map((item, idx) => (
                 <div
                   key={item.id || idx}
-                  className={`flex items-start gap-2.5 sm:gap-3.5 p-2.5 sm:p-3 rounded-2xl ${
+                  className={`flex items-start gap-2.5 sm:gap-3.5 p-2.5 sm:p-3.5 rounded-2xl ${
                     isLight
                       ? 'bg-emerald-50/70 border border-emerald-200/80 hover:border-amber-500/50 shadow-sm'
                       : 'bg-stone-950/40 border border-stone-800/80 hover:border-amber-500/30'
                   } transition-colors`}
                 >
-                  <div className={`w-14 sm:w-16 shrink-0 text-center py-1 px-1.5 sm:px-2 rounded-lg ${
+                  <div className={`w-14 sm:w-16 shrink-0 text-center py-1.5 px-1.5 sm:px-2 rounded-xl ${
                     isLight
-                      ? 'bg-amber-100 border border-amber-400/60 text-amber-900 font-bold'
+                      ? 'bg-amber-100 border border-amber-400/60 text-amber-950 font-bold'
                       : 'bg-amber-500/10 border border-amber-400/30 text-amber-300 font-bold'
-                  } font-cinzel text-[11px] sm:text-xs`}>
-                    {item.time}
+                  } font-cinzel text-xs sm:text-sm`}>
+                    {toPersianDigits(item.time)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className={`font-bold text-xs sm:text-sm ${isLight ? 'text-stone-900' : 'text-stone-100'} font-amiri truncate`}>
+                    <h4 className={`font-bold text-xs sm:text-sm ${isLight ? 'text-stone-900 font-black' : 'text-stone-100'} font-amiri`}>
                       {item.title}
                     </h4>
                     {item.description && (
-                      <p className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5 font-light`}>
+                      <p className={`text-[11px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5 font-light leading-relaxed`}>
                         {item.description}
                       </p>
                     )}
@@ -496,16 +496,16 @@ export default function WeddingCardView({
       case 'rsvp':
         if (data.sectionVisibility?.rsvp === false || data.rsvpConfig.enabled === false) return null;
         return (
-          <div key="rsvp" id="rsvp-section-anchor" className={`my-8 sm:my-10 p-4 sm:p-6 rounded-2xl sm:rounded-3xl ${
+          <div key="rsvp" id="rsvp-section-anchor" className={`my-8 sm:my-10 p-5 sm:p-7 rounded-2xl sm:rounded-3xl ${
             isLight
               ? 'bg-gradient-to-r from-amber-100 via-emerald-50 to-amber-100 border border-amber-500/60 shadow-lg text-emerald-950'
               : 'bg-gradient-to-r from-amber-500/20 via-amber-400/20 to-amber-600/20 border border-amber-400/50 shadow-2xl text-amber-100'
           }`}>
-            <h4 className={`text-lg sm:text-xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-1.5 sm:mb-2`}>
-              تایید حضور در جشن (RSVP)
+            <h4 className={`text-xl sm:text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'} mb-2`}>
+              تایید حضور شما
             </h4>
-            <p className={`text-xs ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} mb-4 sm:mb-5 max-w-md mx-auto leading-relaxed`}>
-              لطفاً جهت برنامه‌ریزی بهتر و تدارک پذیرایی شایسته، حضور خود را تا تاریخ {data.rsvpConfig.deadlineDate} اعلام فرمایید.
+            <p className={`text-xs sm:text-sm ${isLight ? 'text-stone-700 font-normal' : 'text-stone-300 font-light'} mb-4 sm:mb-6 max-w-md mx-auto leading-relaxed`}>
+              برای اینکه بتوانیم میزبانی بهتری از شما عزیزان داشته باشیم، لطفاً تا تاریخ {data.rsvpConfig.deadlineDate ? data.rsvpConfig.deadlineDate.replace(/^تا\s*/, '') : '۱۰ شهریور ۱۴۰۵'} وضعیت حضور خود را از طریق فرم زیر به ما اطلاع دهید.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-md mx-auto">
@@ -517,7 +517,7 @@ export default function WeddingCardView({
                 className="w-full sm:w-auto px-6 py-3 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs sm:text-sm shadow-xl shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <CheckCircle2 className="w-4 h-4 text-stone-950" />
-                <span>ثبت و اعلام تایید حضور</span>
+                <span>ثبت و ارسال تاییدیه</span>
               </motion.button>
 
               {onReopenEnvelope && (
@@ -798,6 +798,19 @@ export default function WeddingCardView({
 
         {/* Dynamic Reorderable Sections */}
         {effectiveOrder.map((sectionKey) => renderSection(sectionKey))}
+
+        {/* Couple's Warm Ending Note */}
+        <div className={`mt-8 sm:mt-12 pt-6 sm:pt-8 border-t ${isLight ? 'border-amber-300/60' : 'border-stone-800'} text-center max-w-lg mx-auto`}>
+          <p className={`font-scheherazade text-base sm:text-xl md:text-2xl ${
+            isLight ? 'text-emerald-950 font-bold' : 'text-amber-200 font-normal'
+          } leading-relaxed sm:leading-loose whitespace-pre-line`}>
+            {data.footerNote || '«آمدن شما، عید ماست...\nمشتاق دیدار و رقصیدن با شما در شبی فراموش‌نشدنی!»'}
+          </p>
+          <div className={`w-16 h-0.5 mx-auto ${isLight ? 'bg-amber-600/50' : 'bg-amber-400/50'} my-2.5 sm:my-3`} />
+          <span className={`font-amiri font-bold text-sm sm:text-base ${isLight ? 'text-amber-900' : 'text-amber-300'}`}>
+            {data.brideName} و {data.groomName}
+          </span>
+        </div>
       </motion.div>
 
       {/* Footer copyright and discreet admin login */}

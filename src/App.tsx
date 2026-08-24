@@ -93,7 +93,7 @@ export default function App() {
 
   const handleAdminLoginSuccess = () => {
     setIsAdminAuthenticated(true);
-    saveAdminSession();
+    saveAdminSession(undefined, weddingData.adminPin || '1404');
   };
 
   const handleAdminLogout = () => {
@@ -120,23 +120,33 @@ export default function App() {
       // Ignore
     }
 
+    // Keep active admin session PIN in sync if it was changed
+    if (updated.adminPin) {
+      saveAdminSession(undefined, updated.adminPin);
+    }
+
+    const authHeaders = getAdminAuthHeaders();
+    if (!authHeaders['X-Admin-Pin'] && updated.adminPin) {
+      authHeaders['X-Admin-Pin'] = updated.adminPin;
+    }
+
     // Persist settings to the server
     fetch('/api/settings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...getAdminAuthHeaders()
+        ...authHeaders
       },
       body: JSON.stringify(updated)
     })
       .then((res) => res.json())
       .then((resData) => {
         if (!resData || !resData.success) {
-          console.error('Failed to save settings to server:', resData?.error);
+          console.warn('Failed to save settings to server:', resData?.error);
         }
       })
       .catch((err) => {
-        console.error('Error saving settings to server:', err);
+        console.warn('Error saving settings to server:', err);
       });
   };
 

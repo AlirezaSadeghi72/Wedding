@@ -51,7 +51,7 @@ export interface TimelineItem {
   time: string;
   title: string;
   description?: string;
-  icon: 'ring' | 'door' | 'cake' | 'utensils' | 'music' | 'camera' | 'sparkles';
+  icon?: 'ring' | 'door' | 'cake' | 'utensils' | 'music' | 'camera' | 'sparkles' | 'heart' | string;
 }
 
 export interface SolarDate {
@@ -243,6 +243,7 @@ export interface WeddingCardData {
   giftRegistry?: GiftRegistryData;
   weather?: WeatherData;
   faqs?: FAQItem[];
+  footerNote?: string;
   waxSeal: WaxSealConfig;
   adminPin?: string;
   colorMode?: 'dark' | 'light';

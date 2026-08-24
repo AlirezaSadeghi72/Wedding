@@ -187,7 +187,9 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
             </div>
 
             <h3 className={`text-xl sm:text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-200'} mb-2`}>
-              {attending === 'yes' ? 'با سپاس، حضور شما با موفقیت ثبت شد!' : 'پیام شما با موفقیت ثبت گردید'}
+              {attending === 'yes'
+                ? 'پاسخ شما با موفقیت ثبت شد. مشتاق دیدار روی ماهتان هستیم!'
+                : 'پیام شما با موفقیت ثبت گردید'}
             </h3>
 
             <p className={`${isLight ? 'text-stone-700' : 'text-stone-300'} text-xs sm:text-sm max-w-md leading-relaxed mb-5`}>
@@ -210,10 +212,10 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                 تایید حضور آنلاین (RSVP)
               </span>
               <h2 className={`text-lg sm:text-2xl font-bold font-amiri ${isLight ? 'text-emerald-950 font-black' : 'text-amber-100'}`}>
-                اعلام حضور در جشن عروسی
+                تایید حضور شما
               </h2>
-              <p className={`text-[11px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
-                مهلت تایید حضور: {data.rsvpConfig.deadlineDate}
+              <p className={`text-[11px] sm:text-xs ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-1 leading-relaxed max-w-md mx-auto`}>
+                برای اینکه بتوانیم میزبانی بهتری از شما عزیزان داشته باشیم، لطفاً تا تاریخ {data.rsvpConfig.deadlineDate ? data.rsvpConfig.deadlineDate.replace(/^تا\s*/, '') : '۱۰ شهریور ۱۴۰۵'} وضعیت حضور خود را از طریق فرم زیر به ما اطلاع دهید.
               </p>
             </div>
 
@@ -228,13 +230,13 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               {/* Attendance Choice */}
               <div>
                 <label className={`block text-xs ${isLight ? 'text-amber-900 font-bold' : 'text-amber-300/90'} mb-1.5 font-medium`}>
-                  آیا افتخار میزبانی شما را خواهیم داشت؟
+                  وضعیت حضور شما: <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setAttending('yes')}
-                    className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 font-medium transition-all cursor-pointer text-xs ${
+                    className={`py-3 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 sm:gap-2 font-medium transition-all cursor-pointer text-xs ${
                       attending === 'yes'
                         ? isLight
                           ? 'bg-emerald-100 border-emerald-500 text-emerald-950 font-bold shadow-sm'
@@ -245,13 +247,13 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     }`}
                   >
                     <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-                    <span>با کمال میل حضور خواهم داشت</span>
+                    <span>با کمال میل شرکت می‌کنم 🌸</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setAttending('no')}
-                    className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 font-medium transition-all cursor-pointer text-xs ${
+                    className={`py-3 px-3 sm:px-4 rounded-xl border flex items-center justify-center gap-1.5 sm:gap-2 font-medium transition-all cursor-pointer text-xs ${
                       attending === 'no'
                         ? isLight
                           ? 'bg-rose-100 border-rose-500 text-rose-950 font-bold shadow-sm'
@@ -262,7 +264,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     }`}
                   >
                     <X className="w-4 h-4 shrink-0 text-rose-600" />
-                    <span>متاسفانه امکان حضور ندارم</span>
+                    <span>متاسفانه امکان حضور ندارم 💌</span>
                   </button>
                 </div>
               </div>
@@ -282,7 +284,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
               {/* Guest Name */}
               <div>
                 <label className={`block text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300 font-medium'} mb-1`}>
-                  نام و نام خانوادگی <span className="text-rose-500">*</span>
+                  نام و نام خانوادگی: <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className={`w-4 h-4 absolute right-3.5 top-1/2 -translate-y-1/2 ${isLight ? 'text-stone-500' : 'text-stone-400'}`} />
@@ -294,7 +296,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                       setGuestName(e.target.value);
                       if (nameError) setNameError('');
                     }}
-                    placeholder="مثلاً: دکتر علی صادقی و بانو"
+                    placeholder="نام کامل شما"
                     className={`w-full pr-10 pl-4 py-2.5 rounded-xl ${
                       nameError
                         ? 'border-rose-500 bg-rose-50/5'
@@ -365,7 +367,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                         : 'text-stone-300 font-medium'
                     } flex items-center gap-1.5`}>
                       <Users className={`w-4 h-4 ${countError ? 'text-rose-500' : isLight ? 'text-amber-700' : 'text-amber-400'}`} />
-                      <span>تعداد کل حاضرین (به همراه خودتان):</span>
+                      <span>تعداد نفرات همراه (من به همراه ... نفر خواهم بود):</span>
                     </label>
                     <span className={`${
                       countError
@@ -585,7 +587,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 text-stone-950" />
-                      <span>ثبت نهایی تایید حضور</span>
+                      <span>ثبت و ارسال تاییدیه</span>
                     </>
                   )}
                 </button>

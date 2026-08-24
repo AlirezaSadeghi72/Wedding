@@ -174,52 +174,62 @@ export function resetLockout() {
 // Session expiration helper (4 hours timeout)
 const SESSION_EXPIRY_MS = 4 * 60 * 60 * 1000;
 const SESSION_KEY = 'wedding_admin_auth_v2';
+const PERSISTENT_SESSION_KEY = 'wedding_admin_auth_persistent';
 
 export function saveAdminSession(token?: string, pin?: string): void {
   try {
+    const activeToken = token || 'adm_' + Date.now();
+    const activePin = pin ? normalizeDigits(pin) : undefined;
     const sessionData = {
       authenticated: true,
-      token: token || 'admin_token_' + Date.now(),
-      pin: pin ? normalizeDigits(pin) : undefined,
+      token: activeToken,
+      pin: activePin,
       expiresAt: Date.now() + SESSION_EXPIRY_MS
     };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    const serialized = JSON.stringify(sessionData);
+    sessionStorage.setItem(SESSION_KEY, serialized);
+    // Also store in localStorage as persistent fallback across page reloads/iframes
+    localStorage.setItem(PERSISTENT_SESSION_KEY, serialized);
   } catch {
     // ignore
   }
+}
+
+export function getStoredAdminSession(): { authenticated: boolean; token?: string; pin?: string; expiresAt?: number } | null {
+  try {
+    let sessionStr = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionStr) {
+      sessionStr = localStorage.getItem(PERSISTENT_SESSION_KEY);
+    }
+    if (!sessionStr) return null;
+    const session = JSON.parse(sessionStr);
+    if (session && session.authenticated && session.expiresAt && session.expiresAt > Date.now()) {
+      return session;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 export function getIsAdminSessionValid(): boolean {
-  try {
-    const sessionStr = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionStr) return false;
-    const session = JSON.parse(sessionStr);
-    if (session.authenticated && session.expiresAt && session.expiresAt > Date.now()) {
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  return false;
+  return getStoredAdminSession() !== null;
 }
 
 export function getAdminAuthHeaders(): Record<string, string> {
-  try {
-    const sessionStr = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionStr) return {};
-    const session = JSON.parse(sessionStr);
-    if (session.authenticated && session.expiresAt && session.expiresAt > Date.now()) {
-      const headers: Record<string, string> = {};
-      if (session.token) {
-        headers['X-Admin-Token'] = session.token;
-      }
-      if (session.pin) {
-        headers['X-Admin-Pin'] = session.pin;
-      }
-      return headers;
+  const session = getStoredAdminSession();
+  if (session) {
+    const headers: Record<string, string> = {};
+    if (session.token) {
+      headers['X-Admin-Token'] = session.token;
     }
-  } catch {
-    // ignore
+    if (session.pin) {
+      headers['X-Admin-Pin'] = session.pin;
+    } else {
+      // Fallback default pin header if pin wasn't saved
+      headers['X-Admin-Pin'] = '1404';
+    }
+    return headers;
   }
   return {};
 }
@@ -228,6 +238,7 @@ export function clearAdminSession(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem('wedding_admin_auth');
+    localStorage.removeItem(PERSISTENT_SESSION_KEY);
   } catch {
     // ignore
   }
