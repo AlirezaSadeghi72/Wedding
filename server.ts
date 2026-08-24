@@ -22,7 +22,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2. Block Hidden Files & Dotfiles (e.g. .env, .git, .htaccess, package.json, server.ts) while allowing Vite client deps
+// 2. Block Hidden Files, Dotfiles, Database Stores, and Backups from Direct Static Access
 app.use((req, res, next) => {
   const normalizedPath = decodeURIComponent(req.path).toLowerCase();
   
@@ -31,7 +31,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // Block sensitive server files and dotfiles
+  // Block sensitive server files, dotfiles, database stores, backups, and configs
   if (
     normalizedPath.startsWith('/.') ||
     normalizedPath.includes('/.env') ||
@@ -39,7 +39,18 @@ app.use((req, res, next) => {
     normalizedPath.includes('/server.ts') ||
     normalizedPath.includes('/tsconfig') ||
     normalizedPath.includes('package.json') ||
-    normalizedPath.includes('.lock')
+    normalizedPath.includes('.lock') ||
+    normalizedPath.startsWith('/data') ||
+    normalizedPath.startsWith('/backups') ||
+    normalizedPath.startsWith('/backups_dir') ||
+    normalizedPath.startsWith('/uploads_dir') ||
+    normalizedPath.includes('store.json') ||
+    normalizedPath.includes('wedding-backup') ||
+    normalizedPath.endsWith('.db') ||
+    normalizedPath.endsWith('.sqlite') ||
+    normalizedPath.endsWith('.sqlite3') ||
+    normalizedPath.endsWith('.sql') ||
+    normalizedPath.endsWith('.bak')
   ) {
     return res.status(403).json({ success: false, error: 'دسترسی به این منبع به دلایل امنیتی مسدود است' });
   }
