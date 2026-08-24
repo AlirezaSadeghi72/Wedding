@@ -11,14 +11,21 @@ export function normalizeDigits(input: string): string {
     .trim();
 }
 
-// Basic HTML sanitization to prevent XSS injection in user-submitted strings (RSVP & Guestbook)
+// Robust HTML sanitization to prevent XSS injection in user-submitted strings (RSVP & Guestbook)
 export function sanitizeString(input: string, maxLength = 500): string {
   if (!input || typeof input !== 'string') return '';
   return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '') // Remove iframes
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // Remove styles
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '') // Remove objects
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '') // Remove embeds
     .replace(/<[^>]+>/g, '') // Strip HTML tags
-    .replace(/javascript:/gi, '')
-    .replace(/onload|onerror|onclick|onmouseover/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .replace(/vbscript\s*:/gi, '')
+    .replace(/\bon\w+\s*=/gi, '') // Remove onload=, onerror=, onclick=, etc.
+    .replace(/[<>]/g, '') // Escape angle brackets
     .trim()
     .slice(0, maxLength);
 }
@@ -168,10 +175,12 @@ export function resetLockout() {
 const SESSION_EXPIRY_MS = 4 * 60 * 60 * 1000;
 const SESSION_KEY = 'wedding_admin_auth_v2';
 
-export function saveAdminSession(): void {
+export function saveAdminSession(token?: string, pin?: string): void {
   try {
     const sessionData = {
       authenticated: true,
+      token: token || 'admin_token_' + Date.now(),
+      pin: pin ? normalizeDigits(pin) : undefined,
       expiresAt: Date.now() + SESSION_EXPIRY_MS
     };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
@@ -192,6 +201,27 @@ export function getIsAdminSessionValid(): boolean {
     // ignore
   }
   return false;
+}
+
+export function getAdminAuthHeaders(): Record<string, string> {
+  try {
+    const sessionStr = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionStr) return {};
+    const session = JSON.parse(sessionStr);
+    if (session.authenticated && session.expiresAt && session.expiresAt > Date.now()) {
+      const headers: Record<string, string> = {};
+      if (session.token) {
+        headers['X-Admin-Token'] = session.token;
+      }
+      if (session.pin) {
+        headers['X-Admin-Pin'] = session.pin;
+      }
+      return headers;
+    }
+  } catch {
+    // ignore
+  }
+  return {};
 }
 
 export function clearAdminSession(): void {

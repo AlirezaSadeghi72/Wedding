@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { RSVPResponse, GuestbookEntry } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
+import { getAdminAuthHeaders } from '../utils/security';
 import ConfirmModal from './ConfirmModal';
 
 interface Props {
@@ -36,7 +37,9 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
   const fetchRSVPs = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/rsvp');
+      const res = await fetch('/api/rsvp', {
+        headers: getAdminAuthHeaders()
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setRsvps(data.data);
@@ -51,7 +54,9 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
   const fetchGuestbook = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/guestbook');
+      const res = await fetch('/api/guestbook', {
+        headers: getAdminAuthHeaders()
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setGuestbookEntries(data.data);
@@ -126,9 +131,16 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
           setIsLoading(true);
           setRsvps((prev) => prev.filter((r) => r.id !== id));
           const encodedId = encodeURIComponent(id);
-          const res = await fetch(`/api/rsvp/${encodedId}`, { method: 'DELETE' });
+          const headers = getAdminAuthHeaders();
+          const res = await fetch(`/api/rsvp/${encodedId}`, {
+            method: 'DELETE',
+            headers
+          });
           if (!res.ok) {
-            await fetch(`/api/rsvp/${encodedId}/delete`, { method: 'POST' });
+            await fetch(`/api/rsvp/${encodedId}/delete`, {
+              method: 'POST',
+              headers
+            });
           }
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
         } catch {
@@ -150,9 +162,10 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
         try {
           setIsLoading(true);
           setRsvps([]);
+          const headers = getAdminAuthHeaders();
           await Promise.allSettled([
-            fetch('/api/rsvp', { method: 'DELETE' }),
-            fetch('/api/rsvp/reset', { method: 'POST' })
+            fetch('/api/rsvp', { method: 'DELETE', headers }),
+            fetch('/api/rsvp/reset', { method: 'POST', headers })
           ]);
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
         } catch {
@@ -175,9 +188,16 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
           setIsLoading(true);
           setGuestbookEntries((prev) => prev.filter((g) => g.id !== id));
           const encodedId = encodeURIComponent(id);
-          const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
+          const headers = getAdminAuthHeaders();
+          const res = await fetch(`/api/guestbook/${encodedId}`, {
+            method: 'DELETE',
+            headers
+          });
           if (!res.ok) {
-            await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+            await fetch(`/api/guestbook/${encodedId}/delete`, {
+              method: 'POST',
+              headers
+            });
           }
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
         } catch {
@@ -199,9 +219,10 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
         try {
           setIsLoading(true);
           setGuestbookEntries([]);
+          const headers = getAdminAuthHeaders();
           await Promise.allSettled([
-            fetch('/api/guestbook', { method: 'DELETE' }),
-            fetch('/api/guestbook/reset', { method: 'POST' })
+            fetch('/api/guestbook', { method: 'DELETE', headers }),
+            fetch('/api/guestbook/reset', { method: 'POST', headers })
           ]);
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
         } catch {

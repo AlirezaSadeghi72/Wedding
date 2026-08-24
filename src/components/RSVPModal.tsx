@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { WeddingCardData } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
 import { sanitizePhoneInput, normalizePhoneNumber, isValidIranianMobile, toEnglishDigits } from '../utils/phoneUtils';
+import { sanitizeString } from '../utils/security';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
   const [dietaryNotes, setDietaryNotes] = useState('');
   const [songRequest, setSongRequest] = useState('');
   const [message, setMessage] = useState('');
+  const [honeypot, setHoneypot] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -72,7 +74,8 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
     setCountError('');
     setErrorMsg('');
 
-    if (!guestName.trim()) {
+    const cleanName = sanitizeString(guestName, 100);
+    if (!cleanName) {
       setNameError('لطفاً نام و نام خانوادگی خود را وارد فرمایید');
       hasError = true;
     }
@@ -104,18 +107,19 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          guestName: guestName.trim(),
+          guestName: cleanName,
           phone: cleanedPhone,
           attending,
           guestCount: attending === 'yes' ? (safeParseCount(guestCount) > 0 ? safeParseCount(guestCount) : 1) : 0,
-          dietaryNotes: dietaryNotes.trim(),
-          songRequest: songRequest.trim(),
-          message: message.trim()
+          dietaryNotes: sanitizeString(dietaryNotes, 200),
+          songRequest: sanitizeString(songRequest, 100),
+          message: sanitizeString(message, 500),
+          website: honeypot // Anti-bot honeypot
         })
       });
 
       const resData = await response.json();
-      if (resData.success) {
+      if (response.ok && resData.success) {
         setIsSuccess(true);
         if (attending === 'yes') {
           confetti({
@@ -261,6 +265,18 @@ export default function RSVPModal({ isOpen, onClose, data, initialGuestName = ''
                     <span>متاسفانه امکان حضور ندارم</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Honeypot field for bot protection */}
+              <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
+                <input
+                  type="text"
+                  name="website"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  value={honeypot}
+                  onChange={(e) => setHoneypot(e.target.value)}
+                />
               </div>
 
               {/* Guest Name */}

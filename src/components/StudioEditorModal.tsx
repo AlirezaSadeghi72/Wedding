@@ -82,6 +82,7 @@ import {
 } from '../data/themes';
 import { SAMPLE_POEMS, DEFAULT_WEDDING_DATA } from '../data/defaultWedding';
 import ConfirmModal from './ConfirmModal';
+import { getAdminAuthHeaders } from '../utils/security';
 
 const toPersianDigits = (num: number | string): string => {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -277,7 +278,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             const base64Data = reader.result as string;
             const res = await fetch('/api/upload', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...getAdminAuthHeaders()
+              },
               body: JSON.stringify({
                 fileName: file.name,
                 fileType: file.type,
@@ -317,7 +321,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     try {
       const res = await fetch('/api/gemini/generate-wedding-text', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAdminAuthHeaders()
+        },
         body: JSON.stringify({
           brideName: formData.brideName,
           groomName: formData.groomName,
@@ -675,7 +682,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           try {
             await fetch('/api/backup', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+                ...getAdminAuthHeaders()
+              },
               body: JSON.stringify({
                 formData,
                 reason: 'Factory Reset'
@@ -702,9 +712,16 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           localStorage.setItem('wedding_card_backup_before_reset', backupData);
 
           // 3. Reset RSVPs and Guestbook store to default initial seed
+          const adminHeaders = getAdminAuthHeaders();
           await Promise.allSettled([
-            fetch('/api/rsvp/reset?mode=seed', { method: 'POST' }),
-            fetch('/api/guestbook/reset?mode=seed', { method: 'POST' })
+            fetch('/api/rsvp/reset?mode=seed', {
+              method: 'POST',
+              headers: adminHeaders
+            }),
+            fetch('/api/guestbook/reset?mode=seed', {
+              method: 'POST',
+              headers: adminHeaders
+            })
           ]);
 
           // 4. Reset form state and notify parent app

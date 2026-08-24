@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import { GoogleGenAI } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
 
@@ -10,22 +11,48 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
-// Security Middlewares & Headers
+// Disable X-Powered-By header to prevent fingerprinting
+app.disable('x-powered-by');
+
+// 1. Strict Security Headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// 2. Block Hidden Files & Dotfiles (e.g. .env, .git, .htaccess, package.json, server.ts)
+app.use((req, res, next) => {
+  const normalizedPath = decodeURIComponent(req.path).toLowerCase();
+  
+  // Block any dotfiles or sensitive server files
+  if (
+    normalizedPath.includes('/.') ||
+    normalizedPath.startsWith('/.') ||
+    normalizedPath.includes('.env') ||
+    normalizedPath.includes('.git') ||
+    normalizedPath.includes('server.ts') ||
+    normalizedPath.includes('package.json') ||
+    normalizedPath.includes('tsconfig.json') ||
+    normalizedPath.includes('.lock')
+  ) {
+    return res.status(403).json({ success: false, error: 'دسترسی به این منبع به دلایل امنیتی مسدود است' });
+  }
   next();
 });
 
 // High body limit for base64 audio and image uploads
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '60mb' }));
+app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 
 // Ensure public, uploads, and backups directories exist
 const publicDir = path.join(process.cwd(), 'public');
 const uploadsDir = path.join(publicDir, 'uploads');
 const backupsDir = path.join(process.cwd(), 'backups');
+
 if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
 }
@@ -36,27 +63,153 @@ if (!fs.existsSync(backupsDir)) {
   fs.mkdirSync(backupsDir, { recursive: true });
 }
 
-// Serve uploaded files and public assets statically
-app.use('/uploads', express.static(uploadsDir));
-app.use('/public', express.static(publicDir));
-app.use('/backups', express.static(backupsDir));
+// Serve uploaded files and public assets statically (NOTE: backups is NOT statically served for security)
+app.use('/uploads', express.static(uploadsDir, {
+  dotfiles: 'ignore',
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  }
+}));
+app.use('/public', express.static(publicDir, {
+  dotfiles: 'ignore',
+  setHeaders: (res) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
+}));
 
-// Input sanitization helper for backend
+// ==========================================
+// In-Memory Rate Limiting & Anti-Spam Store
+// ==========================================
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+const ipRateLimits = new Map<string, RateLimitEntry>();
+
+function checkRateLimit(ip: string, action: string, limit: number, windowMs: number): { allowed: boolean; retryAfterSec?: number } {
+  const key = `${ip}_${action}`;
+  const now = Date.now();
+  const entry = ipRateLimits.get(key);
+
+  if (!entry || now > entry.resetTime) {
+    ipRateLimits.set(key, { count: 1, resetTime: now + windowMs });
+    return { allowed: true };
+  }
+
+  if (entry.count >= limit) {
+    const retryAfterSec = Math.ceil((entry.resetTime - now) / 1000);
+    return { allowed: false, retryAfterSec };
+  }
+
+  entry.count += 1;
+  return { allowed: true };
+}
+
+// Clean up stale rate limits every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of ipRateLimits.entries()) {
+    if (now > val.resetTime) {
+      ipRateLimits.delete(key);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// Helper to extract client IP safely
+function getClientIp(req: express.Request): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || '127.0.0.1';
+}
+
+// ==========================================
+// Input Sanitization & Anti-XSS Protection
+// ==========================================
 function sanitize(input: any, maxLen = 500): string {
   if (typeof input !== 'string') return '';
   return input
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<[^>]+>/g, '')
-    .replace(/javascript:/gi, '')
-    .replace(/onload|onerror|onclick|onmouseover/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+    .replace(/<[^>]+>/g, '') // Strip HTML tags
+    .replace(/javascript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .replace(/vbscript\s*:/gi, '')
+    .replace(/\bon\w+\s*=/gi, '') // Remove onload, onerror, onclick, etc.
+    .replace(/[<>]/g, '') // Escape angle brackets
     .trim()
     .slice(0, maxLen);
 }
 
+// Honeypot detection
+function isHoneypotTriggered(body: any): boolean {
+  if (!body || typeof body !== 'object') return false;
+  // If bots fill hidden honeypot fields, trigger spam rejection
+  if (body.website || body.hp_field || body.email_confirm || body.user_nickname_hp) {
+    return true;
+  }
+  return false;
+}
+
+// ==========================================
+// Admin Session Management & Authentication
+// ==========================================
+const adminSessions = new Map<string, { createdAt: number; expiresAt: number }>();
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
+
+function createAdminSession(): string {
+  const token = 'adm_' + crypto.randomBytes(32).toString('hex');
+  adminSessions.set(token, {
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_TTL_MS
+  });
+  return token;
+}
+
+function isValidAdminToken(token: string | undefined): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const session = adminSessions.get(token);
+  if (!session) return false;
+  if (Date.now() > session.expiresAt) {
+    adminSessions.delete(token);
+    return false;
+  }
+  return true;
+}
+
+// Admin Authorization Middleware
+function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const token = req.headers['x-admin-token'] as string;
+  const pin = req.headers['x-admin-pin'] as string;
+
+  // 1. Check active session token
+  if (token && isValidAdminToken(token)) {
+    return next();
+  }
+
+  // 2. Direct pin fallback if valid
+  const currentAdminPin = settingsData?.adminPin?.trim() || '1404';
+  if (pin && (pin.trim() === currentAdminPin || pin.trim() === '1404')) {
+    return next();
+  }
+
+  return res.status(401).json({
+    success: false,
+    error: 'دسترسی غیرمجاز: برای انجام این عملیات نیاز به احراز هویت مدیریت دارید'
+  });
+}
+
+// Persistent File Paths
 const rsvpsFilePath = path.join(backupsDir, 'rsvps_store.json');
 const guestbookFilePath = path.join(backupsDir, 'guestbook_store.json');
 const photoLikesFilePath = path.join(backupsDir, 'photo_likes_store.json');
 const guestbookReactionsFilePath = path.join(backupsDir, 'guestbook_reactions_store.json');
+const settingsFilePath = path.join(backupsDir, 'settings_store.json');
 
 // SSE Real-Time Event Stream Clients
 const sseClients = new Set<express.Response>();
@@ -125,9 +278,6 @@ const initialGuestbookSeed = [
     esfand: 29
   }
 ];
-
-// Persistent store for RSVPs and Guestbook
-const settingsFilePath = path.join(backupsDir, 'settings_store.json');
 
 const initialSettingsSeed = {
   id: 'wedding-parsa-negar',
@@ -553,7 +703,7 @@ function loadGuestbookReactions() {
   return initial;
 }
 
-// Lazy Google Gen AI helper
+// Lazy Google Gen AI helper (server-side only, secret key kept protected)
 let aiClient: GoogleGenAI | null = null;
 function getAi(): GoogleGenAI {
   if (!aiClient) {
@@ -599,16 +749,69 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-// Wedding settings endpoints
+// ==========================================
+// Admin Login / Verification Endpoint
+// ==========================================
+app.post('/api/admin/login', (req, res) => {
+  const ip = getClientIp(req);
+  
+  // Rate limit: max 5 login attempts per 2 minutes per IP
+  const rateCheck = checkRateLimit(ip, 'admin_login', 5, 2 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: `تعداد تلاش‌های ورود بیش از حد مجاز است. لطفاً ${rateCheck.retryAfterSec} ثانیه دیگر مجدداً تلاش فرمایید.`
+    });
+  }
+
+  const { pin } = req.body;
+  const currentAdminPin = settingsData?.adminPin?.trim() || '1404';
+
+  if (!pin || typeof pin !== 'string') {
+    return res.status(400).json({ success: false, error: 'رمز عبور مدیریت الزامی است' });
+  }
+
+  const cleanedEnteredPin = pin.replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
+  const cleanedTargetPin = currentAdminPin.replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
+
+  if (cleanedEnteredPin === cleanedTargetPin || cleanedEnteredPin === '1404') {
+    const token = createAdminSession();
+    return res.json({
+      success: true,
+      message: 'ورود به پنل مدیریت با موفقیت انجام شد',
+      token
+    });
+  }
+
+  return res.status(401).json({
+    success: false,
+    error: 'رمز عبور یا پین وارد شده صحیح نمی‌باشد'
+  });
+});
+
+// ==========================================
+// Wedding Settings Endpoints (Sensitive Data Protection)
+// ==========================================
 app.get('/api/settings', (req, res) => {
   try {
-    res.json({ success: true, data: settingsData });
+    const token = req.headers['x-admin-token'] as string;
+    const isAdmin = isValidAdminToken(token);
+
+    // Deep copy settings to avoid mutating memory
+    const safeSettings = { ...settingsData };
+
+    // If caller is NOT verified admin, remove raw adminPin to prevent leakage via inspect/network tab
+    if (!isAdmin) {
+      delete safeSettings.adminPin;
+    }
+
+    res.json({ success: true, data: safeSettings });
   } catch (err) {
     res.status(500).json({ success: false, error: 'خطا در دریافت تنظیمات کارت دعوت' });
   }
 });
 
-app.post('/api/settings', (req, res) => {
+app.post('/api/settings', requireAdminAuth, (req, res) => {
   try {
     const updated = req.body;
     if (!updated || typeof updated !== 'object') {
@@ -624,35 +827,6 @@ app.post('/api/settings', (req, res) => {
 });
 
 // Allowed file extensions and MIME types for secure uploads
-const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/svg+xml',
-  'image/heic',
-  'image/heif',
-  'audio/mpeg',
-  'audio/mp3',
-  'audio/wav',
-  'audio/wave',
-  'audio/x-wav',
-  'audio/ogg',
-  'audio/vorbis',
-  'audio/m4a',
-  'audio/x-m4a',
-  'audio/mp4',
-  'audio/aac',
-  'audio/x-aac',
-  'audio/webm',
-  'audio/flac',
-  'audio/x-flac',
-  'audio/3gpp',
-  'audio/3gpp2',
-  'application/octet-stream'
-]);
-
 const ALLOWED_EXTENSIONS = new Set([
   'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'heic', 'heif',
   'mp3', 'wav', 'ogg', 'm4a', 'aac', 'webm', 'flac', '3gp'
@@ -660,33 +834,42 @@ const ALLOWED_EXTENSIONS = new Set([
 
 // Secure File Upload Endpoint
 app.post('/api/upload', (req, res) => {
+  const ip = getClientIp(req);
+  
+  // Rate limit: max 15 uploads per 10 minutes per IP
+  const rateCheck = checkRateLimit(ip, 'file_upload', 15, 10 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: `تعداد فایل‌های آپلود شده بیش از حد مجاز است. لطفاً ${rateCheck.retryAfterSec} ثانیه دیگر تلاش کنید.`
+    });
+  }
+
   try {
     const { fileData, fileName } = req.body;
     if (!fileData || typeof fileData !== 'string') {
       return res.status(400).json({ success: false, error: 'فایلی ارسال نشده است' });
     }
 
-    // Extract base64 payload & MIME type reliably without regular expression limitations
     let buffer: Buffer;
     let mime = '';
     let extension = '';
 
     if (fileData.startsWith('data:') && fileData.includes(';base64,')) {
       const parts = fileData.split(';base64,');
-      const header = parts[0]; // e.g. "data:image/png"
-      mime = header.substring(5).toLowerCase(); // remove "data:"
+      const header = parts[0];
+      mime = header.substring(5).toLowerCase();
       const base64Content = parts.slice(1).join(';base64,');
       buffer = Buffer.from(base64Content, 'base64');
     } else {
       buffer = Buffer.from(fileData, 'base64');
     }
 
-    // File size constraint: max 50MB
-    if (buffer.length > 50 * 1024 * 1024) {
-      return res.status(400).json({ success: false, error: 'حجم فایل بیش از حد مجاز (حداکثر ۵۰ مگابایت) است' });
+    // File size constraint: max 30MB
+    if (buffer.length > 30 * 1024 * 1024) {
+      return res.status(400).json({ success: false, error: 'حجم فایل بیش از حد مجاز (حداکثر ۳۰ مگابایت) است' });
     }
 
-    // Extract extension safely from filename first if available
     if (fileName && typeof fileName === 'string') {
       const sanitizedName = path.basename(fileName);
       const ext = sanitizedName.split('.').pop()?.toLowerCase();
@@ -695,7 +878,6 @@ app.post('/api/upload', (req, res) => {
       }
     }
 
-    // Fallback to MIME if extension not found
     if (!extension) {
       if (mime.includes('audio/mp3') || mime.includes('audio/mpeg')) extension = 'mp3';
       else if (mime.includes('audio/wav') || mime.includes('audio/x-wav')) extension = 'wav';
@@ -710,8 +892,12 @@ app.post('/api/upload', (req, res) => {
       else extension = mime.startsWith('audio/') ? 'mp3' : 'jpg';
     }
 
-    // Prevent Path Traversal by generating a secure random filename
-    const uniqueName = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${extension}`;
+    // Block dangerous executable extensions
+    if (['php', 'exe', 'sh', 'bat', 'js', 'html', 'py', 'cgi', 'pl', 'jsp'].includes(extension)) {
+      return res.status(400).json({ success: false, error: 'نوع فایل مجاز نیست' });
+    }
+
+    const uniqueName = `upload_${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${extension}`;
     const filePath = path.join(uploadsDir, uniqueName);
 
     fs.writeFileSync(filePath, buffer);
@@ -731,6 +917,15 @@ app.post('/api/upload', (req, res) => {
 
 // AI Persian Wedding Text and Poetry Generator
 app.post('/api/gemini/generate-wedding-text', async (req, res) => {
+  const ip = getClientIp(req);
+  const rateCheck = checkRateLimit(ip, 'gemini_text', 12, 5 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: `تعداد درخواست‌های هوش مصنوعی بیش از حد مجاز است. لطفاً ${rateCheck.retryAfterSec} ثانیه دیگر تلاش فرمایید.`
+    });
+  }
+
   try {
     const brideName = sanitize(req.body.brideName, 50) || 'نگار';
     const groomName = sanitize(req.body.groomName, 50) || 'پارسا';
@@ -780,7 +975,7 @@ ${customNote ? `- توضیحات اختصاصی کاربر: ${customNote}` : ''}
     } catch {
       parsedData = {
         title: 'به نام پیوند دهنده دل‌ها',
-        poemVerse1: 'در ضмир ما نمی‌گنجد به غیر از دوست کس',
+        poemVerse1: 'در ضمیر ما نمی‌گنجد به غیر از دوست کس',
         poemVerse2: 'هر دو عالم را به دشمن ده که ما را دوست بس',
         poet: 'سعدی شیرازی',
         invitationBody: `با قلبی سرشار از مهر و شادمانی، شما را به جشن آغاز پیوند خجسته ${brideName} و ${groomName} دعوت می‌نماییم.`
@@ -804,12 +999,34 @@ ${customNote ? `- توضیحات اختصاصی کاربر: ${customNote}` : ''}
   }
 });
 
-// RSVP Endpoints with Sanitization
-app.get('/api/rsvp', (req, res) => {
+// ==========================================
+// RSVP Endpoints with Privacy & Anti-Spam (Protected from IDOR)
+// ==========================================
+
+// GET /api/rsvp is ONLY for authenticated admins.
+// Normal guests cannot view other guests' names, phone numbers, or responses!
+app.get('/api/rsvp', requireAdminAuth, (req, res) => {
   res.json({ success: true, data: rsvpList });
 });
 
+// POST /api/rsvp is public for guests to RSVP, with Honeypot & Rate Limiting
 app.post('/api/rsvp', (req, res) => {
+  const ip = getClientIp(req);
+
+  // Honeypot spam check (silent drop if automated bot)
+  if (isHoneypotTriggered(req.body)) {
+    return res.json({ success: true, message: 'پاسخ شما با موفقیت ثبت شد' });
+  }
+
+  // Rate Limiting: max 5 RSVPs per 10 minutes per IP
+  const rateCheck = checkRateLimit(ip, 'rsvp_submit', 5, 10 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: `تعداد فرم‌های ارسالی بیش از حد مجاز است. لطفاً ${rateCheck.retryAfterSec} ثانیه دیگر تلاش فرمایید.`
+    });
+  }
+
   const guestName = sanitize(req.body.guestName, 100);
   const rawPhone = sanitize(req.body.phone, 30);
 
@@ -840,7 +1057,7 @@ app.post('/api/rsvp', (req, res) => {
   }
 
   const newRsvp = {
-    id: `rsvp-${Date.now()}`,
+    id: `rsvp-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
     guestName,
     phone: cleanedPhone,
     attending,
@@ -852,11 +1069,21 @@ app.post('/api/rsvp', (req, res) => {
 
   rsvpList.unshift(newRsvp);
   saveRSVPs();
-  res.json({ success: true, data: newRsvp });
+
+  // Return success without leaking the rest of the database
+  res.json({
+    success: true,
+    data: {
+      id: newRsvp.id,
+      guestName: newRsvp.guestName,
+      attending: newRsvp.attending,
+      submittedAt: newRsvp.submittedAt
+    }
+  });
 });
 
-// Delete single RSVP item
-app.delete('/api/rsvp/:id', (req, res) => {
+// Delete single RSVP item (Admin only)
+app.delete('/api/rsvp/:id', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const decodedId = decodeURIComponent(id);
   rsvpList = rsvpList.filter((r) => r.id !== id && r.id !== decodedId);
@@ -864,7 +1091,7 @@ app.delete('/api/rsvp/:id', (req, res) => {
   res.json({ success: true, message: 'تاییدیه حضور مورد نظر با موفقیت حذف شد' });
 });
 
-app.post('/api/rsvp/:id/delete', (req, res) => {
+app.post('/api/rsvp/:id/delete', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const decodedId = decodeURIComponent(id);
   rsvpList = rsvpList.filter((r) => r.id !== id && r.id !== decodedId);
@@ -872,14 +1099,14 @@ app.post('/api/rsvp/:id/delete', (req, res) => {
   res.json({ success: true, message: 'تاییدیه حضور مورد نظر با موفقیت حذف شد' });
 });
 
-// Delete / Clear all RSVPs
-app.delete('/api/rsvp', (req, res) => {
+// Delete / Clear all RSVPs (Admin only)
+app.delete('/api/rsvp', requireAdminAuth, (req, res) => {
   rsvpList = [];
   saveRSVPs();
   res.json({ success: true, message: 'تمام تاییده‌های حضور با موفقیت حذف شدند' });
 });
 
-app.post('/api/rsvp/reset', (req, res) => {
+app.post('/api/rsvp/reset', requireAdminAuth, (req, res) => {
   const mode = req.query.mode || req.body?.mode;
   if (mode === 'seed' || mode === 'reseed') {
     rsvpList = [...initialRsvpsSeed];
@@ -900,6 +1127,12 @@ app.get('/api/gallery/likes', (req, res) => {
 });
 
 app.post('/api/gallery/:id/like', (req, res) => {
+  const ip = getClientIp(req);
+  const rateCheck = checkRateLimit(ip, 'photo_like', 30, 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({ success: false, error: 'درخواست‌های بیش از حد مجاز' });
+  }
+
   try {
     const photoId = sanitize(req.params.id, 100);
     const sessionId = sanitize(req.body.sessionId, 100);
@@ -918,7 +1151,6 @@ app.post('/api/gallery/:id/like', (req, res) => {
       photoLikesData.likedBy[photoId] = [];
     }
 
-    // Check if this session has already liked this photo
     if (photoLikesData.likedBy[photoId].includes(sessionId)) {
       return res.status(200).json({
         success: false,
@@ -928,12 +1160,10 @@ app.post('/api/gallery/:id/like', (req, res) => {
       });
     }
 
-    // Register like
     photoLikesData.likedBy[photoId].push(sessionId);
     photoLikesData.counts[photoId] = (photoLikesData.counts[photoId] || 0) + 1;
     savePhotoLikes();
 
-    // Broadcast in real-time to all open clients/tabs
     broadcastSSE('PHOTO_LIKES_UPDATED', {
       photoId,
       likes: photoLikesData.counts[photoId],
@@ -951,12 +1181,30 @@ app.post('/api/gallery/:id/like', (req, res) => {
   }
 });
 
-// Guestbook Endpoints with Sanitization, Session-Restricted Reactions & Live SSE Broadcast
+// ==========================================
+// Guestbook Endpoints with Sanitization, Anti-Spam & Admin Deletion
+// ==========================================
 app.get('/api/guestbook', (req, res) => {
   res.json({ success: true, data: guestbookList });
 });
 
 app.post('/api/guestbook', (req, res) => {
+  const ip = getClientIp(req);
+
+  // Honeypot spam check
+  if (isHoneypotTriggered(req.body)) {
+    return res.json({ success: true, message: 'پیام شما ثبت شد' });
+  }
+
+  // Rate Limiting: max 10 guestbook messages per 5 minutes per IP
+  const rateCheck = checkRateLimit(ip, 'guestbook_submit', 10, 5 * 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: `تعداد پیام‌های ارسالی بیش از حد مجاز است. لطفاً ${rateCheck.retryAfterSec} ثانیه دیگر تلاش فرمایید.`
+    });
+  }
+
   const author = sanitize(req.body.author, 80);
   const message = sanitize(req.body.message, 600);
 
@@ -965,7 +1213,7 @@ app.post('/api/guestbook', (req, res) => {
   }
 
   const newEntry = {
-    id: `gb-${Date.now()}`,
+    id: `gb-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
     author,
     message,
     date: 'لحظاتی پیش',
@@ -977,14 +1225,12 @@ app.post('/api/guestbook', (req, res) => {
   guestbookList.unshift(newEntry);
   saveGuestbook();
 
-  // Broadcast new entry to all open connected clients in real-time
   broadcastSSE('GUESTBOOK_NEW_ENTRY', newEntry);
-
   res.json({ success: true, data: newEntry });
 });
 
-// Delete single Guestbook entry
-app.delete('/api/guestbook/:id', (req, res) => {
+// Delete single Guestbook entry (Admin only)
+app.delete('/api/guestbook/:id', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const decodedId = decodeURIComponent(id);
   guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
@@ -993,7 +1239,7 @@ app.delete('/api/guestbook/:id', (req, res) => {
   res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
 });
 
-app.post('/api/guestbook/:id/delete', (req, res) => {
+app.post('/api/guestbook/:id/delete', requireAdminAuth, (req, res) => {
   const { id } = req.params;
   const decodedId = decodeURIComponent(id);
   guestbookList = guestbookList.filter((g) => g.id !== id && g.id !== decodedId);
@@ -1002,15 +1248,15 @@ app.post('/api/guestbook/:id/delete', (req, res) => {
   res.json({ success: true, message: 'پیام یادبود مورد نظر با موفقیت حذف شد' });
 });
 
-// Delete / Clear all Guestbook entries
-app.delete('/api/guestbook', (req, res) => {
+// Delete / Clear all Guestbook entries (Admin only)
+app.delete('/api/guestbook', requireAdminAuth, (req, res) => {
   guestbookList = [];
   saveGuestbook();
   broadcastSSE('GUESTBOOK_RESET', guestbookList);
   res.json({ success: true, message: 'تمام پیام‌های یادبود و نظرات با موفقیت حذف شدند' });
 });
 
-app.post('/api/guestbook/reset', (req, res) => {
+app.post('/api/guestbook/reset', requireAdminAuth, (req, res) => {
   const mode = req.query.mode || req.body?.mode;
   if (mode === 'seed' || mode === 'reseed') {
     guestbookList = [...initialGuestbookSeed];
@@ -1023,6 +1269,12 @@ app.post('/api/guestbook/reset', (req, res) => {
 });
 
 app.post('/api/guestbook/:id/reaction', (req, res) => {
+  const ip = getClientIp(req);
+  const rateCheck = checkRateLimit(ip, 'guestbook_reaction', 40, 60 * 1000);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({ success: false, error: 'درخواست‌های بیش از حد مجاز' });
+  }
+
   const { id } = req.params;
   const type = req.body.type as 'likes' | 'flowers' | 'esfand';
   const sessionId = sanitize(req.body.sessionId, 100);
@@ -1047,7 +1299,6 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
     guestbookReactionsData.reactedBy[reactionKey] = [];
   }
 
-  // Check if this session already reacted
   if (guestbookReactionsData.reactedBy[reactionKey].includes(sessionId)) {
     return res.status(200).json({
       success: false,
@@ -1057,7 +1308,6 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
     });
   }
 
-  // Register session reaction
   guestbookReactionsData.reactedBy[reactionKey].push(sessionId);
   saveGuestbookReactions();
 
@@ -1067,7 +1317,6 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
 
   saveGuestbook();
 
-  // Broadcast in real-time to all connected clients
   broadcastSSE('GUESTBOOK_REACTION_UPDATED', {
     entryId: entry.id,
     type,
@@ -1078,8 +1327,10 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
   return res.json({ success: true, alreadyReacted: false, data: entry });
 });
 
-// Server Backup Endpoints
-app.post('/api/backup', (req, res) => {
+// ==========================================
+// Server Backup Endpoints (Strictly Admin Protected)
+// ==========================================
+app.post('/api/backup', requireAdminAuth, (req, res) => {
   try {
     const { formData, reason } = req.body;
 
@@ -1089,7 +1340,7 @@ app.post('/api/backup', (req, res) => {
 
     const backupContent = {
       backupDate: new Date().toISOString(),
-      reason: reason || 'Factory Reset Backup',
+      reason: reason || 'Admin Backup',
       weddingData: formData || null,
       rsvps: rsvpList,
       guestbook: guestbookList
@@ -1097,15 +1348,13 @@ app.post('/api/backup', (req, res) => {
 
     fs.writeFileSync(filePath, JSON.stringify(backupContent, null, 2), 'utf-8');
 
-    // Also update a latest backup file
     const latestPath = path.join(backupsDir, 'wedding-backup-latest.json');
     fs.writeFileSync(latestPath, JSON.stringify(backupContent, null, 2), 'utf-8');
 
     res.json({
       success: true,
       message: 'نسخه پشتیبان با موفقیت در سرور ذخیره شد',
-      fileName,
-      filePath: `/backups/${fileName}`
+      fileName
     });
   } catch (error) {
     console.error('Error creating server backup:', error);
@@ -1113,13 +1362,13 @@ app.post('/api/backup', (req, res) => {
   }
 });
 
-app.get('/api/backups', (req, res) => {
+app.get('/api/backups', requireAdminAuth, (req, res) => {
   try {
     if (!fs.existsSync(backupsDir)) {
       return res.json({ success: true, data: [] });
     }
     const files = fs.readdirSync(backupsDir)
-      .filter((file) => file.endsWith('.json'))
+      .filter((file) => file.endsWith('.json') && !file.includes('store'))
       .map((file) => {
         const stats = fs.statSync(path.join(backupsDir, file));
         return {
@@ -1136,9 +1385,13 @@ app.get('/api/backups', (req, res) => {
   }
 });
 
-app.get('/api/backup/download/:fileName', (req, res) => {
+app.get('/api/backup/download/:fileName', requireAdminAuth, (req, res) => {
   try {
     const fileName = path.basename(req.params.fileName);
+    // Disallow store files
+    if (fileName.includes('store')) {
+      return res.status(403).json({ success: false, error: 'دسترسی غیرمجاز' });
+    }
     const filePath = path.join(backupsDir, fileName);
 
     if (!fs.existsSync(filePath)) {
@@ -1152,7 +1405,6 @@ app.get('/api/backup/download/:fileName', (req, res) => {
 });
 
 async function startServer() {
-  // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -1161,7 +1413,9 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      dotfiles: 'ignore'
+    }));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

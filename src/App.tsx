@@ -15,7 +15,7 @@ import RSVPManagerModal from './components/RSVPManagerModal';
 import ThemeSelectorModal from './components/ThemeSelectorModal';
 import AudioPlayerFloating from './components/AudioPlayerFloating';
 import AdminLoginModal from './components/AdminLoginModal';
-import { getIsAdminSessionValid, saveAdminSession, clearAdminSession } from './utils/security';
+import { getIsAdminSessionValid, saveAdminSession, clearAdminSession, getAdminAuthHeaders } from './utils/security';
 
 export default function App() {
   const [weddingData, setWeddingData] = useState<WeddingCardData>(() => {
@@ -124,7 +124,8 @@ export default function App() {
     fetch('/api/settings', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders()
       },
       body: JSON.stringify(updated)
     })

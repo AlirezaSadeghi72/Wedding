@@ -4,7 +4,7 @@ import { Heart, Send, MessageCircleHeart, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GuestbookEntry } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
-import { getIsAdminSessionValid } from '../utils/security';
+import { getIsAdminSessionValid, sanitizeString, getAdminAuthHeaders } from '../utils/security';
 import {
   getSessionId,
   hasReactedGuestbook,
@@ -22,6 +22,7 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
   const [entries, setEntries] = useState<GuestbookEntry[]>([]);
   const [author, setAuthor] = useState('');
   const [message, setMessage] = useState('');
+  const [honeypot, setHoneypot] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const [reactedKeys, setReactedKeys] = useState<Set<string>>(new Set());
@@ -114,7 +115,10 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!author.trim() || !message.trim()) return;
+    const cleanAuthor = sanitizeString(author, 80);
+    const cleanMessage = sanitizeString(message, 600);
+
+    if (!cleanAuthor || !cleanMessage) return;
 
     setIsSubmitting(true);
     try {
@@ -122,12 +126,13 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          author: author.trim(),
-          message: message.trim()
+          author: cleanAuthor,
+          message: cleanMessage,
+          website: honeypot // Anti-bot honeypot
         })
       });
       const data = await res.json();
-      if (data.success && data.data) {
+      if (res.ok && data.success && data.data) {
         setEntries((prev) => {
           if (prev.some((item) => item.id === data.data.id)) return prev;
           return [data.data, ...prev];
@@ -148,8 +153,8 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
       // Local fallback
       const localEntry: GuestbookEntry = {
         id: `gb-local-${Date.now()}`,
-        author: author.trim(),
-        message: message.trim(),
+        author: cleanAuthor,
+        message: cleanMessage,
         date: 'لحظاتی پیش',
         likes: 1,
         flowers: 1,
@@ -213,9 +218,16 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
         try {
           setEntries((prev) => prev.filter((item) => item.id !== id));
           const encodedId = encodeURIComponent(id);
-          const res = await fetch(`/api/guestbook/${encodedId}`, { method: 'DELETE' });
+          const headers = getAdminAuthHeaders();
+          const res = await fetch(`/api/guestbook/${encodedId}`, {
+            method: 'DELETE',
+            headers
+          });
           if (!res.ok) {
-            await fetch(`/api/guestbook/${encodedId}/delete`, { method: 'POST' });
+            await fetch(`/api/guestbook/${encodedId}/delete`, {
+              method: 'POST',
+              headers
+            });
           }
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
         } catch {
@@ -257,6 +269,18 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
             ? 'bg-stone-50 border border-stone-200'
             : 'bg-stone-950/60 border border-stone-800'
         } space-y-2.5 sm:space-y-3`}>
+          {/* Honeypot field for anti-spam */}
+          <div className="hidden" aria-hidden="true" style={{ display: 'none' }}>
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
             <div>
               <label className={`block text-[11px] sm:text-xs ${isLight ? 'text-stone-700 font-semibold' : 'text-stone-300'} mb-1 font-medium`}>

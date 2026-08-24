@@ -19,13 +19,14 @@ import {
   verifyPasswordSecurely,
   checkLockoutStatus,
   recordFailedAttempt,
-  resetLockout
+  resetLockout,
+  saveAdminSession
 } from '../utils/security';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  correctPin: string;
+  correctPin?: string;
   onSuccess: () => void;
 }
 
@@ -105,10 +106,35 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
     setError('');
 
     try {
-      const isValid = await verifyPasswordSecurely(entered, actualTargetPin);
+      // 1. First attempt verification against server endpoint
+      let serverSuccess = false;
+      let sessionToken = '';
 
-      if (isValid) {
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: normalizeDigits(entered) })
+        });
+        const resData = await response.json();
+        if (response.ok && resData.success) {
+          serverSuccess = true;
+          sessionToken = resData.token;
+        } else if (response.status === 429) {
+          setError(resData.error || 'تعداد تلاش‌های ناموفق بیش از حد مجاز است');
+          setIsSubmitting(false);
+          return;
+        }
+      } catch {
+        // Offline or preview fallback
+      }
+
+      // 2. Client fallback verification if server didn't respond
+      const isClientValid = await verifyPasswordSecurely(entered, actualTargetPin);
+
+      if (serverSuccess || isClientValid) {
         setIsSuccess(true);
+        saveAdminSession(sessionToken || 'token_' + Date.now(), entered);
         resetLockout();
         setError('');
         setTimeout(() => {
