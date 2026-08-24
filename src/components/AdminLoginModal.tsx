@@ -109,6 +109,7 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
       // 1. First attempt verification against server endpoint
       let serverSuccess = false;
       let sessionToken = '';
+      let serverResponded = false;
 
       try {
         const response = await fetch('/api/admin/login', {
@@ -116,6 +117,7 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pin: normalizeDigits(entered) })
         });
+        serverResponded = true;
         const resData = await response.json();
         if (response.ok && resData.success) {
           serverSuccess = true;
@@ -124,15 +126,23 @@ export default function AdminLoginModal({ isOpen, onClose, correctPin, onSuccess
           setError(resData.error || 'تعداد تلاش‌های ناموفق بیش از حد مجاز است');
           setIsSubmitting(false);
           return;
+        } else {
+          // Server explicitly returned success: false
+          serverSuccess = false;
         }
       } catch {
         // Offline or preview fallback
       }
 
-      // 2. Client fallback verification if server didn't respond
-      const isClientValid = await verifyPasswordSecurely(entered, actualTargetPin);
+      // 2. Client fallback verification only if server didn't respond
+      let isFinalValid = false;
+      if (serverResponded) {
+        isFinalValid = serverSuccess;
+      } else {
+        isFinalValid = await verifyPasswordSecurely(entered, actualTargetPin);
+      }
 
-      if (serverSuccess || isClientValid) {
+      if (isFinalValid) {
         setIsSuccess(true);
         saveAdminSession(sessionToken || 'token_' + Date.now(), entered);
         resetLockout();

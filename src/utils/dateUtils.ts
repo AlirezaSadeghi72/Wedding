@@ -8,6 +8,30 @@ export function toPersianDigits(num: number | string | undefined | null): string
     .replace(/[٠-٩]/g, (w) => persianDigits[arabicDigits.indexOf(w)]);
 }
 
+export function formatGregorianToPersian(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const year = date.getFullYear();
+    const monthIndex = date.getMonth(); // 0-11
+    const day = date.getDate();
+    
+    const months = [
+      'ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن',
+      'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر'
+    ];
+    
+    const persianMonth = months[monthIndex];
+    const persianDay = toPersianDigits(day);
+    const persianYear = toPersianDigits(year);
+    
+    return `مصادف با ${persianDay} ${persianMonth} ${persianYear}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
 export interface TimeLeft {
   days: number;
   hours: number;

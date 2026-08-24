@@ -33,7 +33,9 @@ export default function App() {
 
   // Fetch wedding settings from server on mount & listen to real-time live changes
   useEffect(() => {
-    fetch('/api/settings')
+    fetch('/api/settings', {
+      headers: getAdminAuthHeaders()
+    })
       .then((res) => res.json())
       .then((resData) => {
         if (resData && resData.success && resData.data) {
@@ -114,7 +116,21 @@ export default function App() {
 
   const handleAdminLoginSuccess = () => {
     setIsAdminAuthenticated(true);
-    saveAdminSession(undefined, weddingData.adminPin || '1404');
+    fetch('/api/settings', {
+      headers: getAdminAuthHeaders()
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData && resData.success && resData.data) {
+          setWeddingData(resData.data);
+          try {
+            localStorage.setItem('wedding_card_data', JSON.stringify(resData.data));
+          } catch {
+            // Ignore
+          }
+        }
+      })
+      .catch(() => {});
   };
 
   const handleAdminLogout = () => {

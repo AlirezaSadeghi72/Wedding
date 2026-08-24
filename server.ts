@@ -251,7 +251,7 @@ function requireAdminAuth(req: express.Request, res: express.Response, next: exp
   const currentAdminPin = (settingsData?.adminPin || '1404').toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
   const cleanedHeaderPin = pin ? pin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
 
-  if (cleanedHeaderPin && (cleanedHeaderPin === currentAdminPin || cleanedHeaderPin === '1404')) {
+  if (cleanedHeaderPin && cleanedHeaderPin === currentAdminPin) {
     return next();
   }
 
@@ -386,6 +386,7 @@ const initialSettingsSeed = {
     dayOfWeek: 'سه‌شنبه'
   },
   gregorianDate: '2026-09-01T18:00:00',
+  gregorianDateText: 'مصادف با ۱ سپتامبر ۲۰۲۶',
   eventTime: '۱۸:۰۰ الی ۲۳:۰۰',
   venue: {
     name: 'عمارت و باغ تالار قصر نیلوفر',
@@ -485,6 +486,8 @@ const initialSettingsSeed = {
     allowSongRequest: true,
     requirePhone: false
   },
+  envelopeOpenBtnTop: true,
+  envelopeOpenBtnBottom: true,
   weather: {
     enabled: true,
     temperature: '۲۴°C',
@@ -837,7 +840,7 @@ app.post('/api/admin/login', (req, res) => {
   const cleanedEnteredPin = pin.replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
   const cleanedTargetPin = currentAdminPin.replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
 
-  if (cleanedEnteredPin === cleanedTargetPin || cleanedEnteredPin === '1404') {
+  if (cleanedEnteredPin === cleanedTargetPin) {
     const token = createAdminSession();
     return res.json({
       success: true,
@@ -850,6 +853,45 @@ app.post('/api/admin/login', (req, res) => {
     success: false,
     error: 'رمز عبور یا پین وارد شده صحیح نمی‌باشد'
   });
+});
+
+app.post('/api/admin/change-password', (req, res) => {
+  try {
+    const { currentPin, newPin } = req.body;
+    const token = req.headers['x-admin-token'] as string;
+    const headerPin = req.headers['x-admin-pin'] as string;
+    const isAdminByToken = isValidAdminToken(token);
+
+    const currentAdminPin = (settingsData?.adminPin || '1404').toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
+    const cleanedCurrent = currentPin ? currentPin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
+    const cleanedHeaderPin = headerPin ? headerPin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
+    const cleanedNew = newPin ? newPin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
+
+    if (!cleanedNew || cleanedNew.length < 4) {
+      return res.status(400).json({ success: false, error: 'رمز عبور جدید باید حداقل دارای ۴ رقم یا کاراکتر باشد' });
+    }
+
+    const isCurrentValid = (cleanedCurrent && cleanedCurrent === currentAdminPin) || (cleanedHeaderPin && cleanedHeaderPin === currentAdminPin) || isAdminByToken;
+
+    if (!isCurrentValid) {
+      return res.status(401).json({ success: false, error: 'رمز عبور فعلی مدیریت نادرست است' });
+    }
+
+    // Update in settingsData and persist to disk
+    settingsData.adminPin = cleanedNew;
+    saveSettings();
+    const newToken = createAdminSession();
+    broadcastSSE('SETTINGS_UPDATED', { ...settingsData, adminPin: undefined });
+
+    return res.json({
+      success: true,
+      message: 'رمز عبور مدیریت با موفقیت به‌روزرسانی شد',
+      token: newToken,
+      newPin: cleanedNew
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'خطا در تغییر رمز عبور مدیریت' });
+  }
 });
 
 // ==========================================

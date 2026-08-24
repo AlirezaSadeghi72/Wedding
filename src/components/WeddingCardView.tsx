@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { WeddingCardData, SectionKey, getEffectiveSectionsOrder } from '../types';
 import { getTheme } from '../data/themes';
-import { calculateTimeLeft, toPersianDigits, generateIcsCalendar, downloadCalendarFile, TimeLeft } from '../utils/dateUtils';
+import { calculateTimeLeft, toPersianDigits, generateIcsCalendar, downloadCalendarFile, TimeLeft, formatGregorianToPersian } from '../utils/dateUtils';
 import { copyToClipboard } from '../utils/clipboard';
 import RSVPModal from './RSVPModal';
 import GuestbookSection from './GuestbookSection';
@@ -205,7 +205,7 @@ export default function WeddingCardView({
                   {data.solarDate.dayOfWeek} {data.solarDate.day} {data.solarDate.month} {data.solarDate.year}
                 </span>
                 <span className={`text-[10px] sm:text-[11px] ${isLight ? 'text-stone-600' : 'text-stone-400'} mt-0.5`}>
-                  مصادف با ۱۸ سپتامبر ۲۰۲۵
+                  {data.gregorianDateText || formatGregorianToPersian(data.gregorianDate)}
                 </span>
               </div>
 

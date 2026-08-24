@@ -227,7 +227,7 @@ export default function WeddingEnvelope({
         
         {/* Floating Animated Call to Action Banner above the envelope */}
         <AnimatePresence>
-          {!sealBroken && animStage === 'idle' && (
+          {!sealBroken && animStage === 'idle' && data.envelopeOpenBtnTop !== false && (
             <motion.button
               type="button"
               initial={{ opacity: 0, y: 12, scale: 0.9 }}
@@ -475,7 +475,7 @@ export default function WeddingEnvelope({
       {/* ================= 3. GRAND WAX SEAL OPENING BUTTON AT THE BOTTOM ================= */}
       <div className="w-full max-w-lg flex flex-col items-center justify-center shrink-0 pb-1.5 sm:pb-3 z-30 min-h-[58px]">
         <AnimatePresence>
-          {!sealBroken && (
+          {!sealBroken && data.envelopeOpenBtnBottom !== false && (
             <motion.div
               key="wax-seal-button"
               initial={{ scale: 0.9, opacity: 0, y: 10 }}

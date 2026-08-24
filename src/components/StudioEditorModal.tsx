@@ -56,7 +56,8 @@ import {
   GripVertical
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
-import { normalizeDigits, verifyPasswordSecurely } from '../utils/security';
+import { normalizeDigits, verifyPasswordSecurely, saveAdminSession } from '../utils/security';
+import { formatGregorianToPersian } from '../utils/dateUtils';
 import {
   WeddingCardData,
   ThemeId,
@@ -753,13 +754,6 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
       return;
     }
 
-    const currentActual = formData.adminPin || '1404';
-    const isCurrentValid = await verifyPasswordSecurely(normCurrent, currentActual);
-    if (!isCurrentValid) {
-      setPassChangeStatus({ type: 'error', message: 'رمز عبور فعلی نادرست است.' });
-      return;
-    }
-
     if (normNew.length < 4) {
       setPassChangeStatus({ type: 'error', message: 'رمز عبور جدید باید حداقل دارای ۴ کاراکتر یا رقم باشد.' });
       return;
@@ -770,13 +764,65 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
       return;
     }
 
-    // Update formData with the new password
-    setFormData((prev) => ({
-      ...prev,
-      adminPin: normNew
-    }));
+    const currentActual = formData.adminPin || '1404';
+    let serverResponded = false;
+    let serverSuccess = false;
+    let newSessionToken = '';
+    let errorMessage = '';
 
-    setPassChangeStatus({ type: 'success', message: 'رمز عبور مدیریت با موفقیت تغییر یافت. برای ثبت نهایی دکمه ذخیره را بزنید.' });
+    try {
+      const authHeaders = getAdminAuthHeaders();
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders
+        },
+        body: JSON.stringify({
+          currentPin: normCurrent,
+          newPin: normNew
+        })
+      });
+
+      serverResponded = true;
+      const resData = await response.json();
+      if (response.ok && resData.success) {
+        serverSuccess = true;
+        newSessionToken = resData.token;
+      } else {
+        serverSuccess = false;
+        errorMessage = resData.error || 'رمز عبور فعلی نادرست است';
+      }
+    } catch {
+      serverResponded = false;
+    }
+
+    let isFinalValid = false;
+    if (serverResponded) {
+      isFinalValid = serverSuccess;
+    } else {
+      isFinalValid = await verifyPasswordSecurely(normCurrent, currentActual);
+      if (!isFinalValid) {
+        errorMessage = 'رمز عبور فعلی نادرست است.';
+      }
+    }
+
+    if (!isFinalValid) {
+      setPassChangeStatus({ type: 'error', message: errorMessage || 'رمز عبور فعلی نادرست است.' });
+      return;
+    }
+
+    // Update formData with the new password
+    const updatedData = {
+      ...formData,
+      adminPin: normNew
+    };
+
+    setFormData(updatedData);
+    saveAdminSession(newSessionToken || 'token_' + Date.now(), normNew);
+    onSave(updatedData);
+
+    setPassChangeStatus({ type: 'success', message: 'رمز عبور مدیریت با موفقیت تغییر یافت و ذخیره شد.' });
     setCurrentPasswordInput('');
     setNewPasswordInput('');
     setConfirmPasswordInput('');
@@ -1676,6 +1722,50 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   </div>
                 </div>
               </div>
+
+              {/* ۵. تنظیم دکمه‌های بازگشایی پاکت */}
+              <div className="p-4 rounded-2xl border border-stone-200 bg-white space-y-3">
+                <label className="block text-xs font-bold text-stone-900">
+                  ۵. مدیریت دکمه‌های بازگشایی پاکت:
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  <label className="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div className="flex flex-col text-right">
+                      <span className="text-xs font-bold text-stone-900">نمایش دکمه بازگشایی شناور بالایی</span>
+                      <span className="text-[10px] text-stone-500 mt-0.5">کلید متحرک بالای پاکت (لمس کنید 👇)</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.envelopeOpenBtnTop !== false}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          envelopeOpenBtnTop: e.target.checked
+                        })
+                      }
+                      className="w-4 h-4 text-amber-600 focus:ring-amber-500 rounded border-stone-300 cursor-pointer"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 transition-colors cursor-pointer">
+                    <div className="flex flex-col text-right">
+                      <span className="text-xs font-bold text-stone-900">نمایش دکمه مهر و موم پایینی</span>
+                      <span className="text-[10px] text-stone-500 mt-0.5">مهر مومی بزرگ جهت گشودن پاکت</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={formData.envelopeOpenBtnBottom !== false}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          envelopeOpenBtnBottom: e.target.checked
+                        })
+                      }
+                      className="w-4 h-4 text-amber-600 focus:ring-amber-500 rounded border-stone-300 cursor-pointer"
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1823,13 +1913,52 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   </div>
 
                   <div>
-                    <label className="block text-[11px] text-stone-600 mb-1">تاریخ میلادی دقیق (برای تایمر معکوس):</label>
+                    <label className="block text-[11px] text-stone-600 mb-1">تاریخ میلادی دقیق (برای تقویم و شمارش معکوس):</label>
                     <input
                       type="datetime-local"
-                      value={formData.gregorianDate.slice(0, 16)}
-                      onChange={(e) => setFormData({ ...formData, gregorianDate: e.target.value })}
+                      value={formData.gregorianDate ? formData.gregorianDate.slice(0, 16) : ''}
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        const autoFormatted = formatGregorianToPersian(newDate);
+                        setFormData({
+                          ...formData,
+                          gregorianDate: newDate,
+                          gregorianDateText: autoFormatted
+                        });
+                      }}
                       className="w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
                     />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="block text-[11px] text-stone-600 mb-1">
+                    متن معادل میلادی (نمایش روی کارت - مصادف با...):
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={formData.gregorianDateText || ''}
+                      onChange={(e) => setFormData({ ...formData, gregorianDateText: e.target.value })}
+                      placeholder={formatGregorianToPersian(formData.gregorianDate) || 'مصادف با ۱ سپتامبر ۲۰۲۶'}
+                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-amber-200 text-xs text-stone-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          gregorianDateText: formatGregorianToPersian(formData.gregorianDate)
+                        })
+                      }
+                      className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition-colors cursor-pointer shrink-0"
+                    >
+                      محاسبه خودکار
+                    </button>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                    <span className="font-semibold">پیش‌نمایش روی کارت:</span>
+                    <span>{formData.gregorianDateText || formatGregorianToPersian(formData.gregorianDate) || '—'}</span>
                   </div>
                 </div>
               </div>

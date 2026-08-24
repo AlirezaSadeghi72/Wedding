@@ -224,7 +224,8 @@ export interface WeddingCardData {
   };
   invitationBody: string;
   solarDate: SolarDate;
-  gregorianDate: string; // e.g. "2025-09-18T19:00:00"
+  gregorianDate: string; // e.g. "2026-09-01T18:00:00"
+  gregorianDateText?: string; // e.g. "مصادف با ۱ سپتامبر ۲۰۲۶" or custom
   eventTime: string;
   venue: {
     name: string;
@@ -256,6 +257,8 @@ export interface WeddingCardData {
     allowSongRequest?: boolean;
     requirePhone?: boolean;
   };
+  envelopeOpenBtnTop?: boolean;
+  envelopeOpenBtnBottom?: boolean;
 }
 
 export interface RSVPResponse {

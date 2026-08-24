@@ -46,6 +46,7 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     dayOfWeek: 'سه‌شنبه'
   },
   gregorianDate: '2026-09-01T18:00:00',
+  gregorianDateText: 'مصادف با ۱ سپتامبر ۲۰۲۶',
   eventTime: '۱۸:۰۰ الی ۲۳:۰۰',
   venue: {
     name: 'عمارت و باغ تالار قصر نیلوفر',
@@ -145,6 +146,8 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     allowSongRequest: true,
     requirePhone: false
   },
+  envelopeOpenBtnTop: true,
+  envelopeOpenBtnBottom: true,
   weather: {
     enabled: true,
     temperature: '۲۴°C',
