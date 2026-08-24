@@ -48,19 +48,66 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ extended: true, limit: '60mb' }));
 
-// Ensure public, uploads, and backups directories exist
-const publicDir = path.join(process.cwd(), 'public');
-const uploadsDir = path.join(publicDir, 'uploads');
-const backupsDir = path.join(process.cwd(), 'backups');
+// Determine build and runtime environment paths
+const isProduction = process.env.NODE_ENV === 'production';
+const distDir = path.join(process.cwd(), 'dist');
 
-if (!fs.existsSync(publicDir)) {
-  fs.mkdirSync(publicDir, { recursive: true });
+// Dynamic directories configuration:
+// Dynamic files (stores, backups, uploads) are kept in dist/ (or custom env overrides)
+// so that root source files remain clean and git updates never cause merge conflicts.
+const rootBackupsDir = path.join(process.cwd(), 'backups');
+const rootPublicDir = path.join(process.cwd(), 'public');
+const rootUploadsDir = path.join(rootPublicDir, 'uploads');
+
+const distBackupsDir = path.join(distDir, 'backups');
+const distUploadsDir = path.join(distDir, 'uploads');
+const distPublicDir = path.join(distDir, 'public');
+
+export const backupsDir = process.env.BACKUPS_DIR || distBackupsDir;
+export const uploadsDir = process.env.UPLOADS_DIR || distUploadsDir;
+export const publicDir = isProduction && fs.existsSync(distPublicDir) ? distPublicDir : rootPublicDir;
+
+// Ensure runtime directories exist
+[distDir, backupsDir, uploadsDir, publicDir].forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch {
+      // ignore
+    }
+  }
+});
+
+// Auto-migrate legacy root /backups to the active backups directory if not already copied
+if (fs.existsSync(rootBackupsDir) && rootBackupsDir !== backupsDir) {
+  try {
+    const files = fs.readdirSync(rootBackupsDir);
+    for (const file of files) {
+      const src = path.join(rootBackupsDir, file);
+      const dest = path.join(backupsDir, file);
+      if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+  } catch (e) {
+    console.warn('Backup auto-migration note:', e);
+  }
 }
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-if (!fs.existsSync(backupsDir)) {
-  fs.mkdirSync(backupsDir, { recursive: true });
+
+// Auto-migrate legacy root public/uploads to the active uploads directory if not already copied
+if (fs.existsSync(rootUploadsDir) && rootUploadsDir !== uploadsDir) {
+  try {
+    const files = fs.readdirSync(rootUploadsDir);
+    for (const file of files) {
+      const src = path.join(rootUploadsDir, file);
+      const dest = path.join(uploadsDir, file);
+      if (fs.statSync(src).isFile() && !fs.existsSync(dest)) {
+        fs.copyFileSync(src, dest);
+      }
+    }
+  } catch (e) {
+    console.warn('Uploads auto-migration note:', e);
+  }
 }
 
 // Serve uploaded files and public assets statically (NOTE: backups is NOT statically served for security)
@@ -71,6 +118,18 @@ app.use('/uploads', express.static(uploadsDir, {
     res.setHeader('Cache-Control', 'public, max-age=86400');
   }
 }));
+
+// Fallback serve legacy root uploads if present
+if (rootUploadsDir !== uploadsDir && fs.existsSync(rootUploadsDir)) {
+  app.use('/uploads', express.static(rootUploadsDir, {
+    dotfiles: 'ignore',
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+  }));
+}
+
 app.use('/public', express.static(publicDir, {
   dotfiles: 'ignore',
   setHeaders: (res) => {

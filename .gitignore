@@ -4,6 +4,10 @@ dist/
 coverage/
 uploads/
 public/uploads/
+backups/
+data/
+dist/
+*.bak
 .DS_Store
 *.log
 .env*
