@@ -14,29 +14,31 @@ const PORT = 3000;
 // Disable X-Powered-By header to prevent fingerprinting
 app.disable('x-powered-by');
 
-// 1. Strict Security Headers
+// 1. Strict Security Headers (Configured to support AI Studio iframe preview)
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
 
-// 2. Block Hidden Files & Dotfiles (e.g. .env, .git, .htaccess, package.json, server.ts)
+// 2. Block Hidden Files & Dotfiles (e.g. .env, .git, .htaccess, package.json, server.ts) while allowing Vite client deps
 app.use((req, res, next) => {
   const normalizedPath = decodeURIComponent(req.path).toLowerCase();
   
-  // Block any dotfiles or sensitive server files
+  // Allow Vite internal client modules (e.g. /@vite/client, /node_modules/.vite/...)
+  if (normalizedPath.includes('.vite/') || normalizedPath.startsWith('/@')) {
+    return next();
+  }
+
+  // Block sensitive server files and dotfiles
   if (
-    normalizedPath.includes('/.') ||
     normalizedPath.startsWith('/.') ||
-    normalizedPath.includes('.env') ||
-    normalizedPath.includes('.git') ||
-    normalizedPath.includes('server.ts') ||
+    normalizedPath.includes('/.env') ||
+    normalizedPath.includes('/.git') ||
+    normalizedPath.includes('/server.ts') ||
+    normalizedPath.includes('/tsconfig') ||
     normalizedPath.includes('package.json') ||
-    normalizedPath.includes('tsconfig.json') ||
     normalizedPath.includes('.lock')
   ) {
     return res.status(403).json({ success: false, error: 'دسترسی به این منبع به دلایل امنیتی مسدود است' });
@@ -237,17 +239,17 @@ function isValidAdminToken(token: string | undefined): boolean {
   return true;
 }
 
-// Admin Authorization Middleware
+// Admin Authorization Middleware (strictly validated against server settings)
 function requireAdminAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
   const token = req.headers['x-admin-token'] as string;
   const pin = req.headers['x-admin-pin'] as string;
 
-  // 1. Check active session token
+  // 1. Check active session token registered in memory
   if (token && isValidAdminToken(token)) {
     return next();
   }
 
-  // 2. Direct pin fallback with normalization
+  // 2. Direct pin fallback with strict normalization against server's active PIN
   const currentAdminPin = (settingsData?.adminPin || '1404').toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
   const cleanedHeaderPin = pin ? pin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
 
@@ -255,14 +257,9 @@ function requireAdminAuth(req: express.Request, res: express.Response, next: exp
     return next();
   }
 
-  // 3. Fallback for valid token format in preview container environments
-  if (token && (token.startsWith('adm_') || token.startsWith('token_'))) {
-    return next();
-  }
-
   return res.status(401).json({
     success: false,
-    error: 'دسترسی غیرمجاز: برای انجام این عملیات نیاز به احراز هویت مدیریت دارید'
+    error: 'دسترسی غیرمجاز: نشست مدیریت نامعتبر یا منقضی شده است'
   });
 }
 
@@ -855,6 +852,28 @@ app.post('/api/admin/login', (req, res) => {
   });
 });
 
+app.get('/api/admin/verify-session', (req, res) => {
+  const token = req.headers['x-admin-token'] as string;
+  const pin = req.headers['x-admin-pin'] as string;
+  const currentAdminPin = (settingsData?.adminPin || '1404').toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim();
+  const cleanedHeaderPin = pin ? pin.toString().replace(/[۰-۹]/g, (d: string) => String.fromCharCode(d.charCodeAt(0) - 1776 + 48)).trim() : '';
+
+  if (token && isValidAdminToken(token)) {
+    return res.json({ success: true, valid: true });
+  }
+
+  if (cleanedHeaderPin && cleanedHeaderPin === currentAdminPin) {
+    const newToken = createAdminSession();
+    return res.json({ success: true, valid: true, token: newToken });
+  }
+
+  return res.status(401).json({
+    success: false,
+    valid: false,
+    error: 'نشست مدیریت نامعتبر یا منقضی شده است'
+  });
+});
+
 app.post('/api/admin/change-password', (req, res) => {
   try {
     const { currentPin, newPin } = req.body;
@@ -876,6 +895,9 @@ app.post('/api/admin/change-password', (req, res) => {
     if (!isCurrentValid) {
       return res.status(401).json({ success: false, error: 'رمز عبور فعلی مدیریت نادرست است' });
     }
+
+    // Invalidate all existing admin sessions immediately
+    adminSessions.clear();
 
     // Update in settingsData and persist to disk
     settingsData.adminPin = cleanedNew;

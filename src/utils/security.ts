@@ -225,9 +225,6 @@ export function getAdminAuthHeaders(): Record<string, string> {
     }
     if (session.pin) {
       headers['X-Admin-Pin'] = session.pin;
-    } else {
-      // Fallback default pin header if pin wasn't saved
-      headers['X-Admin-Pin'] = '1404';
     }
     return headers;
   }
@@ -242,4 +239,31 @@ export function clearAdminSession(): void {
   } catch {
     // ignore
   }
+}
+
+export async function validateAdminSessionWithServer(): Promise<boolean> {
+  const session = getStoredAdminSession();
+  if (!session) return false;
+
+  try {
+    const res = await fetch('/api/admin/verify-session', {
+      headers: getAdminAuthHeaders()
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.valid) {
+        if (data.token && data.token !== session.token) {
+          saveAdminSession(data.token, session.pin);
+        }
+        return true;
+      }
+    }
+  } catch {
+    // network issue, keep session if within local expiration
+    return true;
+  }
+
+  clearAdminSession();
+  return false;
 }

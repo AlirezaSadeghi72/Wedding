@@ -15,7 +15,7 @@ import RSVPManagerModal from './components/RSVPManagerModal';
 import ThemeSelectorModal from './components/ThemeSelectorModal';
 import AudioPlayerFloating from './components/AudioPlayerFloating';
 import AdminLoginModal from './components/AdminLoginModal';
-import { getIsAdminSessionValid, saveAdminSession, clearAdminSession, getAdminAuthHeaders } from './utils/security';
+import { getIsAdminSessionValid, saveAdminSession, clearAdminSession, getAdminAuthHeaders, validateAdminSessionWithServer } from './utils/security';
 import { subscribeToLiveEvents } from './utils/sessionSync';
 
 export default function App() {
@@ -82,6 +82,17 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     return getIsAdminSessionValid();
   });
+
+  // Verify stored session with server on mount; if invalid or expired, clear it
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      validateAdminSessionWithServer().then((isValid) => {
+        if (!isValid) {
+          setIsAdminAuthenticated(false);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     // Read URL search params for direct admin mode
