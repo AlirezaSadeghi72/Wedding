@@ -3038,14 +3038,10 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                       </div>
 
                       {/* Equalizer Style Selector Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                         {[
-                          { id: 'bars', label: 'میله‌های کلاسیک', desc: 'طیف فرکانسی متقارن و لوکس', icon: '📊' },
-                          { id: 'wave', label: 'امواج روان و سیال', desc: 'منحنی نوری سینوسی نئونی', icon: '🌊' },
-                          { id: 'dots', label: 'ماتریس نقطه‌ای', desc: 'نقاط نورانی و ذرات شناور', icon: '🔘' },
-                          { id: 'glow_bars', label: 'ستون‌های نئونی', desc: 'ستون با نور متمرکز بالا', icon: '⚡' },
-                          { id: 'circular_pulse', label: 'امواج رادیال', desc: 'حلقه‌های صوتی متحدالمرکز', icon: '💫' },
-                          { id: 'minimal_line', label: 'خط ضربان مینیمال', desc: 'سیگنال باریک و مدرن', icon: '〰️' },
+                          { id: 'bars', label: 'میله‌های کلاسیک', desc: 'طیف فرکانسی متقارن و متوازن لوکس', icon: '📊' },
+                          { id: 'mirror_spectrum', label: 'طیف دوطرفه آینه‌ای (شیشه‌ای)', desc: 'ستون‌های شیشه‌ای متقارن با نگین مرکزی و گرادیان کریستالی', icon: '🪞' },
                           { id: 'off', label: 'بدون اکولایزر', desc: 'خاموش بودن جلوه بصری', icon: '🚫' },
                         ].map((item) => {
                           const isSelected = (formData.music.equalizerStyle || 'bars') === item.id;

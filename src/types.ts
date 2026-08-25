@@ -196,11 +196,7 @@ export interface MusicTrack {
 
 export type EqualizerStyle =
   | 'bars'
-  | 'wave'
-  | 'dots'
-  | 'glow_bars'
-  | 'circular_pulse'
-  | 'minimal_line'
+  | 'mirror_spectrum'
   | 'off';
 
 export type EqualizerColor =

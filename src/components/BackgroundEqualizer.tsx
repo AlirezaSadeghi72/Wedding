@@ -49,7 +49,7 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
     let lastTime = 0;
 
     const animateRealTimeSpectrum = (time: number) => {
-      // 30-40 fps update loop for smooth Web Audio sync
+      // Smooth 35fps loop for Web Audio spectral sync
       if (time - lastTime >= 28) {
         lastTime = time;
         const liveFrequencies = weddingAudio.getSpectrumBars(barCount);
@@ -72,69 +72,93 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
     { id: 6, char: '✧', left: '84%', delay: 4.1, duration: 5.8, size: 'text-sm' },
   ], []);
 
-  // Color schemes configuration
+  // Color schemes and rich glass gradients configuration
   const colorClasses = useMemo(() => {
     switch (color) {
       case 'rose':
         return {
-          gradient: 'from-rose-600/80 via-pink-400/90 to-rose-200',
-          shadow: 'shadow-[0_0_12px_rgba(244,63,94,0.6)]',
+          classicGradient: 'from-rose-600/85 via-pink-400/90 to-rose-200',
+          glassTopGradient: 'from-rose-500/30 via-rose-400/80 to-white/95',
+          glassBottomGradient: 'from-white/95 via-rose-400/80 to-rose-500/30',
+          shadow: 'shadow-[0_0_12px_rgba(244,63,94,0.65)]',
           glow: 'from-rose-500/15 via-pink-400/15 to-amber-500/10',
           stroke: '#f43f5e',
-          fill: 'rgba(244,63,94,0.15)',
+          accent: 'bg-rose-400',
+          border: 'border-rose-300/80',
+          glassBorder: 'border-rose-200/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(244,63,94,0.9)]',
           noteText: 'text-rose-500/40 drop-shadow-[0_0_10px_rgba(244,63,94,0.4)]',
-          accent: 'bg-rose-500'
         };
       case 'emerald':
         return {
-          gradient: 'from-emerald-600/80 via-teal-400/90 to-emerald-200',
-          shadow: 'shadow-[0_0_12px_rgba(16,185,129,0.6)]',
+          classicGradient: 'from-emerald-600/85 via-teal-400/90 to-emerald-200',
+          glassTopGradient: 'from-emerald-500/30 via-teal-400/80 to-white/95',
+          glassBottomGradient: 'from-white/95 via-teal-400/80 to-emerald-500/30',
+          shadow: 'shadow-[0_0_12px_rgba(16,185,129,0.65)]',
           glow: 'from-emerald-500/15 via-teal-400/15 to-cyan-500/10',
           stroke: '#10b981',
-          fill: 'rgba(16,185,129,0.15)',
+          accent: 'bg-emerald-400',
+          border: 'border-emerald-300/80',
+          glassBorder: 'border-emerald-200/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(16,185,129,0.9)]',
           noteText: 'text-emerald-500/40 drop-shadow-[0_0_10px_rgba(16,185,129,0.4)]',
-          accent: 'bg-emerald-500'
         };
       case 'cyan':
         return {
-          gradient: 'from-cyan-600/80 via-sky-400/90 to-blue-200',
-          shadow: 'shadow-[0_0_12px_rgba(6,182,212,0.6)]',
+          classicGradient: 'from-cyan-600/85 via-sky-400/90 to-blue-200',
+          glassTopGradient: 'from-cyan-500/30 via-sky-400/80 to-white/95',
+          glassBottomGradient: 'from-white/95 via-sky-400/80 to-cyan-500/30',
+          shadow: 'shadow-[0_0_12px_rgba(6,182,212,0.65)]',
           glow: 'from-cyan-500/15 via-sky-400/15 to-indigo-500/10',
           stroke: '#06b6d4',
-          fill: 'rgba(6,182,212,0.15)',
+          accent: 'bg-cyan-400',
+          border: 'border-cyan-300/80',
+          glassBorder: 'border-cyan-200/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(6,182,212,0.9)]',
           noteText: 'text-cyan-500/40 drop-shadow-[0_0_10px_rgba(6,182,212,0.4)]',
-          accent: 'bg-cyan-500'
         };
       case 'purple':
         return {
-          gradient: 'from-purple-600/80 via-fuchsia-400/90 to-pink-200',
-          shadow: 'shadow-[0_0_12px_rgba(168,85,247,0.6)]',
+          classicGradient: 'from-purple-600/85 via-fuchsia-400/90 to-pink-200',
+          glassTopGradient: 'from-purple-500/30 via-fuchsia-400/80 to-white/95',
+          glassBottomGradient: 'from-white/95 via-fuchsia-400/80 to-purple-500/30',
+          shadow: 'shadow-[0_0_12px_rgba(168,85,247,0.65)]',
           glow: 'from-purple-500/15 via-fuchsia-400/15 to-pink-500/10',
           stroke: '#a855f7',
-          fill: 'rgba(168,85,247,0.15)',
+          accent: 'bg-purple-400',
+          border: 'border-purple-300/80',
+          glassBorder: 'border-purple-200/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(168,85,247,0.9)]',
           noteText: 'text-purple-500/40 drop-shadow-[0_0_10px_rgba(168,85,247,0.4)]',
-          accent: 'bg-purple-500'
         };
       case 'white':
         return {
-          gradient: 'from-stone-400/80 via-stone-200/90 to-white',
-          shadow: 'shadow-[0_0_12px_rgba(255,255,255,0.7)]',
+          classicGradient: 'from-stone-400/85 via-stone-200/90 to-white',
+          glassTopGradient: 'from-white/20 via-white/70 to-white',
+          glassBottomGradient: 'from-white via-white/70 to-white/20',
+          shadow: 'shadow-[0_0_12px_rgba(255,255,255,0.75)]',
           glow: 'from-white/10 via-stone-200/10 to-amber-100/10',
           stroke: '#ffffff',
-          fill: 'rgba(255,255,255,0.12)',
+          accent: 'bg-white',
+          border: 'border-white/80',
+          glassBorder: 'border-white/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(255,255,255,0.95)]',
           noteText: 'text-stone-300/50 drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]',
-          accent: 'bg-white'
         };
       case 'gold':
       default:
         return {
-          gradient: 'from-amber-600/80 via-amber-400/95 to-yellow-200',
-          shadow: 'shadow-[0_0_12px_rgba(245,158,11,0.6)]',
+          classicGradient: 'from-amber-600/85 via-amber-400/95 to-yellow-200',
+          glassTopGradient: 'from-amber-500/30 via-amber-400/80 to-amber-100/95',
+          glassBottomGradient: 'from-amber-100/95 via-amber-400/80 to-amber-500/30',
+          shadow: 'shadow-[0_0_12px_rgba(245,158,11,0.65)]',
           glow: isLight ? 'from-amber-500/15 via-amber-400/20 to-emerald-500/15' : 'from-amber-500/20 via-amber-300/15 to-purple-500/15',
           stroke: '#f59e0b',
-          fill: 'rgba(245,158,11,0.18)',
+          accent: 'bg-amber-400',
+          border: 'border-amber-300/80',
+          glassBorder: 'border-amber-200/90',
+          jewelGlow: 'shadow-[0_0_8px_rgba(245,158,11,0.95)]',
           noteText: 'text-amber-500/40 drop-shadow-[0_0_10px_rgba(245,158,11,0.4)]',
-          accent: 'bg-amber-500'
         };
     }
   }, [color, isLight]);
@@ -142,45 +166,6 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
   if (style === 'off') {
     return null;
   }
-
-  // Calculate SVG wave path points for 'wave' style
-  const svgWavePoints = useMemo(() => {
-    if (style !== 'wave') return '';
-    const width = 1000;
-    const height = 120;
-    const numPoints = barHeights.length;
-    const dx = width / (numPoints - 1);
-
-    const points = barHeights.map((h, i) => {
-      const x = i * dx;
-      const normalizedH = (h / 100) * (height * 0.75);
-      const y = height - Math.max(8, normalizedH);
-      return { x, y };
-    });
-
-    let d = `M 0 ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      const mx = (p0.x + p1.x) / 2;
-      d += ` Q ${p0.x} ${p0.y}, ${mx} ${(p0.y + p1.y) / 2}`;
-    }
-    const lastP = points[points.length - 1];
-    d += ` T ${lastP.x} ${lastP.y}`;
-    return d;
-  }, [barHeights, style]);
-
-  const svgWaveAreaPath = useMemo(() => {
-    if (style !== 'wave' || !svgWavePoints) return '';
-    return `${svgWavePoints} L 1000 120 L 0 120 Z`;
-  }, [svgWavePoints, style]);
-
-  // Average energy for radial circles
-  const avgEnergy = useMemo(() => {
-    if (barHeights.length === 0) return 0;
-    const sum = barHeights.reduce((a, b) => a + b, 0);
-    return Math.round(sum / barHeights.length);
-  }, [barHeights]);
 
   return (
     <AnimatePresence>
@@ -198,7 +183,7 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
             {barHeights.slice(0, 24).map((h, idx) => (
               <motion.div
                 key={`top-bar-${idx}`}
-                className={`w-1 sm:w-1.5 md:w-2 rounded-full bg-gradient-to-b ${colorClasses.gradient} ${colorClasses.shadow}`}
+                className={`w-1 sm:w-1.5 md:w-2 rounded-full bg-gradient-to-b ${colorClasses.classicGradient} ${colorClasses.shadow}`}
                 animate={{ height: `${Math.max(6, h * 0.4)}px` }}
                 transition={{ duration: 0.05, ease: 'linear' }}
               />
@@ -239,9 +224,9 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
             style={{ animationDuration: '4s' }}
           />
 
-          {/* EQUALIZER SHAPES & STYLES (Positioned 6-8px above footer music player) */}
+          {/* EQUALIZER SHAPES (Positioned 6-8px above footer music player) */}
 
-          {/* STYLE 1: BARS (طیف میله‌ای کلاسیک) */}
+          {/* 1. CLASSIC BARS (میله‌های کلاسیک متقارن و لوکس) */}
           {style === 'bars' && (
             <div className="w-full flex justify-center pb-[58px] sm:pb-[66px] md:pb-[68px] px-2.5 sm:px-6 relative">
               <div className="w-full max-w-6xl flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2.5 h-10 sm:h-14 md:h-16 px-1">
@@ -253,7 +238,7 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
                   return (
                     <motion.div
                       key={`bottom-bar-${index}`}
-                      className={`flex-1 max-w-[8px] sm:max-w-[12px] md:max-w-[16px] rounded-t-full bg-gradient-to-t ${colorClasses.gradient} ${colorClasses.shadow}`}
+                      className={`flex-1 max-w-[8px] sm:max-w-[12px] md:max-w-[16px] rounded-t-full bg-gradient-to-t ${colorClasses.classicGradient} ${colorClasses.shadow}`}
                       animate={{
                         height: `${effectiveHeight}%`,
                       }}
@@ -268,160 +253,45 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
             </div>
           )}
 
-          {/* STYLE 2: WAVE (امواج صوتی سینوسی و روان) */}
-          {style === 'wave' && (
-            <div className="w-full flex justify-center pb-[54px] sm:pb-[62px] md:pb-[64px] px-2 sm:px-6 relative">
-              <div className="w-full max-w-6xl h-16 sm:h-24 relative flex items-end">
-                <svg
-                  viewBox="0 0 1000 120"
-                  preserveAspectRatio="none"
-                  className="w-full h-full filter drop-shadow-[0_0_12px_rgba(245,158,11,0.55)]"
-                >
-                  <defs>
-                    <linearGradient id={`wave-gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={colorClasses.stroke} stopOpacity="0.45" />
-                      <stop offset="100%" stopColor={colorClasses.stroke} stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
-                  {svgWaveAreaPath && (
-                    <path d={svgWaveAreaPath} fill={`url(#wave-gradient-${color})`} />
-                  )}
-                  {svgWavePoints && (
-                    <path
-                      d={svgWavePoints}
-                      fill="none"
-                      stroke={colorClasses.stroke}
-                      strokeWidth="3.5"
-                      strokeLinecap="round"
-                    />
-                  )}
-                </svg>
-              </div>
-            </div>
-          )}
-
-          {/* STYLE 3: DOTS (ماتریس نقطه‌ای و کپسول‌های معلق) */}
-          {style === 'dots' && (
-            <div className="w-full flex justify-center pb-[58px] sm:pb-[66px] md:pb-[68px] px-2.5 sm:px-6 relative">
-              <div className="w-full max-w-6xl flex items-end justify-center gap-1.5 sm:gap-2 md:gap-3 h-12 sm:h-16 px-1">
+          {/* 2. MIRROR SPECTRUM (طیف دوطرفه آینه‌ای شیشه‌ای و کریستالی با گرادیان غنی) */}
+          {style === 'mirror_spectrum' && (
+            <div className="w-full flex justify-center pb-[54px] sm:pb-[62px] md:pb-[64px] px-2.5 sm:px-6 relative">
+              <div className="w-full max-w-6xl flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 h-16 sm:h-20 md:h-24 px-1">
                 {barHeights.map((height, index) => {
                   const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
                   const scaleFactor = 1 - distanceFromCenter * 0.2;
-                  const effectiveHeight = Math.max(10, Math.round(height * scaleFactor));
-                  const dotCount = Math.max(1, Math.min(6, Math.ceil(effectiveHeight / 16)));
+                  const effectiveHeight = Math.max(12, Math.round(height * scaleFactor));
 
                   return (
                     <div
-                      key={`dots-col-${index}`}
-                      className="flex-1 max-w-[10px] sm:max-w-[14px] flex flex-col-reverse items-center gap-1.5"
+                      key={`glass-mirror-bar-${index}`}
+                      className="flex-1 max-w-[8px] sm:max-w-[12px] md:max-w-[15px] flex flex-col items-center justify-center h-full relative"
                     >
-                      {Array.from({ length: dotCount }).map((_, dIdx) => (
-                        <motion.div
-                          key={`dot-${index}-${dIdx}`}
-                          className={`w-1.5 h-1.5 sm:w-2 sm:h-2 md:w-2.5 md:h-2.5 rounded-full ${colorClasses.accent} ${colorClasses.shadow}`}
-                          animate={{
-                            scale: [1, 1.25, 1],
-                            opacity: [0.7, 1, 0.7],
-                          }}
-                          transition={{
-                            duration: 0.3 + (dIdx * 0.05),
-                            repeat: Infinity,
-                          }}
-                        />
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STYLE 4: GLOW BARS (ستون‌های نوری نئونی مدرن) */}
-          {style === 'glow_bars' && (
-            <div className="w-full flex justify-center pb-[58px] sm:pb-[66px] md:pb-[68px] px-2.5 sm:px-6 relative">
-              <div className="w-full max-w-6xl flex items-end justify-center gap-1.5 sm:gap-2 md:gap-3.5 h-12 sm:h-18 px-1">
-                {barHeights.map((height, index) => {
-                  const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
-                  const scaleFactor = 1 - distanceFromCenter * 0.2;
-                  const effectiveHeight = Math.max(10, Math.round(height * scaleFactor));
-
-                  return (
-                    <div
-                      key={`glow-col-${index}`}
-                      className="flex-1 max-w-[12px] sm:max-w-[18px] md:max-w-[22px] flex flex-col justify-end items-center h-full"
-                    >
-                      {/* Bright tip light */}
+                      {/* Top Glass Half Column */}
                       <motion.div
-                        className={`w-2.5 h-1 sm:w-3.5 sm:h-1.5 rounded-full bg-white ${colorClasses.shadow} mb-1`}
-                        animate={{ opacity: [0.7, 1, 0.7] }}
-                        transition={{ duration: 0.15, repeat: Infinity }}
-                      />
-                      {/* Neon body column */}
-                      <motion.div
-                        className={`w-full rounded-t-lg bg-gradient-to-t ${colorClasses.gradient} ${colorClasses.shadow}`}
-                        animate={{ height: `${effectiveHeight}%` }}
+                        className={`w-full rounded-t-full border-t border-x ${colorClasses.glassBorder} bg-gradient-to-t ${colorClasses.glassTopGradient} ${colorClasses.shadow} backdrop-blur-sm relative overflow-hidden`}
+                        animate={{ height: `${effectiveHeight / 2}%` }}
                         transition={{ duration: 0.05, ease: 'easeOut' }}
+                      >
+                        {/* Specular glass reflection line */}
+                        <div className="absolute inset-x-0 top-0 h-[2px] bg-white/90 rounded-t-full" />
+                      </motion.div>
+
+                      {/* Center Glowing Jewel Point */}
+                      <div
+                        className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${colorClasses.accent} ${colorClasses.jewelGlow} border border-white/80 my-0.5 z-10 shrink-0 transition-transform`}
                       />
+
+                      {/* Bottom Glass Mirror Half Column */}
+                      <motion.div
+                        className={`w-full rounded-b-full border-b border-x ${colorClasses.glassBorder} bg-gradient-to-b ${colorClasses.glassBottomGradient} ${colorClasses.shadow} backdrop-blur-sm relative overflow-hidden`}
+                        animate={{ height: `${effectiveHeight / 2}%` }}
+                        transition={{ duration: 0.05, ease: 'easeOut' }}
+                      >
+                        {/* Specular glass reflection line */}
+                        <div className="absolute inset-x-0 bottom-0 h-[2px] bg-white/90 rounded-b-full" />
+                      </motion.div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STYLE 5: CIRCULAR PULSE (امواج رادیال و حلقه‌های متحدالمرکز صوتی) */}
-          {style === 'circular_pulse' && (
-            <div className="w-full flex justify-center pb-[52px] sm:pb-[60px] relative overflow-hidden pointer-events-none">
-              <div className="relative w-64 h-24 sm:w-96 sm:h-32 flex items-center justify-center">
-                {/* 4 Concentric sound pulse ripples */}
-                {[1, 2, 3, 4].map((ring) => {
-                  const ringScale = 1 + (ring * 0.45) + (avgEnergy / 140);
-                  return (
-                    <motion.div
-                      key={`ripple-${ring}`}
-                      className={`absolute rounded-full border-2 border-dashed ${colorClasses.shadow}`}
-                      style={{
-                        borderColor: colorClasses.stroke,
-                        width: `${ring * 60}px`,
-                        height: `${ring * 35}px`,
-                      }}
-                      animate={{
-                        scale: [ringScale * 0.85, ringScale * 1.15, ringScale * 0.85],
-                        opacity: [0.3, 0.8, 0.3],
-                      }}
-                      transition={{
-                        duration: 1.2 + ring * 0.3,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* STYLE 6: MINIMAL LINE (خط باریک ضربان صوتی مینیمال) */}
-          {style === 'minimal_line' && (
-            <div className="w-full flex justify-center pb-[58px] sm:pb-[66px] md:pb-[68px] px-4 sm:px-10 relative">
-              <div className="w-full max-w-5xl h-6 flex items-center justify-between gap-1">
-                {barHeights.map((height, index) => {
-                  const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
-                  const scaleFactor = 1 - distanceFromCenter * 0.25;
-                  const effectiveHeight = Math.max(3, Math.round((height / 100) * 24 * scaleFactor));
-
-                  return (
-                    <motion.div
-                      key={`min-line-${index}`}
-                      className={`flex-1 rounded-full ${colorClasses.accent} ${colorClasses.shadow}`}
-                      animate={{
-                        height: `${effectiveHeight}px`,
-                      }}
-                      transition={{
-                        duration: 0.05,
-                        ease: 'easeOut',
-                      }}
-                    />
                   );
                 })}
               </div>
