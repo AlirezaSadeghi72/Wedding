@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { WeddingCardData, SealColor } from '../types';
 import { Sparkles, Calendar, Clock, MapPin, Heart, Crown, Flower2, Bird } from 'lucide-react';
-import { weddingAudio } from '../utils/audioSynth';
+import { weddingAudio, getEffectivePlaylist } from '../utils/audioSynth';
 import { getTheme } from '../data/themes';
 
 interface Props {
@@ -96,16 +96,17 @@ export default function WeddingEnvelope({
     weddingAudio.markEnvelopeOpened();
 
     // 1. Play romantic wedding audio:
-    // - On first open (or full refresh): always play enabled wedding music from track 0
+    // - On first open (or full refresh): randomly select a track from the playlist to surprise and delight guests
     // - On subsequent opens (when user goes back to envelope and re-opens): respect user's mute / chosen track / volume
     if (data.music?.enabled) {
       if (isFirstTimeOpenThisSession) {
-        // Fresh session opening: ensure unmuted and start initial track smoothly
+        // Fresh session opening: ensure unmuted and randomly choose a track
         weddingAudio.setUserMuted(false);
-        const initialTracks = data.music.playlist?.length ? data.music.playlist : (data.music.tracks?.length ? data.music.tracks : []);
-        if (initialTracks.length > 0) {
-          weddingAudio.setCurrentTrackIndex(0);
-          weddingAudio.playTrack(initialTracks[0]);
+        const playlist = getEffectivePlaylist(data.music);
+        if (playlist.length > 0) {
+          const randomIndex = Math.floor(Math.random() * playlist.length);
+          weddingAudio.setCurrentTrackIndex(randomIndex);
+          weddingAudio.playTrack(playlist[randomIndex]);
         } else if (data.music.audioUrl) {
           weddingAudio.playCustomAudio(data.music.audioUrl);
         } else {

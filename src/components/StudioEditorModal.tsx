@@ -53,7 +53,9 @@ import {
   Bird,
   ArrowUp,
   ArrowDown,
-  GripVertical
+  GripVertical,
+  Waves,
+  Activity
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 import { normalizeDigits, verifyPasswordSecurely, saveAdminSession } from '../utils/security';
@@ -72,6 +74,8 @@ import {
   OverallFontPairing,
   OverallAmbientEffect,
   SectionKey,
+  EqualizerStyle,
+  EqualizerColor,
   DEFAULT_SECTIONS_ORDER,
   getEffectiveSectionsOrder
 } from '../types';
@@ -3020,6 +3024,120 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                         </div>
                       );
                     })()}
+
+                    {/* EQUALIZER & AUDIO VISUALIZER SETTINGS */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-100/40 to-stone-50 border border-amber-300/80 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-stone-900 font-bold text-xs">
+                          <Activity className="w-4 h-4 text-amber-600" />
+                          <span>شکل و حالت‌های متنوع اکولایزر زنده (Visualizer)</span>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900 font-bold">
+                          سینک زنده با صدا
+                        </span>
+                      </div>
+
+                      {/* Equalizer Style Selector Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        {[
+                          { id: 'bars', label: 'میله‌های کلاسیک', desc: 'طیف فرکانسی متقارن و لوکس', icon: '📊' },
+                          { id: 'wave', label: 'امواج روان و سیال', desc: 'منحنی نوری سینوسی نئونی', icon: '🌊' },
+                          { id: 'dots', label: 'ماتریس نقطه‌ای', desc: 'نقاط نورانی و ذرات شناور', icon: '🔘' },
+                          { id: 'glow_bars', label: 'ستون‌های نئونی', desc: 'ستون با نور متمرکز بالا', icon: '⚡' },
+                          { id: 'circular_pulse', label: 'امواج رادیال', desc: 'حلقه‌های صوتی متحدالمرکز', icon: '💫' },
+                          { id: 'minimal_line', label: 'خط ضربان مینیمال', desc: 'سیگنال باریک و مدرن', icon: '〰️' },
+                          { id: 'off', label: 'بدون اکولایزر', desc: 'خاموش بودن جلوه بصری', icon: '🚫' },
+                        ].map((item) => {
+                          const isSelected = (formData.music.equalizerStyle || 'bars') === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() =>
+                                setFormData({
+                                  ...formData,
+                                  music: { ...formData.music, equalizerStyle: item.id as EqualizerStyle }
+                                })
+                              }
+                              className={`p-3 rounded-xl border text-right transition-all cursor-pointer flex flex-col gap-1 ${
+                                isSelected
+                                  ? 'bg-amber-100/90 border-amber-500 shadow-sm ring-2 ring-amber-400/40 text-stone-950 font-bold'
+                                  : 'bg-white/80 border-stone-200 hover:border-amber-300 text-stone-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-base">{item.icon}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 stroke-[3]" />}
+                              </div>
+                              <span className="text-xs font-bold">{item.label}</span>
+                              <span className="text-[10px] text-stone-500 line-clamp-1">{item.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Equalizer Color Palette Selection */}
+                      {formData.music.equalizerStyle !== 'off' && (
+                        <div className="pt-2 border-t border-amber-200/60 space-y-2">
+                          <label className="block text-[11px] font-bold text-stone-800">
+                            پالت رنگی جلوه اکولایزر:
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                            {[
+                              { id: 'gold', label: 'طلایی سلطنتی', bg: 'bg-amber-400', border: 'border-amber-500' },
+                              { id: 'rose', label: 'رزگلد / یاقوتی', bg: 'bg-rose-400', border: 'border-rose-500' },
+                              { id: 'emerald', label: 'زمردی / فیروزه', bg: 'bg-emerald-400', border: 'border-emerald-500' },
+                              { id: 'cyan', label: 'آبی کریستالی', bg: 'bg-cyan-400', border: 'border-cyan-500' },
+                              { id: 'purple', label: 'بنفش رویایی', bg: 'bg-purple-400', border: 'border-purple-500' },
+                              { id: 'white', label: 'سفید الماسی', bg: 'bg-stone-100', border: 'border-stone-400' },
+                            ].map((c) => {
+                              const isSelected = (formData.music.equalizerColor || 'gold') === c.id;
+                              return (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setFormData({
+                                      ...formData,
+                                      music: { ...formData.music, equalizerColor: c.id as EqualizerColor }
+                                    })
+                                  }
+                                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-all ${
+                                    isSelected
+                                      ? 'bg-white font-bold border-amber-500 ring-2 ring-amber-400/40 text-stone-900 shadow-sm'
+                                      : 'bg-white/60 border-stone-200 hover:border-amber-300 text-stone-700'
+                                  }`}
+                                >
+                                  <span className={`w-3 h-3 rounded-full ${c.bg} border ${c.border} shrink-0`} />
+                                  <span className="text-[11px] truncate">{c.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Floating Notes Toggle */}
+                      <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id="showFloatingNotesToggle"
+                            checked={formData.music.showFloatingNotes ?? true}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                music: { ...formData.music, showFloatingNotes: e.target.checked }
+                              })
+                            }
+                            className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
+                          />
+                          <label htmlFor="showFloatingNotesToggle" className="cursor-pointer text-stone-800 font-semibold">
+                            نمایش نوت‌های رمانتیک و ذرات ستاره‌ای شناور در پس‌زمینه (♪ ♫ ✦)
+                          </label>
+                        </div>
+                      </div>
+                    </div>
 
                     {/* PLAYLIST MANAGER SECTION */}
                     <div className="space-y-4 pt-2">

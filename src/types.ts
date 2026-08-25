@@ -194,6 +194,23 @@ export interface MusicTrack {
   synthPreset?: 'romantic_piano' | 'traditional_oud' | 'gentle_acoustic' | 'celestial_harp';
 }
 
+export type EqualizerStyle =
+  | 'bars'
+  | 'wave'
+  | 'dots'
+  | 'glow_bars'
+  | 'circular_pulse'
+  | 'minimal_line'
+  | 'off';
+
+export type EqualizerColor =
+  | 'gold'
+  | 'rose'
+  | 'emerald'
+  | 'cyan'
+  | 'purple'
+  | 'white';
+
 export interface MusicConfig {
   enabled: boolean;
   title: string;
@@ -204,6 +221,9 @@ export interface MusicConfig {
   synthPreset: 'romantic_piano' | 'traditional_oud' | 'gentle_acoustic' | 'celestial_harp';
   playlist?: MusicTrack[];
   tracks?: MusicTrack[];
+  equalizerStyle?: EqualizerStyle;
+  equalizerColor?: EqualizerColor;
+  showFloatingNotes?: boolean;
 }
 
 export interface WeddingCardData {

@@ -18,7 +18,7 @@ import {
   Settings,
   Check
 } from 'lucide-react';
-import { weddingAudio } from '../utils/audioSynth';
+import { weddingAudio, getEffectivePlaylist } from '../utils/audioSynth';
 import { WeddingCardData, MusicTrack } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
 
@@ -39,51 +39,7 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
 
   // Build combined playlist strictly synchronized with data.music settings
   const buildPlaylist = useCallback((): MusicTrack[] => {
-    const musicConfig = data.music;
-    if (!musicConfig) return [];
-
-    const customTracks = musicConfig.playlist && musicConfig.playlist.length > 0
-      ? musicConfig.playlist
-      : musicConfig.tracks && musicConfig.tracks.length > 0
-      ? musicConfig.tracks
-      : [];
-
-    if (customTracks.length > 0) {
-      return customTracks;
-    }
-
-    // Default built-in presets fallback using configured main track info
-    return [
-      {
-        id: 'main-track',
-        title: musicConfig.title || 'پیانوی رمانتیک و دلنشین',
-        artist: musicConfig.artist || 'نوای آرامش‌بخش پیانو',
-        synthPreset: musicConfig.synthPreset || 'romantic_piano',
-        isPreset: !musicConfig.audioUrl,
-        url: musicConfig.audioUrl
-      },
-      {
-        id: 'preset-oud',
-        title: 'نوای سنتور و عود سنتی ایرانی',
-        artist: 'دستگاه اصفهان و شور اصیل',
-        synthPreset: 'traditional_oud',
-        isPreset: true
-      },
-      {
-        id: 'preset-harp',
-        title: 'چنگ و هارپ آسمانی و رویایی',
-        artist: 'نوای ملایم پیوند فرخنده',
-        synthPreset: 'celestial_harp',
-        isPreset: true
-      },
-      {
-        id: 'preset-guitar',
-        title: 'گیتار آکوستیک ملایم و عاشقانه',
-        artist: 'ملودی دلنواز و آرام',
-        synthPreset: 'gentle_acoustic',
-        isPreset: true
-      }
-    ];
+    return getEffectivePlaylist(data.music);
   }, [data.music]);
 
   const playlist = buildPlaylist();
@@ -120,13 +76,12 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
     }
   }, [data.music?.volume]);
 
-  // Keep player playback status in sync with weddingAudio engine
+  // Keep player playback status in sync with weddingAudio engine instantly
   useEffect(() => {
-    const interval = setInterval(() => {
-      const active = weddingAudio.getIsPlaying();
+    const unsubscribe = weddingAudio.subscribe((active) => {
       setIsPlaying(active);
-    }, 400);
-    return () => clearInterval(interval);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Lock body scroll and keydown listener for modal

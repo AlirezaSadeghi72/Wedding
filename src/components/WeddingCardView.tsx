@@ -28,6 +28,7 @@ import PhotoGallerySection from './PhotoGallerySection';
 import WeatherSection from './WeatherSection';
 import GiftRegistrySection from './GiftRegistrySection';
 import FAQSection from './FAQSection';
+import BackgroundEqualizer from './BackgroundEqualizer';
 
 interface Props {
   data: WeddingCardData;
@@ -692,6 +693,9 @@ export default function WeddingCardView({
 
       {/* Subtle Persian Damask / Ambient Background */}
       <div className={`absolute inset-0 ${isLight ? 'opacity-15' : 'opacity-10'} bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none`} />
+
+      {/* Luxury Music Equalizer Visualizer & Floating Notes on Background */}
+      <BackgroundEqualizer data={data} isLight={isLight} />
 
       {/* Dynamic Ambient Background Effects */}
       {(overallStyle?.ambientEffect === 'gold_sparkles' || !overallStyle?.ambientEffect) && (

@@ -107,6 +107,9 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     artist: 'نوای ملایم پیانو و سنتور',
     audioUrl: '',
     synthPreset: 'romantic_piano',
+    equalizerStyle: 'bars',
+    equalizerColor: 'gold',
+    showFloatingNotes: true,
     playlist: [
       {
         id: 'track-1',
