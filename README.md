@@ -73,6 +73,111 @@ npm run start
 
 ---
 
+---
+
+## 🌐 راهنمای جامع استقرار روی هاست‌های اشتراکی (Shared Hosting Guide - cPanel / DirectAdmin / Plesk)
+
+هاست‌های اشتراکی به دو دسته کلی تقسیم می‌شوند:
+1. **هاست‌های اشتراکی دارای پشتیبانی از Node.js (cPanel Setup Node.js App / CloudLinux NodeJS Selector)**: که از تمام امکانات شامل سرور Express، ذخیره پیام‌های RSVP در بک‌اند و آپلود فایل پشتیبانی می‌کنند.
+2. **هاست‌های اشتراکی معمولی (صرفاً وب‌سرور PHP/Apache بدون Node.js - استقرار استاتیک)**: که خروجی فرانت‌اند به عنوان سایت ایستا (Static HTML/JS/CSS) بارگذاری می‌شود.
+
+در ادامه مراحل گام به گام هر دو حالت به همراه فایل‌های کانفیگ مورد نیاز توضیح داده شده است:
+
+---
+
+### 🟢 حالت اول: هاست اشتراکی با قابلیت Node.js (cPanel - Setup Node.js App)
+
+اکثر هاستینگ‌های لینوکسی مدرن (دارای cPanel و CloudLinux) ابزار **Setup Node.js App** دارند.
+
+#### گام ۱: بیلد و آماده‌سازی فایل‌ها در کامپیوتر شما
+در سیستم خود دستور بیلد را اجرا کنید:
+```bash
+npm install
+npm run build
+```
+این دستور پوشه `dist/` را می‌سازد که شامل تمام کدهای فرانت‌اند و فایل باندل‌شده بک‌اند `dist/server.cjs` است.
+
+#### گام ۲: ساخت فایل فشرده (ZIP) جهت آپلود روی هاست
+فایل‌های زیر را انتخاب کرده و فشرده (ZIP) کنید:
+- پوشه `dist` (کامل)
+- پوشه `public`
+- فایل `package.json`
+- فایل `.env.example` یا ساخت فایل `.env` (در صورت نیاز)
+
+*(نکته: پوشه `node_modules` و `src` را داخل فایل زیپ قرار ندهید تا حجم آپلود بسیار کم باشد).*
+
+#### گام ۳: ورود به cPanel و ایجاد برنامه Node.js
+1. وارد کنترل‌پنل cPanel هاست خود شوید.
+2. در بخش **Software** روی گزینه **Setup Node.js App** کلیک کنید.
+3. دکمه **Create Application** را بزنید و فیلدها را به شکل زیر پر کنید:
+   - **Node.js Version:** نسخه `18.x` یا `20.x` را انتخاب کنید.
+   - **Application Mode:** روی حالت `Production` قرار دهید.
+   - **Application Root:** مسیر پوشه برنامه (مثلاً `wedding` یا `public_html`).
+   - **Application URL:** دامنه یا ساب‌دامنه‌ای که می‌خواهید کارت روی آن باز شود (مثلا `wedding.yourdomain.com`).
+   - **Application Startup File:** دقیقاً عبارت `dist/server.cjs` را بنویسید.
+4. دکمه **Create** در گوشه بالا را بزنید.
+
+#### گام ۴: آپلود و استخراج فایل‌ها روی هاست
+1. وارد **File Manager** در cPanel شوید.
+2. به پوشه‌ای که در مرحله قبل به عنوان *Application Root* تعیین کردید بروید.
+3. فایل زیپ ساخته‌شده در گام ۲ را آپلود کرده و **Extract** نمایید.
+
+#### گام ۵: نصب پکیج‌ها و اجرای نهایی
+1. به صفحه **Setup Node.js App** بازگردید و برنامه ساخته شده را باز کنید.
+2. در پایین صفحه روی دکمه **Run NPM Install** کلیک کنید تا وابستگی‌های لازم برای اجرای سرور نصب شوند.
+3. در بالای صفحه دکمه **Restart** را بزنید.
+4. سایت شما اکنون به طور کامل با دامنه اختصاصی آنلاین و در دسترس است!
+
+---
+
+### 🟡 حالت دوم: هاست اشتراکی معمولی (سایت استاتیک - بدون Node.js)
+
+اگر هاست اشتراکی شما از Node.js پشتیبانی نمی‌کند، می‌توانید خروجی استاتیک پروژه را مستقیماً داخل پوشه `public_html` آپلود کنید.
+
+#### گام ۱: ساخت خروجی نهایی
+در سیستم خود دستور زیر را اجرا کنید:
+```bash
+npm run build
+```
+
+#### گام ۲: آپلود محتویات پوشه `dist`
+1. وارد **File Manager** هاست (cPanel / DirectAdmin / Plesk) شوید.
+2. وارد پوشه `public_html` (یا ساب‌فولدر مدنظرتان) شوید.
+3. **تمام محتویات داخل پوشه `dist`** (شامل `index.html`، پوشه `assets` و...) را به درون `public_html` منتقل کنید.
+
+#### گام ۳: ساخت فایل `.htaccess` جهت مدیریت روتینگ (Single Page App Routing)
+برای اینکه صفحات به درستی باز شوند و خطای ۴۰۴ ایجاد نشود، یک فایل با نام `.htaccess` در همان مسیر `public_html` بسازید و کدهای زیر را داخل آن قرار دهید:
+
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-l
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# بهینه‌سازی کش مرورگر برای سرعت بارگذاری بالا
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpg "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType audio/mpeg "access plus 1 year"
+</IfModule>
+```
+
+#### گام ۴: فعال‌سازی SSL رایگان در هاست
+در cPanel وارد بخش **SSL/TLS Status** شده و برای دامنه خود گزینه **Run AutoSSL** یا گواهی رایگان Let's Encrypt را فعال کنید تا سایت با پروتکل امن `https://` باز شود.
+
+---
+
 ## 🐧 راهنمای جامع استقرار روی سرور لینوکس ابونتو (Ubuntu Linux Deployment)
 
 این راهنما گام به گام مراحل نصب، کانفیگ Nginx، دریافت گواهی SSL و **تنظیم بالا آمدن اتوماتیک برنامه در صورت ریستارت شدن سرور (Auto-restart on Reboot)** را در سیستم‌عامل ابونتو (Ubuntu 20.04 / 22.04 / 24.04 LTS) توضیح می‌دهد.
