@@ -167,7 +167,13 @@ class WeddingAudioPlayer {
     if (this.customAudio) {
       this.customAudio.pause();
     }
-    this.customAudio = new Audio(url);
+    // Sanitize any Persian/Arabic digits to valid Latin digits in audio URLs
+    const cleanUrl = (url || '')
+      .trim()
+      .replace(/[۰-۹]/g, (d) => '0123456789'['۰۱۲۳۴۵۶۷۸۹'.indexOf(d)])
+      .replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)]);
+
+    this.customAudio = new Audio(cleanUrl);
     this.customAudio.volume = this.volume;
     this.customAudio.loop = !onEnded;
 

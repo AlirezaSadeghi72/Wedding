@@ -14,25 +14,52 @@ if (typeof document !== 'undefined') {
   document.addEventListener('input', (event) => {
     const target = event.target as HTMLInputElement | HTMLTextAreaElement;
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-      const type = target.type || 'text';
+      const type = (target.type || 'text').toLowerCase();
       
-      // Determine if this is a password or PIN field to completely exclude it
-      const isPasswordField = 
-        type === 'password' || 
-        target.getAttribute('data-no-farsi-digits') === 'true' ||
-        target.name?.toLowerCase().includes('pass') ||
-        target.name?.toLowerCase().includes('pin') ||
-        target.id?.toLowerCase().includes('pass') ||
-        target.id?.toLowerCase().includes('pin') ||
-        target.placeholder?.includes('رمز') ||
-        target.placeholder?.includes('پسورد');
-
-      if (isPasswordField) {
+      // 1. Exclude non-text types (password, url, email, number, date, time, file, color, range, etc.)
+      const excludedTypes = ['password', 'url', 'email', 'number', 'date', 'datetime-local', 'time', 'file', 'color', 'range', 'hidden', 'checkbox', 'radio'];
+      if (excludedTypes.includes(type)) {
         return;
       }
 
-      // Process text-like input types to automatically enforce Farsi digit entry
-      if (['text', 'tel', 'search', 'textarea', 'url'].includes(type) || target.tagName === 'TEXTAREA') {
+      // 2. Exclude explicitly marked fields
+      if (target.getAttribute('data-no-farsi-digits') === 'true') {
+        return;
+      }
+
+      // 3. Exclude any LTR input (URLs, codes, coordinates, English texts, latin names)
+      if (target.getAttribute('dir')?.toLowerCase() === 'ltr') {
+        return;
+      }
+
+      // 4. Exclude by name, id, class or placeholder patterns for technical/URL/secret fields
+      const fieldIdentifier = `${target.name || ''} ${target.id || ''} ${target.className || ''} ${target.placeholder || ''}`.toLowerCase();
+      const technicalKeywords = [
+        'pass', 'pin', 'token', 'secret', 'key',
+        'url', 'link', 'http', 'audio', 'music', 'mp3', 'image', 'photo',
+        'lat', 'lng', 'coord', 'iban', 'card', 'mono', 'font-mono'
+      ];
+      if (technicalKeywords.some((kw) => fieldIdentifier.includes(kw))) {
+        return;
+      }
+
+      // 5. Check if the value itself looks like a URL, link, or path
+      const currentValue = target.value || '';
+      if (
+        currentValue.startsWith('http://') ||
+        currentValue.startsWith('https://') ||
+        currentValue.startsWith('data:') ||
+        currentValue.startsWith('blob:') ||
+        currentValue.startsWith('/') ||
+        currentValue.includes('://') ||
+        currentValue.includes('www.') ||
+        /\.(mp3|m4a|wav|ogg|aac|png|jpg|jpeg|webp|gif|svg|json)(\?.*)?$/i.test(currentValue)
+      ) {
+        return;
+      }
+
+      // Process standard Persian text inputs (text, search, textarea, tel)
+      if (['text', 'tel', 'search'].includes(type) || target.tagName === 'TEXTAREA') {
         const originalValue = target.value;
         const convertedValue = replaceWithPersianDigits(originalValue);
         
