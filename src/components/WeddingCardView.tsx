@@ -742,10 +742,11 @@ export default function WeddingCardView({
 
       {/* Main Luxury Wedding Card Container */}
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className={`relative w-full max-w-2xl rounded-2xl sm:rounded-3xl ${currentTheme.cardBg} ${getBorderClasses()} p-3.5 sm:p-8 md:p-12 shadow-2xl backdrop-blur-2xl text-center overflow-hidden my-2 sm:my-6`}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className={`relative w-full max-w-2xl rounded-2xl sm:rounded-3xl ${currentTheme.cardBg} ${getBorderClasses()} p-3.5 sm:p-8 md:p-12 shadow-2xl backdrop-blur-xl text-center overflow-hidden my-2 sm:my-6`}
+        style={{ willChange: 'transform, opacity' }}
       >
         {/* Ornate Gold Framing Corners */}
         {overallStyle.borderStyle !== 'minimal_clean' && (
