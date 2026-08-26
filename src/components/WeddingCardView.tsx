@@ -28,7 +28,7 @@ import PhotoGallerySection from './PhotoGallerySection';
 import WeatherSection from './WeatherSection';
 import GiftRegistrySection from './GiftRegistrySection';
 import FAQSection from './FAQSection';
-import BackgroundEqualizer from './BackgroundEqualizer';
+import BackgroundEqualizer, { TopDownwardEqualizer } from './BackgroundEqualizer';
 
 interface Props {
   data: WeddingCardData;
@@ -640,55 +640,64 @@ export default function WeddingCardView({
         isLight ? 'text-stone-800' : 'text-stone-100'
       } flex flex-col items-center justify-start relative overflow-x-hidden w-full transition-colors duration-500`}
     >
-      {/* Fixed Sticky Top Bar for RSVP & Reopen Envelope */}
+      {/* Fixed Sticky Top Bar for RSVP & Reopen Envelope with Full-Width Downward Equalizer */}
       <motion.div
         initial={{ y: -60, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.5, ease: 'easeOut' }}
         className={`fixed ${
           isAdminAuthenticated ? 'top-13 sm:top-15' : 'top-2 sm:top-3.5'
-        } z-40 inset-x-0 flex items-center justify-center gap-1.5 sm:gap-2.5 pointer-events-none px-2 sm:px-3 max-w-xl mx-auto transition-all duration-300`}
+        } z-40 inset-x-0 flex flex-col items-center justify-center pointer-events-none px-2 sm:px-3 max-w-xl mx-auto transition-all duration-300`}
       >
-        {/* RSVP Shortcut Button */}
-        {data.sectionVisibility?.rsvp !== false && data.rsvpConfig.enabled !== false && (
-          <button
-            type="button"
-            onClick={() => {
-              setIsRsvpOpen(true);
-              const el = document.getElementById('rsvp-section-anchor') || document.getElementById('rsvp-open-btn');
-              if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }}
-            className="pointer-events-auto group px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-500/80 text-amber-950 shadow-lg shadow-amber-900/10 backdrop-blur-xl flex items-center gap-1.5 sm:gap-2 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-amber-500/20"
-          >
-            <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-500" />
-            </span>
-            <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
-            <span className="text-[11px] sm:text-xs md:text-sm font-bold font-amiri text-amber-950 whitespace-nowrap">
-              <span className="sm:hidden">ثبت تایید حضور</span>
-              <span className="hidden sm:inline">تایید حضور (ثبت RSVP)</span>
-            </span>
-          </button>
-        )}
+        <div className="flex flex-col items-center justify-center pointer-events-auto">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2.5">
+            {/* RSVP Shortcut Button */}
+            {data.sectionVisibility?.rsvp !== false && data.rsvpConfig.enabled !== false && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRsvpOpen(true);
+                  const el = document.getElementById('rsvp-section-anchor') || document.getElementById('rsvp-open-btn');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="group px-3 py-1.5 sm:px-4 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-500/80 text-amber-950 shadow-lg shadow-amber-900/10 backdrop-blur-xl flex items-center gap-1.5 sm:gap-2 transition-all transform hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-amber-500/20"
+              >
+                <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-500" />
+                </span>
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold font-amiri text-amber-950 whitespace-nowrap">
+                  <span className="sm:hidden">ثبت تایید حضور</span>
+                  <span className="hidden sm:inline">تایید حضور (ثبت RSVP)</span>
+                </span>
+              </button>
+            )}
 
-        {/* Reopen Envelope Shortcut Button */}
-        {onReopenEnvelope && (
-          <button
-            type="button"
-            onClick={onReopenEnvelope}
-            className="pointer-events-auto group px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-300 text-stone-900 shadow-lg shadow-amber-900/10 backdrop-blur-xl flex items-center gap-1 sm:gap-1.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer text-[11px] sm:text-xs md:text-sm font-bold font-amiri ring-2 ring-amber-500/20"
-            title="مشاهده مجدد پاکت نامه و انیمیشن مهر و موم"
-          >
-            <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
-            <span className="text-[11px] sm:text-xs md:text-sm font-bold font-amiri text-amber-950 whitespace-nowrap">
-              <span className="sm:hidden">پاکت دعوت</span>
-              <span className="hidden sm:inline">مشاهده مجدد پاکت</span>
-            </span>
-          </button>
-        )}
+            {/* Reopen Envelope Shortcut Button */}
+            {onReopenEnvelope && (
+              <button
+                type="button"
+                onClick={onReopenEnvelope}
+                className="group px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-full bg-white/95 hover:bg-amber-50 border border-amber-300 text-stone-900 shadow-lg shadow-amber-900/10 backdrop-blur-xl flex items-center gap-1 sm:gap-1.5 transition-all transform hover:scale-105 active:scale-95 cursor-pointer text-[11px] sm:text-xs md:text-sm font-bold font-amiri ring-2 ring-amber-500/20"
+                title="مشاهده مجدد پاکت نامه و انیمیشن مهر و موم"
+              >
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 group-hover:text-amber-700 shrink-0" />
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold font-amiri text-amber-950 whitespace-nowrap">
+                  <span className="sm:hidden">پاکت دعوت</span>
+                  <span className="hidden sm:inline">مشاهده مجدد پاکت</span>
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Downward hanging equalizer spanning full width across both action buttons */}
+          <div className="w-full flex justify-center mt-0.5">
+            <TopDownwardEqualizer data={data} isLight={isLight} />
+          </div>
+        </div>
       </motion.div>
 
       {/* Subtle Persian Damask / Ambient Background */}
