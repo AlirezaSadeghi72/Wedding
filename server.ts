@@ -620,6 +620,42 @@ const initialGuestbookReactionsSeed = {
   reactedBy: {} as Record<string, string[]>
 };
 
+function cleanWeddingSettings(raw: any): any {
+  if (!raw || typeof raw !== 'object') return {};
+  
+  // Unwrap nested weddingData if present
+  let src = { ...raw };
+  while (src.weddingData && typeof src.weddingData === 'object' && Object.keys(src.weddingData).length > 0) {
+    src = { ...src.weddingData };
+  }
+
+  // Explicitly remove backup envelope / collections / metadata fields to prevent bloat
+  const forbiddenKeys = [
+    'weddingData',
+    'rsvps',
+    'rsvpList',
+    'rsvpsList',
+    'guestbook',
+    'guestbookList',
+    'comments',
+    'notes',
+    'photoLikes',
+    'guestbookReactions',
+    'stats',
+    'version',
+    'exportDate',
+    'backupDate',
+    'appName',
+    'reason'
+  ];
+
+  for (const k of forbiddenKeys) {
+    delete src[k];
+  }
+
+  return src;
+}
+
 let rsvpList = loadRSVPs();
 let guestbookList = loadGuestbook();
 let settingsData = loadSettings();
@@ -628,11 +664,12 @@ let guestbookReactionsData = loadGuestbookReactions();
 
 function saveSettingsToFile(settingsObj: any) {
   try {
+    const cleaned = cleanWeddingSettings(settingsObj);
     const dir = path.dirname(settingsFilePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(settingsFilePath, JSON.stringify(settingsObj, null, 2), 'utf-8');
+    fs.writeFileSync(settingsFilePath, JSON.stringify(cleaned, null, 2), 'utf-8');
   } catch (err) {
     console.error('Error saving settings to disk:', err);
   }
@@ -646,7 +683,11 @@ function loadSettings() {
   try {
     if (fs.existsSync(settingsFilePath)) {
       const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object') {
+        const cleaned = cleanWeddingSettings(parsed);
+        return { ...initialSettingsSeed, ...cleaned };
+      }
     }
   } catch (err) {
     console.error('Error reading settings from disk:', err);
@@ -960,7 +1001,8 @@ app.post('/api/settings', requireAdminAuth, (req, res) => {
     if (!updated || typeof updated !== 'object') {
       return res.status(400).json({ success: false, error: 'اطلاعات ارسالی نامعتبر است' });
     }
-    settingsData = { ...settingsData, ...updated };
+    const cleanUpdated = cleanWeddingSettings(updated);
+    settingsData = { ...settingsData, ...cleanUpdated };
     saveSettings();
     broadcastSSE('SETTINGS_UPDATED', settingsData);
     res.json({ success: true, data: settingsData });
@@ -1473,26 +1515,35 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
 });
 
 // ==========================================
-// Server Backup Endpoints (Strictly Admin Protected)
+// Server Backup & Export Endpoints (Admin Protected)
 // ==========================================
+
+function buildUnifiedBackupPayload(rawWeddingData?: any, reason = 'Admin Backup') {
+  const cleanSettings = cleanWeddingSettings(rawWeddingData || settingsData);
+  return {
+    version: '2.0',
+    exportDate: new Date().toISOString(),
+    appName: 'wedding-card-studio',
+    reason,
+    stats: {
+      totalRsvps: rsvpList.length,
+      totalGuestbook: guestbookList.length
+    },
+    weddingData: cleanSettings,
+    rsvps: rsvpList,
+    guestbook: guestbookList,
+    photoLikes: photoLikesData
+  };
+}
+
 app.post('/api/backup', requireAdminAuth, (req, res) => {
   try {
     const { formData, reason } = req.body;
+    const backupContent = buildUnifiedBackupPayload(formData, reason || 'Admin Backup');
 
     const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `wedding-backup-${timeStamp}.json`;
     const filePath = path.join(backupsDir, fileName);
-
-    const backupContent = {
-      version: '2.0',
-      backupDate: new Date().toISOString(),
-      reason: reason || 'Admin Backup',
-      weddingData: formData || settingsData || null,
-      rsvps: rsvpList,
-      guestbook: guestbookList,
-      photoLikes: photoLikesData,
-      ...(formData || settingsData || {})
-    };
 
     fs.writeFileSync(filePath, JSON.stringify(backupContent, null, 2), 'utf-8');
 
@@ -1504,7 +1555,8 @@ app.post('/api/backup', requireAdminAuth, (req, res) => {
       message: 'نسخه پشتیبان با موفقیت در سرور ذخیره شد',
       fileName,
       totalRsvps: rsvpList.length,
-      totalGuestbook: guestbookList.length
+      totalGuestbook: guestbookList.length,
+      data: backupContent
     });
   } catch (error) {
     console.error('Error creating server backup:', error);
@@ -1512,19 +1564,31 @@ app.post('/api/backup', requireAdminAuth, (req, res) => {
   }
 });
 
-// Full unified export endpoint
+// Full unified export endpoints (both GET and POST supported)
+app.post('/api/backup/export', requireAdminAuth, (req, res) => {
+  try {
+    const { formData } = req.body;
+    const fullBackup = buildUnifiedBackupPayload(formData, 'Admin Export');
+
+    // Also auto-save a snapshot file in server backupsDir
+    try {
+      const timeStamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `wedding-backup-${timeStamp}.json`;
+      fs.writeFileSync(path.join(backupsDir, fileName), JSON.stringify(fullBackup, null, 2), 'utf-8');
+      fs.writeFileSync(path.join(backupsDir, 'wedding-backup-latest.json'), JSON.stringify(fullBackup, null, 2), 'utf-8');
+    } catch (saveErr) {
+      console.warn('Could not auto-snapshot backup file to disk:', saveErr);
+    }
+
+    res.json({ success: true, data: fullBackup });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'خطا در دریافت پشتیبان کامل' });
+  }
+});
+
 app.get('/api/backup/full-export', requireAdminAuth, (req, res) => {
   try {
-    const fullBackup = {
-      version: '2.0',
-      exportDate: new Date().toISOString(),
-      app: 'wedding-invitation-card',
-      weddingData: settingsData,
-      rsvps: rsvpList,
-      guestbook: guestbookList,
-      photoLikes: photoLikesData,
-      ...settingsData
-    };
+    const fullBackup = buildUnifiedBackupPayload(settingsData, 'Full Export');
     res.json({ success: true, data: fullBackup });
   } catch (err) {
     res.status(500).json({ success: false, error: 'خطا در دریافت پشتیبان کامل' });
@@ -1541,15 +1605,17 @@ app.post('/api/backup/restore', requireAdminAuth, (req, res) => {
 
     // 1. Restore Wedding Settings if provided
     if (weddingData && typeof weddingData === 'object' && restoreOptions?.weddingSettings !== false) {
-      settingsData = { ...settingsData, ...weddingData };
+      const clean = cleanWeddingSettings(weddingData);
+      settingsData = { ...settingsData, ...clean };
       saveSettings();
       broadcastSSE('SETTINGS_UPDATED', settingsData);
       restoredSettings = true;
     }
 
     // 2. Restore RSVPs if provided
-    if (Array.isArray(rsvps) && restoreOptions?.rsvps !== false) {
-      const sanitizedList = rsvps.map((r: any, idx: number) => ({
+    const rawRsvps = Array.isArray(rsvps) ? rsvps : Array.isArray(req.body.rsvpList) ? req.body.rsvpList : null;
+    if (rawRsvps && restoreOptions?.rsvps !== false) {
+      const sanitizedList = rawRsvps.map((r: any, idx: number) => ({
         id: r.id ? sanitize(String(r.id), 80) : `rsvp-restored-${Date.now()}-${idx}`,
         guestName: sanitize(String(r.guestName || 'مهمان گرامی'), 100),
         phone: r.phone ? sanitize(String(r.phone), 30) : '',
@@ -1559,15 +1625,27 @@ app.post('/api/backup/restore', requireAdminAuth, (req, res) => {
         message: r.message ? sanitize(String(r.message), 500) : '',
         songRequest: r.songRequest ? sanitize(String(r.songRequest), 200) : '',
         submittedAt: r.submittedAt || new Date().toISOString()
-      }));
+      })).filter((r) => r.guestName);
+
       rsvpList = sanitizedList;
       saveRSVPs();
+      broadcastSSE('RSVP_UPDATED', { list: rsvpList, totalCount: rsvpList.length });
       restoredRsvpsCount = rsvpList.length;
     }
 
     // 3. Restore Guestbook comments & notes if provided
-    if (Array.isArray(guestbook) && restoreOptions?.guestbook !== false) {
-      const sanitizedList = guestbook.map((g: any, idx: number) => ({
+    const rawGuestbook = Array.isArray(guestbook)
+      ? guestbook
+      : Array.isArray(req.body.guestbookList)
+      ? req.body.guestbookList
+      : Array.isArray(req.body.comments)
+      ? req.body.comments
+      : Array.isArray(req.body.notes)
+      ? req.body.notes
+      : null;
+
+    if (rawGuestbook && restoreOptions?.guestbook !== false) {
+      const sanitizedList = rawGuestbook.map((g: any, idx: number) => ({
         id: g.id ? sanitize(String(g.id), 80) : `gb-restored-${Date.now()}-${idx}`,
         author: sanitize(String(g.author || 'مهمان گرامی'), 80),
         message: sanitize(String(g.message || ''), 600),

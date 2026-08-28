@@ -263,6 +263,55 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
     document.body.removeChild(link);
   };
 
+  const exportFullBackupJson = async () => {
+    try {
+      setIsLoading(true);
+      const headers = getAdminAuthHeaders();
+      let backupPayload: any = null;
+
+      try {
+        const res = await fetch('/api/backup/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({})
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            backupPayload = data.data;
+          }
+        }
+      } catch {
+        // Fallback
+      }
+
+      if (!backupPayload) {
+        backupPayload = {
+          version: '2.0',
+          exportDate: new Date().toISOString(),
+          appName: 'wedding-card-studio',
+          rsvps,
+          guestbook: guestbookEntries,
+          stats: { totalRsvps: rsvps.length, totalGuestbook: guestbookEntries.length }
+        };
+      }
+
+      const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `wedding-full-backup-${Date.now()}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Ignore
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return typeof document !== 'undefined'
     ? createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-stone-900/60 backdrop-blur-md">
@@ -405,6 +454,15 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                         غائبین ({toPersianDigits(totalDeclined.length)})
                       </button>
                     </div>
+
+                    <button
+                      onClick={exportFullBackupJson}
+                      className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shrink-0 shadow-sm"
+                      title="دانلود فایل پشتیبان جامع کامل (شامل تنظیمات، تاییده‌ها و نظرات)"
+                    >
+                      <Download className="w-3.5 h-3.5 text-amber-700" />
+                      <span>پشتیبان کامل JSON</span>
+                    </button>
 
                     <button
                       onClick={exportToCSV}

@@ -691,76 +691,117 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     }));
   };
 
+  const cleanWeddingData = (raw: any): WeddingCardData => {
+    if (!raw || typeof raw !== 'object') {
+      return { ...DEFAULT_WEDDING_DATA };
+    }
+
+    let src = { ...raw };
+    while (src.weddingData && typeof src.weddingData === 'object' && Object.keys(src.weddingData).length > 0) {
+      src = { ...src.weddingData };
+    }
+
+    const forbiddenKeys = [
+      'weddingData', 'rsvps', 'rsvpList', 'rsvpsList', 'guestbook', 'guestbookList',
+      'comments', 'notes', 'photoLikes', 'guestbookReactions', 'stats',
+      'version', 'exportDate', 'backupDate', 'appName', 'reason'
+    ];
+
+    for (const k of forbiddenKeys) {
+      delete src[k];
+    }
+
+    return { ...DEFAULT_WEDDING_DATA, ...src };
+  };
+
   const handleExportJson = async () => {
     setIsExporting(true);
     setBackupNotice(null);
     try {
-      // 1. Fetch latest RSVPs and Guestbook entries directly from database
       const headers = getAdminAuthHeaders();
-      const [rsvpRes, gbRes] = await Promise.allSettled([
-        fetch('/api/rsvp', { headers }),
-        fetch('/api/guestbook')
-      ]);
+      const cleanFormData = cleanWeddingData(formData);
 
-      let rsvpsList: any[] = [];
-      let guestbookList: any[] = [];
+      let finalBackup: any = null;
 
-      if (rsvpRes.status === 'fulfilled' && rsvpRes.value.ok) {
-        const rData = await rsvpRes.value.json();
-        if (rData.success && Array.isArray(rData.data)) {
-          rsvpsList = rData.data;
-        }
-      }
-      if (gbRes.status === 'fulfilled' && gbRes.value.ok) {
-        const gData = await gbRes.value.json();
-        if (gData.success && Array.isArray(gData.data)) {
-          guestbookList = gData.data;
-        }
-      }
-
-      // 2. Snapshot to server backup directory
+      // 1. First try unified server export endpoint which has direct access to database stores
       try {
-        await fetch('/api/backup', {
+        const exportRes = await fetch('/api/backup/export', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...headers
           },
-          body: JSON.stringify({
-            formData,
-            reason: 'User Downloaded Full Backup'
-          })
+          body: JSON.stringify({ formData: cleanFormData })
         });
-      } catch (err) {
-        console.warn('Server backup error during export:', err);
+
+        if (exportRes.ok) {
+          const exportData = await exportRes.json();
+          if (exportData.success && exportData.data) {
+            finalBackup = exportData.data;
+          }
+        }
+      } catch (srvErr) {
+        console.warn('Direct server export endpoint error, using fallback:', srvErr);
       }
 
-      // 3. Build unified JSON payload
-      const fullBackup = {
-        version: '2.0',
-        exportDate: new Date().toISOString(),
-        appName: 'wedding-card-studio',
-        weddingData: formData,
-        rsvps: rsvpsList,
-        guestbook: guestbookList,
-        // Spread formData at root for backwards-compatibility with old format
-        ...formData
-      };
+      // 2. Fallback if server export failed or returned empty
+      if (!finalBackup) {
+        const [rsvpRes, gbRes] = await Promise.allSettled([
+          fetch('/api/rsvp', { headers }),
+          fetch('/api/guestbook')
+        ]);
 
-      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(fullBackup, null, 2)
-      )}`;
+        let rsvpsList: any[] = [];
+        let guestbookList: any[] = [];
+
+        if (rsvpRes.status === 'fulfilled' && rsvpRes.value.ok) {
+          const rData = await rsvpRes.value.json();
+          if (rData.success && Array.isArray(rData.data)) {
+            rsvpsList = rData.data;
+          }
+        }
+        if (gbRes.status === 'fulfilled' && gbRes.value.ok) {
+          const gData = await gbRes.value.json();
+          if (gData.success && Array.isArray(gData.data)) {
+            guestbookList = gData.data;
+          }
+        }
+
+        finalBackup = {
+          version: '2.0',
+          exportDate: new Date().toISOString(),
+          appName: 'wedding-card-studio',
+          stats: {
+            totalRsvps: rsvpsList.length,
+            totalGuestbook: guestbookList.length
+          },
+          weddingData: cleanFormData,
+          rsvps: rsvpsList,
+          guestbook: guestbookList
+        };
+      }
+
+      const totalR = Array.isArray(finalBackup.rsvps) ? finalBackup.rsvps.length : 0;
+      const totalG = Array.isArray(finalBackup.guestbook) ? finalBackup.guestbook.length : 0;
+
+      const blob = new Blob([JSON.stringify(finalBackup, null, 2)], {
+        type: 'application/json;charset=utf-8;'
+      });
+      const url = URL.createObjectURL(blob);
       const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute('href', jsonString);
       const timeStamp = new Date().toISOString().slice(0, 10);
-      downloadAnchor.setAttribute('download', `wedding-full-backup-${timeStamp}.json`);
+      const brideName = cleanFormData.brideName?.trim() || 'bride';
+      const groomName = cleanFormData.groomName?.trim() || 'groom';
+      downloadAnchor.setAttribute('href', url);
+      downloadAnchor.setAttribute('download', `wedding-full-backup-${brideName}-${groomName}-${timeStamp}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
-      downloadAnchor.remove();
+      document.body.removeChild(downloadAnchor);
+      URL.revokeObjectURL(url);
 
       setBackupNotice({
         type: 'success',
-        message: `فایل پشتیبان کامل با موفقیت آماده و دانلود شد (شامل مشخصات کارت، ${toPersianDigits(rsvpsList.length)} تاییدیه حضور و ${toPersianDigits(guestbookList.length)} یادداشت و نظر دفترچه یادبود).`
+        message: `فایل پشتیبان جامع با موفقیت آماده و دانلود گردید (شامل مشخصات و تم کارت، ${toPersianDigits(totalR)} تاییدیه حضور و ${toPersianDigits(totalG)} یادداشت و پیام دفترچه یادبود).`
       });
       fetchDbStats();
     } catch (error) {
@@ -788,22 +829,20 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           return;
         }
 
-        // Detect extracted components
-        let extractedWedding: WeddingCardData | null = null;
-        if (parsed.weddingData && typeof parsed.weddingData === 'object' && parsed.weddingData.brideName) {
-          extractedWedding = parsed.weddingData;
-        } else if (parsed.brideName) {
-          // Legacy format or root-spread format
-          const { rsvps: _r, guestbook: _g, photoLikes: _pl, ...cleanWedding } = parsed;
-          extractedWedding = cleanWedding as WeddingCardData;
-        }
+        // Cleanly extract wedding settings
+        const rawWedding = parsed.weddingData || parsed;
+        const extractedWedding = cleanWeddingData(rawWedding);
 
+        // Cleanly extract RSVPs
         const extractedRsvps = Array.isArray(parsed.rsvps)
           ? parsed.rsvps
           : Array.isArray(parsed.rsvpList)
           ? parsed.rsvpList
+          : Array.isArray(parsed.rsvpsList)
+          ? parsed.rsvpsList
           : [];
 
+        // Cleanly extract Guestbook messages / notes
         const extractedGuestbook = Array.isArray(parsed.guestbook)
           ? parsed.guestbook
           : Array.isArray(parsed.guestbookList)
@@ -814,20 +853,17 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           ? parsed.notes
           : [];
 
-        if (!extractedWedding && extractedRsvps.length === 0 && extractedGuestbook.length === 0) {
-          alert('ساختار فایل پشتیبان شناسایی نشد یا فایل فاقد اطلاعات معتبر کارت دعوت است.');
-          return;
-        }
+        const photoLikes = parsed.photoLikes || null;
 
-        const brideName = extractedWedding?.brideName || formData.brideName || 'عروس';
-        const groomName = extractedWedding?.groomName || formData.groomName || 'داماد';
+        const brideName = extractedWedding.brideName || 'عروس';
+        const groomName = extractedWedding.groomName || 'داماد';
 
         // Prompt confirmation dialog with full summary
         setConfirmConfig({
           isOpen: true,
-          title: 'بازگردانی و اعمال فایل پشتیبان',
+          title: 'بازگردانی و اعمال فایل پشتیبان جامع',
           message: `اطلاعات زیر در فایل پشتیبان شناسایی شد:\n` +
-            `• تنظیمات و تم کارت دعوت (${brideName} و ${groomName})\n` +
+            `• مشخصات، تنظیمات و تم کارت دعوت (${brideName} و ${groomName})\n` +
             `• تاییده‌های حضور مهمانان (RSVP): ${toPersianDigits(extractedRsvps.length)} مورد\n` +
             `• نظرات و یادداشت‌های دفترچه یادبود: ${toPersianDigits(extractedGuestbook.length)} مورد\n\n` +
             `آیا از بازگردانی و جایگزینی این اطلاعات اطمینان دارید؟`,
@@ -835,22 +871,21 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             setIsRestoring(true);
             try {
               // 1. Update Wedding Settings in state & local storage
-              if (extractedWedding) {
-                setFormData(extractedWedding);
-                onSave(extractedWedding);
-                try {
-                  localStorage.setItem('wedding_card_data', JSON.stringify(extractedWedding));
-                } catch {
-                  // Ignore
-                }
+              setFormData(extractedWedding);
+              onSave(extractedWedding);
+              try {
+                localStorage.setItem('wedding_card_data', JSON.stringify(extractedWedding));
+              } catch {
+                // Ignore
               }
 
               // 2. Call server restore API to restore settings, RSVPs, and Guestbook notes
               const headers = getAdminAuthHeaders();
               const restorePayload = {
-                weddingData: extractedWedding || formData,
+                weddingData: extractedWedding,
                 rsvps: extractedRsvps,
-                guestbook: extractedGuestbook
+                guestbook: extractedGuestbook,
+                photoLikes
               };
 
               const res = await fetch('/api/backup/restore', {
@@ -873,7 +908,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
 
               setBackupNotice({
                 type: 'success',
-                message: `فایل پشتیبان با موفقیت بازگردانی شد: تنظیمات کارت، ${toPersianDigits(extractedRsvps.length)} تاییدیه حضور و ${toPersianDigits(extractedGuestbook.length)} یادداشت دفترچه یادبود اعمال گردیدند.`
+                message: `فایل پشتیبان با موفقیت بازگردانی شد: تنظیمات کارت، ${toPersianDigits(extractedRsvps.length)} تاییدیه حضور و ${toPersianDigits(extractedGuestbook.length)} یادداشت دفترچه یادبود با موفقیت اعمال شدند.`
               });
             } catch (err: any) {
               console.error('Error during restore:', err);
@@ -899,43 +934,17 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     setConfirmConfig({
       isOpen: true,
       title: 'بازنشانی به تنظیمات پیش‌فرض کارخانه',
-      message: 'آیا از بازنشانی به تنظیمات پیش‌فرض کارخانه اطمینان دارید؟ تمامی تاییده‌های حضور مهمانان (RSVP) و پیام‌های دفترچه یادبود پاکسازی شده و یک نسخه پشتیبان دانلود می‌گردد.',
+      message: 'آیا از بازنشانی به تنظیمات پیش‌فرض کارخانه اطمینان دارید؟ تمامی تاییده‌های حضور مهمانان (RSVP) و پیام‌های دفترچه یادبود پاکسازی شده و یک نسخه پشتیبان جامع دانلود می‌گردد.',
       onConfirm: async () => {
         try {
-          // 1. Send backup to server FIRST before clearing anything
+          // 1. Take a full backup before reset
           try {
-            await fetch('/api/backup', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                ...getAdminAuthHeaders()
-              },
-              body: JSON.stringify({
-                formData,
-                reason: 'Factory Reset'
-              })
-            });
+            await handleExportJson();
           } catch (err) {
-            console.warn('Server backup fetch error:', err);
+            console.warn('Backup before reset warning:', err);
           }
 
-          // 2. Take automatic client browser backup download
-          const backupData = JSON.stringify(formData, null, 2);
-          const jsonBlob = new Blob([backupData], { type: 'application/json;charset=utf-8;' });
-          const url = URL.createObjectURL(jsonBlob);
-          const downloadAnchor = document.createElement('a');
-          const timeStamp = new Date().toISOString().slice(0, 10);
-          downloadAnchor.setAttribute('href', url);
-          downloadAnchor.setAttribute('download', `wedding-backup-before-reset-${timeStamp}.json`);
-          document.body.appendChild(downloadAnchor);
-          downloadAnchor.click();
-          document.body.removeChild(downloadAnchor);
-          URL.revokeObjectURL(url);
-
-          // Save a local storage backup as well
-          localStorage.setItem('wedding_card_backup_before_reset', backupData);
-
-          // 3. Reset RSVPs and Guestbook store to default initial seed
+          // 2. Reset RSVPs and Guestbook store to default initial seed
           const adminHeaders = getAdminAuthHeaders();
           await Promise.allSettled([
             fetch('/api/rsvp/reset?mode=seed', {
@@ -948,17 +957,20 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
             })
           ]);
 
-          // 4. Reset form state and notify parent app
-          setFormData(DEFAULT_WEDDING_DATA);
-          onSave(DEFAULT_WEDDING_DATA);
-          localStorage.setItem('wedding_card_data', JSON.stringify(DEFAULT_WEDDING_DATA));
+          // 3. Reset form state and notify parent app
+          const cleanDefault = { ...DEFAULT_WEDDING_DATA };
+          setFormData(cleanDefault);
+          onSave(cleanDefault);
+          localStorage.setItem('wedding_card_data', JSON.stringify(cleanDefault));
 
-          // 5. Trigger global event so active components re-fetch/clear their lists
+          // 4. Trigger global event so active components re-fetch/clear their lists
           window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+          fetchDbStats();
         } catch (error) {
           console.error('Error during factory reset:', error);
-          setFormData(DEFAULT_WEDDING_DATA);
-          onSave(DEFAULT_WEDDING_DATA);
+          const cleanDefault = { ...DEFAULT_WEDDING_DATA };
+          setFormData(cleanDefault);
+          onSave(cleanDefault);
         }
       }
     });
