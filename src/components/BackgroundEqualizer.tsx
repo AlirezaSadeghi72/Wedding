@@ -320,6 +320,48 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
     };
   }, []);
 
+  // Dynamically measure the exact rendered height of the fixed music footer
+  const [footerHeight, setFooterHeight] = useState<number>(44);
+
+  useEffect(() => {
+    const updateFooterHeight = () => {
+      const footerEl = document.getElementById('permanent-music-footer');
+      if (footerEl) {
+        const rect = footerEl.getBoundingClientRect();
+        if (rect.height > 0) {
+          setFooterHeight(Math.round(rect.height));
+        }
+      }
+    };
+
+    updateFooterHeight();
+    const t1 = setTimeout(updateFooterHeight, 50);
+    const t2 = setTimeout(updateFooterHeight, 250);
+    const t3 = setTimeout(updateFooterHeight, 600);
+
+    const footerEl = document.getElementById('permanent-music-footer');
+    let observer: ResizeObserver | null = null;
+    if (footerEl && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        updateFooterHeight();
+      });
+      observer.observe(footerEl);
+    }
+
+    window.addEventListener('resize', updateFooterHeight);
+    window.addEventListener('orientationchange', updateFooterHeight);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener('resize', updateFooterHeight);
+      window.removeEventListener('orientationchange', updateFooterHeight);
+      if (observer && footerEl) {
+        observer.unobserve(footerEl);
+      }
+    };
+  }, [isPlaying]);
+
   // Smooth throttled Web Audio spectral sync loop (30fps) with GPU scaleY transforms
   useEffect(() => {
     if (!isPlaying || style === 'off') return;
@@ -406,7 +448,10 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
 
           {/* 1. CLASSIC BARS */}
           {style === 'bars' && (
-            <div className="w-full flex flex-col items-center justify-end pb-[calc(49px+env(safe-area-inset-bottom,0px))] sm:pb-[calc(65px+env(safe-area-inset-bottom,0px))] md:pb-[calc(65px+env(safe-area-inset-bottom,0px))] landscape:pb-[calc(43px+env(safe-area-inset-bottom,0px))] px-2.5 sm:px-6 relative">
+            <div
+              className="w-full flex flex-col items-center justify-end px-2.5 sm:px-6 relative transition-[padding] duration-150"
+              style={{ paddingBottom: `${footerHeight + 2}px` }}
+            >
               <div className="w-full max-w-5xl flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2.5 h-10 sm:h-14 md:h-16 px-1">
                 {barHeights.map((height, index) => {
                   const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
@@ -429,7 +474,10 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
 
           {/* 2. MIRROR SPECTRUM */}
           {style === 'mirror_spectrum' && (
-            <div className="w-full flex flex-col items-center justify-end pb-[calc(49px+env(safe-area-inset-bottom,0px))] sm:pb-[calc(65px+env(safe-area-inset-bottom,0px))] md:pb-[calc(65px+env(safe-area-inset-bottom,0px))] landscape:pb-[calc(43px+env(safe-area-inset-bottom,0px))] px-2.5 sm:px-6 relative">
+            <div
+              className="w-full flex flex-col items-center justify-end px-2.5 sm:px-6 relative transition-[padding] duration-150"
+              style={{ paddingBottom: `${footerHeight + 2}px` }}
+            >
               <div className="w-full max-w-5xl flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 h-16 sm:h-20 md:h-24 px-1">
                 {barHeights.map((height, index) => {
                   const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
