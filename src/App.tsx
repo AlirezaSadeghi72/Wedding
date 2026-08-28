@@ -5,8 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Palette, Users, Eye, LogOut, Sliders } from 'lucide-react';
-import { WeddingCardData } from './types';
+import { Palette, Users, Eye, LogOut, Sliders, BarChart2 } from 'lucide-react';
+import { WeddingCardData, VisitStats } from './types';
 import { DEFAULT_WEDDING_DATA } from './data/defaultWedding';
 import WeddingEnvelope from './components/WeddingEnvelope';
 import WeddingCardView from './components/WeddingCardView';
@@ -16,7 +16,8 @@ import ThemeSelectorModal from './components/ThemeSelectorModal';
 import AudioPlayerFloating from './components/AudioPlayerFloating';
 import AdminLoginModal from './components/AdminLoginModal';
 import { getIsAdminSessionValid, saveAdminSession, clearAdminSession, getAdminAuthHeaders, validateAdminSessionWithServer } from './utils/security';
-import { subscribeToLiveEvents } from './utils/sessionSync';
+import { subscribeToLiveEvents, trackSiteVisit } from './utils/sessionSync';
+import { toPersianDigits } from './utils/dateUtils';
 
 export default function App() {
   const [weddingData, setWeddingData] = useState<WeddingCardData>(() => {
@@ -30,6 +31,19 @@ export default function App() {
     }
     return DEFAULT_WEDDING_DATA;
   });
+
+  const [visitStats, setVisitStats] = useState<VisitStats>({
+    totalVisits: 0,
+    uniqueVisitors: 0,
+    todayVisits: 0,
+    todayDate: '',
+    lastVisitAt: ''
+  });
+
+  // Track site visit for every guest upon page load
+  useEffect(() => {
+    trackSiteVisit();
+  }, []);
 
   // Fetch wedding settings from server on mount & listen to real-time live changes
   useEffect(() => {
@@ -51,7 +65,7 @@ export default function App() {
         console.error('Failed to load settings from server:', err);
       });
 
-    // Real-time synchronization: when settings or theme are saved, update instantly for all viewers
+    // Real-time synchronization: when settings or visits are updated, sync instantly
     const unsubscribe = subscribeToLiveEvents((event) => {
       if (event.type === 'SETTINGS_UPDATED' && event.payload) {
         const incomingSettings = event.payload as WeddingCardData;
@@ -64,6 +78,12 @@ export default function App() {
         } catch {
           // Ignore
         }
+      } else if (event.type === 'VISITS_UPDATED' && event.payload) {
+        const incomingVisits = event.payload as Partial<VisitStats>;
+        setVisitStats((prev) => ({
+          ...prev,
+          ...incomingVisits
+        }));
       }
     });
 
@@ -82,6 +102,27 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => {
     return getIsAdminSessionValid();
   });
+
+  // Fetch visitor statistics whenever admin is authenticated
+  const fetchVisitStats = () => {
+    if (!isAdminAuthenticated) return;
+    fetch('/api/visits/stats', {
+      headers: getAdminAuthHeaders()
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData && resData.success && resData.data) {
+          setVisitStats(resData.data);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      fetchVisitStats();
+    }
+  }, [isAdminAuthenticated]);
 
   // Verify stored session with server on mount; if invalid or expired, clear it
   useEffect(() => {
@@ -139,6 +180,18 @@ export default function App() {
           } catch {
             // Ignore
           }
+        }
+      })
+      .catch(() => {});
+
+    // Fetch visits stats on admin login
+    fetch('/api/visits/stats', {
+      headers: getAdminAuthHeaders()
+    })
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData && resData.success && resData.data) {
+          setVisitStats(resData.data);
         }
       })
       .catch(() => {});
@@ -214,6 +267,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Site Visits Counter (Admin Only) */}
+            <button
+              onClick={() => setIsRsvpManagerOpen(true)}
+              className="flex items-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-950 border border-amber-300/90 cursor-pointer transition-all text-xs font-semibold shadow-sm whitespace-nowrap"
+              title={`مجموع بازدیدهای کارت: ${toPersianDigits(visitStats.totalVisits || 0)} | بازدیدکنندگان یکتا: ${toPersianDigits(visitStats.uniqueVisitors || 0)} | امروز: ${toPersianDigits(visitStats.todayVisits || 0)}`}
+            >
+              <Eye className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span className="font-bold font-cinzel text-amber-900">{toPersianDigits(visitStats.totalVisits || 0)}</span>
+              <span className="hidden sm:inline text-[11px] text-amber-800 font-medium">بازدید</span>
+            </button>
+
             {/* Theme Selection Modal Toggle */}
             <button
               onClick={() => setIsThemeSelectorOpen(true)}
@@ -338,6 +402,7 @@ export default function App() {
       <RSVPManagerModal
         isOpen={isRsvpManagerOpen}
         onClose={() => setIsRsvpManagerOpen(false)}
+        weddingData={weddingData}
       />
 
       {/* Theme Selector Modal */}

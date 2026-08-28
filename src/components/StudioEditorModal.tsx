@@ -160,7 +160,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
   const [activeTrackIdInSettings, setActiveTrackIdInSettings] = useState<string | null>(null);
 
   // Backup & Restore comprehensive state
-  const [dbStats, setDbStats] = useState<{ rsvpsCount: number; guestbookCount: number } | null>(null);
+  const [dbStats, setDbStats] = useState<{ rsvpsCount: number; guestbookCount: number; visitsCount?: number } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [backupNotice, setBackupNotice] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
@@ -168,13 +168,15 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
   const fetchDbStats = async () => {
     try {
       const headers = getAdminAuthHeaders();
-      const [rsvpRes, gbRes] = await Promise.allSettled([
+      const [rsvpRes, gbRes, visitRes] = await Promise.allSettled([
         fetch('/api/rsvp', { headers }),
-        fetch('/api/guestbook')
+        fetch('/api/guestbook'),
+        fetch('/api/visits/stats', { headers })
       ]);
 
       let rCount = 0;
       let gCount = 0;
+      let vCount = 0;
 
       if (rsvpRes.status === 'fulfilled' && rsvpRes.value.ok) {
         const rData = await rsvpRes.value.json();
@@ -188,7 +190,13 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           gCount = gData.data.length;
         }
       }
-      setDbStats({ rsvpsCount: rCount, guestbookCount: gCount });
+      if (visitRes.status === 'fulfilled' && visitRes.value.ok) {
+        const vData = await visitRes.value.json();
+        if (vData.success && vData.data) {
+          vCount = vData.data.totalVisits || 0;
+        }
+      }
+      setDbStats({ rsvpsCount: rCount, guestbookCount: gCount, visitsCount: vCount });
     } catch {
       // Ignore
     }
@@ -3905,8 +3913,8 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                   </button>
                 </div>
 
-                {/* 3 Overview Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* 4 Overview Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                   <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-sm space-y-1">
                     <div className="flex items-center justify-between text-stone-500 text-[11px]">
                       <span className="flex items-center gap-1.5 font-bold text-stone-700">
@@ -3939,14 +3947,29 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                     <div className="flex items-center justify-between text-stone-500 text-[11px]">
                       <span className="flex items-center gap-1.5 font-bold text-stone-700">
                         <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
-                        نظرات و پیام‌های یادبود
+                        نظرات و یادبود
                       </span>
                       <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">
-                        {toPersianDigits(dbStats?.guestbookCount ?? '...')} یادداشت
+                        {toPersianDigits(dbStats?.guestbookCount ?? '...')} پیام
                       </span>
                     </div>
                     <p className="text-[11px] text-stone-600">
                       ثبت شده در دفترچه یادبود
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-sm space-y-1">
+                    <div className="flex items-center justify-between text-stone-500 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-bold text-stone-700">
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
+                        شمارنده بازدیدها
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-bold">
+                        {toPersianDigits(dbStats?.visitsCount ?? '...')} بازدید
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600">
+                      ثبت شده در شمارنده امنیتی
                     </p>
                   </div>
                 </div>

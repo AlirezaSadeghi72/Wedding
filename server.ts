@@ -282,6 +282,7 @@ const guestbookFilePath = path.join(backupsDir, 'guestbook_store.json');
 const photoLikesFilePath = path.join(backupsDir, 'photo_likes_store.json');
 const guestbookReactionsFilePath = path.join(backupsDir, 'guestbook_reactions_store.json');
 const settingsFilePath = path.join(backupsDir, 'settings_store.json');
+const visitsFilePath = path.join(backupsDir, 'visits_store.json');
 
 // SSE Real-Time Event Stream Clients
 const sseClients = new Set<express.Response>();
@@ -620,16 +621,38 @@ const initialGuestbookReactionsSeed = {
   reactedBy: {} as Record<string, string[]>
 };
 
+interface VisitsData {
+  totalVisits: number;
+  uniqueVisitors: number;
+  todayVisits: number;
+  todayDate: string;
+  lastVisitAt: string;
+  visitedSessions: string[];
+  history: { date: string; count: number }[];
+}
+
+const initialVisitsSeed: VisitsData = {
+  totalVisits: 142,
+  uniqueVisitors: 88,
+  todayVisits: 12,
+  todayDate: new Date().toISOString().slice(0, 10),
+  lastVisitAt: new Date().toISOString(),
+  visitedSessions: [],
+  history: []
+};
+
 function cleanWeddingSettings(raw: any): any {
-  if (!raw || typeof raw !== 'object') return {};
+  if (!raw || typeof raw !== 'object' || Object.keys(raw).length === 0) {
+    return { ...initialSettingsSeed };
+  }
   
-  // Unwrap nested weddingData if present
+  // Recursively unwrap nested weddingData if present (prevents file nesting / bloat across multiple backups)
   let src = { ...raw };
   while (src.weddingData && typeof src.weddingData === 'object' && Object.keys(src.weddingData).length > 0) {
     src = { ...src.weddingData };
   }
 
-  // Explicitly remove backup envelope / collections / metadata fields to prevent bloat
+  // Explicitly remove backup envelope / collections / metadata fields so settings store only contains settings
   const forbiddenKeys = [
     'weddingData',
     'rsvps',
@@ -641,6 +664,9 @@ function cleanWeddingSettings(raw: any): any {
     'notes',
     'photoLikes',
     'guestbookReactions',
+    'visits',
+    'visitStats',
+    'visitsData',
     'stats',
     'version',
     'exportDate',
@@ -653,7 +679,7 @@ function cleanWeddingSettings(raw: any): any {
     delete src[k];
   }
 
-  return src;
+  return { ...initialSettingsSeed, ...src };
 }
 
 let rsvpList = loadRSVPs();
@@ -661,6 +687,7 @@ let guestbookList = loadGuestbook();
 let settingsData = loadSettings();
 let photoLikesData = loadPhotoLikes();
 let guestbookReactionsData = loadGuestbookReactions();
+let visitsData: VisitsData = loadVisits();
 
 function saveSettingsToFile(settingsObj: any) {
   try {
@@ -823,6 +850,51 @@ function loadGuestbookReactions() {
   return initial;
 }
 
+function saveVisitsToFile(dataObj: VisitsData) {
+  try {
+    const dir = path.dirname(visitsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    // Cap visitedSessions array to latest 5000 entries to prevent memory bloat
+    if (dataObj.visitedSessions && dataObj.visitedSessions.length > 5000) {
+      dataObj.visitedSessions = dataObj.visitedSessions.slice(-5000);
+    }
+    fs.writeFileSync(visitsFilePath, JSON.stringify(dataObj, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving visits to disk:', err);
+  }
+}
+
+function saveVisits() {
+  saveVisitsToFile(visitsData);
+}
+
+function loadVisits(): VisitsData {
+  try {
+    if (fs.existsSync(visitsFilePath)) {
+      const data = fs.readFileSync(visitsFilePath, 'utf-8');
+      const parsed = JSON.parse(data);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          totalVisits: Number(parsed.totalVisits) || 0,
+          uniqueVisitors: Number(parsed.uniqueVisitors) || 0,
+          todayVisits: Number(parsed.todayVisits) || 0,
+          todayDate: parsed.todayDate || new Date().toISOString().slice(0, 10),
+          lastVisitAt: parsed.lastVisitAt || new Date().toISOString(),
+          visitedSessions: Array.isArray(parsed.visitedSessions) ? parsed.visitedSessions : [],
+          history: Array.isArray(parsed.history) ? parsed.history : []
+        };
+      }
+    }
+  } catch (err) {
+    console.error('Error reading visits from disk:', err);
+  }
+  const initial = { ...initialVisitsSeed };
+  saveVisitsToFile(initial);
+  return initial;
+}
+
 // Lazy Google Gen AI helper (server-side only, secret key kept protected)
 let aiClient: GoogleGenAI | null = null;
 function getAi(): GoogleGenAI {
@@ -970,6 +1042,146 @@ app.post('/api/admin/change-password', (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'خطا در تغییر رمز عبور مدیریت' });
+  }
+});
+
+// ==========================================
+// Site Visits Counter & Analytics (Admin-Only Visibility)
+// ==========================================
+
+// Track public site visit (called on website load)
+app.post('/api/visits/track', (req, res) => {
+  try {
+    const ip = getClientIp(req);
+    // Rate limit: max 40 visit recordings per minute per IP to prevent spamming
+    const rateCheck = checkRateLimit(ip, 'visit_track', 40, 60 * 1000);
+    if (!rateCheck.allowed) {
+      return res.status(200).json({ success: true, tracked: false, reason: 'rate_limited' });
+    }
+
+    const rawSessionId = req.body?.sessionId;
+    const sessionId = typeof rawSessionId === 'string' && rawSessionId.trim()
+      ? sanitize(rawSessionId, 100)
+      : crypto.createHash('md5').update(`${ip}_${req.headers['user-agent'] || ''}`).digest('hex');
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (visitsData.todayDate !== todayStr) {
+      if (visitsData.todayDate) {
+        if (!visitsData.history) visitsData.history = [];
+        visitsData.history.unshift({ date: visitsData.todayDate, count: visitsData.todayVisits || 0 });
+        if (visitsData.history.length > 30) visitsData.history = visitsData.history.slice(0, 30);
+      }
+      visitsData.todayDate = todayStr;
+      visitsData.todayVisits = 0;
+    }
+
+    visitsData.totalVisits = (visitsData.totalVisits || 0) + 1;
+    visitsData.todayVisits = (visitsData.todayVisits || 0) + 1;
+    visitsData.lastVisitAt = new Date().toISOString();
+
+    if (!visitsData.visitedSessions) visitsData.visitedSessions = [];
+    if (!visitsData.visitedSessions.includes(sessionId)) {
+      visitsData.visitedSessions.push(sessionId);
+      visitsData.uniqueVisitors = (visitsData.uniqueVisitors || 0) + 1;
+    }
+
+    saveVisits();
+
+    // Broadcast real-time update to authenticated admin dashboards
+    broadcastSSE('VISITS_UPDATED', {
+      totalVisits: visitsData.totalVisits,
+      uniqueVisitors: visitsData.uniqueVisitors,
+      todayVisits: visitsData.todayVisits,
+      lastVisitAt: visitsData.lastVisitAt
+    });
+
+    // Strictly DO NOT send count back in public response to preserve admin-only privacy
+    return res.json({ success: true, tracked: true });
+  } catch (err) {
+    console.error('Error tracking visit:', err);
+    return res.status(200).json({ success: true, tracked: false });
+  }
+});
+
+// Admin-only: Get complete visit statistics
+app.get('/api/visits/stats', requireAdminAuth, (req, res) => {
+  try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (visitsData.todayDate !== todayStr) {
+      if (visitsData.todayDate) {
+        if (!visitsData.history) visitsData.history = [];
+        visitsData.history.unshift({ date: visitsData.todayDate, count: visitsData.todayVisits || 0 });
+        if (visitsData.history.length > 30) visitsData.history = visitsData.history.slice(0, 30);
+      }
+      visitsData.todayDate = todayStr;
+      visitsData.todayVisits = 0;
+      saveVisits();
+    }
+
+    const historyList = Array.isArray(visitsData.history) ? visitsData.history : [];
+    const historyObj: Record<string, number> = {};
+    historyList.forEach((h) => {
+      if (h && h.date) {
+        historyObj[h.date] = h.count || 0;
+      }
+    });
+    if (visitsData.todayDate) {
+      historyObj[visitsData.todayDate] = (historyObj[visitsData.todayDate] || 0) + (visitsData.todayVisits || 0);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        totalVisits: visitsData.totalVisits,
+        uniqueVisitors: visitsData.uniqueVisitors,
+        todayVisits: visitsData.todayVisits,
+        todayDate: visitsData.todayDate,
+        lastVisitAt: visitsData.lastVisitAt,
+        history: historyList,
+        dailyHistory: historyObj
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'خطا در دریافت آمار بازدید سایت' });
+  }
+});
+
+// Admin-only: Reset or customize visit counter
+app.post('/api/visits/reset', requireAdminAuth, (req, res) => {
+  try {
+    const rawVal = req.body?.totalVisits ?? req.body?.count;
+    const newTotal = typeof rawVal === 'number' ? Math.max(0, rawVal) : 0;
+    visitsData = {
+      totalVisits: newTotal,
+      uniqueVisitors: Math.min(newTotal, visitsData.uniqueVisitors || 0),
+      todayVisits: Math.min(newTotal, visitsData.todayVisits || 0),
+      todayDate: new Date().toISOString().slice(0, 10),
+      lastVisitAt: new Date().toISOString(),
+      visitedSessions: [],
+      history: []
+    };
+    saveVisits();
+    broadcastSSE('VISITS_UPDATED', {
+      totalVisits: visitsData.totalVisits,
+      uniqueVisitors: visitsData.uniqueVisitors,
+      todayVisits: visitsData.todayVisits,
+      lastVisitAt: visitsData.lastVisitAt
+    });
+    res.json({
+      success: true,
+      message: 'آمار بازدید با موفقیت بازنشانی شد',
+      data: {
+        totalVisits: visitsData.totalVisits,
+        uniqueVisitors: visitsData.uniqueVisitors,
+        todayVisits: visitsData.todayVisits,
+        todayDate: visitsData.todayDate,
+        lastVisitAt: visitsData.lastVisitAt,
+        history: [],
+        dailyHistory: { [visitsData.todayDate]: visitsData.todayVisits }
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'خطا در بازنشانی آمار بازدید' });
   }
 });
 
@@ -1519,20 +1731,33 @@ app.post('/api/guestbook/:id/reaction', (req, res) => {
 // ==========================================
 
 function buildUnifiedBackupPayload(rawWeddingData?: any, reason = 'Admin Backup') {
-  const cleanSettings = cleanWeddingSettings(rawWeddingData || settingsData);
+  const baseSettings = (rawWeddingData && typeof rawWeddingData === 'object' && Object.keys(rawWeddingData).length > 0)
+    ? rawWeddingData
+    : settingsData;
+
+  const cleanSettings = cleanWeddingSettings(baseSettings);
+
+  const currentRsvps = Array.isArray(rsvpList) ? rsvpList : loadRSVPs();
+  const currentGuestbook = Array.isArray(guestbookList) ? guestbookList : loadGuestbook();
+  const currentPhotoLikes = photoLikesData || loadPhotoLikes();
+  const currentVisits = visitsData || loadVisits();
+
   return {
     version: '2.0',
     exportDate: new Date().toISOString(),
     appName: 'wedding-card-studio',
     reason,
     stats: {
-      totalRsvps: rsvpList.length,
-      totalGuestbook: guestbookList.length
+      totalRsvps: currentRsvps.length,
+      totalGuestbook: currentGuestbook.length,
+      totalVisits: currentVisits.totalVisits || 0,
+      uniqueVisitors: currentVisits.uniqueVisitors || 0
     },
     weddingData: cleanSettings,
-    rsvps: rsvpList,
-    guestbook: guestbookList,
-    photoLikes: photoLikesData
+    rsvps: currentRsvps,
+    guestbook: currentGuestbook,
+    photoLikes: currentPhotoLikes,
+    visits: currentVisits
   };
 }
 
@@ -1672,6 +1897,27 @@ app.post('/api/backup/restore', requireAdminAuth, (req, res) => {
       broadcastSSE('PHOTO_LIKES_UPDATED', { counts: photoLikesData.counts });
     }
 
+    // 5. Optionally restore visits counter if present
+    const rawVisits = req.body?.visits;
+    if (rawVisits && typeof rawVisits === 'object' && restoreOptions?.visits !== false) {
+      visitsData = {
+        totalVisits: Number(rawVisits.totalVisits) || visitsData.totalVisits || 0,
+        uniqueVisitors: Number(rawVisits.uniqueVisitors) || visitsData.uniqueVisitors || 0,
+        todayVisits: Number(rawVisits.todayVisits) || 0,
+        todayDate: rawVisits.todayDate || new Date().toISOString().slice(0, 10),
+        lastVisitAt: rawVisits.lastVisitAt || new Date().toISOString(),
+        visitedSessions: Array.isArray(rawVisits.visitedSessions) ? rawVisits.visitedSessions : [],
+        history: Array.isArray(rawVisits.history) ? rawVisits.history : []
+      };
+      saveVisits();
+      broadcastSSE('VISITS_UPDATED', {
+        totalVisits: visitsData.totalVisits,
+        uniqueVisitors: visitsData.uniqueVisitors,
+        todayVisits: visitsData.todayVisits,
+        lastVisitAt: visitsData.lastVisitAt
+      });
+    }
+
     res.json({
       success: true,
       message: 'بازیابی اطلاعات با موفقیت انجام شد',
@@ -1680,10 +1926,12 @@ app.post('/api/backup/restore', requireAdminAuth, (req, res) => {
       restoredGuestbookCount,
       totalRsvps: rsvpList.length,
       totalGuestbook: guestbookList.length,
+      totalVisits: visitsData.totalVisits,
       data: {
         settings: settingsData,
         rsvps: rsvpList,
-        guestbook: guestbookList
+        guestbook: guestbookList,
+        visits: visitsData
       }
     });
   } catch (error) {

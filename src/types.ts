@@ -300,3 +300,13 @@ export interface GuestbookEntry {
   esfand: number;
 }
 
+export interface VisitStats {
+  totalVisits: number;
+  uniqueVisitors: number;
+  todayVisits: number;
+  todayDate: string;
+  lastVisitAt: string;
+  history?: { date: string; count: number }[];
+  dailyHistory?: Record<string, number>;
+}
+

@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 import { 
-  X, Users, CheckCircle, XCircle, Search, Download, RefreshCw, MessageSquare, Phone, Trash2, Heart
+  X, Users, CheckCircle, XCircle, Search, Download, RefreshCw, MessageSquare, Phone, Trash2, Heart, Eye, Activity, Calendar, Clock, BarChart3, RotateCcw, ShieldCheck
 } from 'lucide-react';
-import { RSVPResponse, GuestbookEntry } from '../types';
+import { RSVPResponse, GuestbookEntry, VisitStats, WeddingCardData } from '../types';
 import { 
   toPersianDigits, 
   formatPersianDateTime, 
@@ -13,17 +13,26 @@ import {
   formatPersianRelativeTime 
 } from '../utils/dateUtils';
 import { getAdminAuthHeaders } from '../utils/security';
+import { subscribeToLiveEvents } from '../utils/sessionSync';
 import ConfirmModal from './ConfirmModal';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  weddingData?: WeddingCardData;
 }
 
-export default function RSVPManagerModal({ isOpen, onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<'rsvp' | 'guestbook'>('rsvp');
+export default function RSVPManagerModal({ isOpen, onClose, weddingData }: Props) {
+  const [activeTab, setActiveTab] = useState<'rsvp' | 'guestbook' | 'analytics'>('rsvp');
   const [rsvps, setRsvps] = useState<RSVPResponse[]>([]);
   const [guestbookEntries, setGuestbookEntries] = useState<GuestbookEntry[]>([]);
+  const [visitStats, setVisitStats] = useState<VisitStats>({
+    totalVisits: 0,
+    uniqueVisitors: 0,
+    todayVisits: 0,
+    todayDate: '',
+    lastVisitAt: ''
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'yes' | 'no'>('all');
   const [isLoading, setIsLoading] = useState(false);
@@ -74,9 +83,24 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
     }
   };
 
+  const fetchVisits = async () => {
+    try {
+      const res = await fetch('/api/visits/stats', {
+        headers: getAdminAuthHeaders()
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setVisitStats(data.data);
+      }
+    } catch {
+      // Fallback
+    }
+  };
+
   const loadAllData = () => {
     fetchRSVPs();
     fetchGuestbook();
+    fetchVisits();
   };
 
   useEffect(() => {
@@ -85,6 +109,19 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
     };
     window.addEventListener('wedding_data_reset', handleReset);
     return () => window.removeEventListener('wedding_data_reset', handleReset);
+  }, []);
+
+  // Listen to live visit updates via SSE
+  useEffect(() => {
+    const unsubscribe = subscribeToLiveEvents((event) => {
+      if (event.type === 'VISITS_UPDATED' && event.payload) {
+        setVisitStats((prev) => ({
+          ...prev,
+          ...(event.payload as Partial<VisitStats>)
+        }));
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -273,7 +310,7 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
         const res = await fetch('/api/backup/export', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({})
+          body: JSON.stringify({ formData: weddingData })
         });
         if (res.ok) {
           const data = await res.json();
@@ -286,21 +323,39 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
       }
 
       if (!backupPayload) {
+        let currentWeddingSettings = weddingData;
+        if (!currentWeddingSettings) {
+          try {
+            const raw = localStorage.getItem('wedding_card_data');
+            if (raw) currentWeddingSettings = JSON.parse(raw);
+          } catch {
+            // Ignore
+          }
+        }
+
         backupPayload = {
           version: '2.0',
           exportDate: new Date().toISOString(),
           appName: 'wedding-card-studio',
-          rsvps,
+          stats: {
+            totalRsvps: rsvps.length,
+            totalGuestbook: guestbookEntries.length,
+            totalVisits: visitStats.totalVisits || 0,
+            uniqueVisitors: visitStats.uniqueVisitors || 0
+          },
+          weddingData: currentWeddingSettings || {},
+          rsvps: rsvps,
           guestbook: guestbookEntries,
-          stats: { totalRsvps: rsvps.length, totalGuestbook: guestbookEntries.length }
+          visits: visitStats
         };
       }
 
       const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
+      const timeStamp = new Date().toISOString().slice(0, 10);
       link.href = url;
-      link.setAttribute('download', `wedding-full-backup-${Date.now()}.json`);
+      link.setAttribute('download', `wedding-full-backup-${timeStamp}.json`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -310,6 +365,35 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResetVisits = () => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'بازنشانی شمارنده بازدید',
+      message: 'آیا مایلید آمار و شمارنده بازدیدهای کارت دعوت را صفر (ریست) کنید؟',
+      onConfirm: async () => {
+        try {
+          setIsLoading(true);
+          const headers = getAdminAuthHeaders();
+          const res = await fetch('/api/visits/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...headers },
+            body: JSON.stringify({ count: 0 })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.data) {
+              setVisitStats(data.data);
+            }
+          }
+        } catch {
+          fetchVisits();
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    });
   };
 
   return typeof document !== 'undefined'
@@ -329,10 +413,10 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                 </div>
                 <div>
                   <h2 className="text-lg sm:text-xl font-bold font-amiri text-amber-950">
-                    مدیریت مهمانان، تایید حضورها و نظرات
+                    مدیریت مهمانان، تایید حضورها و آمار
                   </h2>
                   <p className="text-xs text-stone-600">
-                    مدیریت و حذف تاییده‌های RSVP و پیام‌های دفترچه یادبود
+                    مدیریت و حذف تاییده‌های RSVP، پیام‌های یادبود و آمار بازدید کارت
                   </p>
                 </div>
               </div>
@@ -346,10 +430,10 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-2 px-4 sm:px-6 pt-3 bg-[#FAF6ED] border-b border-amber-200">
+            <div className="flex items-center gap-2 px-4 sm:px-6 pt-3 bg-[#FAF6ED] border-b border-amber-200 overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setActiveTab('rsvp')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border-b-2 ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
                   activeTab === 'rsvp'
                     ? 'bg-white border-amber-600 text-amber-950 shadow-sm'
                     : 'border-transparent text-stone-600 hover:text-stone-900 hover:bg-amber-100/50'
@@ -364,7 +448,7 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
 
               <button
                 onClick={() => setActiveTab('guestbook')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border-b-2 ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
                   activeTab === 'guestbook'
                     ? 'bg-white border-amber-600 text-amber-950 shadow-sm'
                     : 'border-transparent text-stone-600 hover:text-stone-900 hover:bg-amber-100/50'
@@ -374,6 +458,21 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                 <span>دفترچه یادبود و نظرات</span>
                 <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
                   {toPersianDigits(guestbookEntries.length)}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs sm:text-sm font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+                  activeTab === 'analytics'
+                    ? 'bg-white border-amber-600 text-amber-950 shadow-sm'
+                    : 'border-transparent text-stone-600 hover:text-stone-900 hover:bg-amber-100/50'
+                }`}
+              >
+                <Eye className="w-4 h-4 text-blue-600" />
+                <span>آمار و تعداد بازدیدها</span>
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[10px] font-bold font-cinzel">
+                  {toPersianDigits(visitStats.totalVisits || 0)}
                 </span>
               </button>
             </div>
@@ -665,6 +764,148 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                   )}
                 </div>
               </>
+            )}
+
+            {/* TAB 3: SITE VISITOR ANALYTICS */}
+            {activeTab === 'analytics' && (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  {/* Total Visits Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-blue-50/90 to-indigo-50/40 border border-blue-200/90 shadow-sm relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-blue-900 font-bold">مجموع کل بازدیدها</span>
+                      <div className="p-2 rounded-xl bg-blue-100/80 text-blue-700">
+                        <Eye className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-bold font-cinzel text-blue-950 tracking-tight">
+                      {toPersianDigits(visitStats.totalVisits || 0)}
+                    </div>
+                    <p className="text-[11px] text-blue-800/80 mt-1.5 font-light">
+                      تعداد کل دفعات باز شدن کارت دعوت
+                    </p>
+                  </div>
+
+                  {/* Unique Visitors Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-50/90 to-teal-50/40 border border-emerald-200/90 shadow-sm relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-emerald-900 font-bold">بازدیدکنندگان یکتا</span>
+                      <div className="p-2 rounded-xl bg-emerald-100/80 text-emerald-700">
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-bold font-cinzel text-emerald-950 tracking-tight">
+                      {toPersianDigits(visitStats.uniqueVisitors || 0)}
+                    </div>
+                    <p className="text-[11px] text-emerald-800/80 mt-1.5 font-light">
+                      تعداد دستگاه‌ها و نشست‌های مجزا
+                    </p>
+                  </div>
+
+                  {/* Today's Visits Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50/90 to-orange-50/40 border border-amber-200/90 shadow-sm relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-amber-900 font-bold">بازدیدهای امروز</span>
+                      <div className="p-2 rounded-xl bg-amber-100/80 text-amber-700">
+                        <Calendar className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-3xl sm:text-4xl font-bold font-cinzel text-amber-950 tracking-tight">
+                      {toPersianDigits(visitStats.todayVisits || 0)}
+                    </div>
+                    <p className="text-[11px] text-amber-800/80 mt-1.5 font-light">
+                      تعداد بازدیدهای ثبت شده امروز
+                    </p>
+                  </div>
+
+                  {/* Last Visit Time Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-purple-50/90 to-violet-50/40 border border-purple-200/90 shadow-sm relative overflow-hidden">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-purple-900 font-bold">آخرین فعالیت</span>
+                      <div className="p-2 rounded-xl bg-purple-100/80 text-purple-700">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="text-sm sm:text-base font-bold text-purple-950 mt-1 truncate font-vazir">
+                      {visitStats.lastVisitAt ? formatPersianRelativeTime(visitStats.lastVisitAt) : 'هنوز ثبتی وجود ندارد'}
+                    </div>
+                    <p className="text-[11px] text-purple-800/80 mt-1.5 font-light truncate">
+                      {visitStats.lastVisitAt ? formatPersianDateTime(visitStats.lastVisitAt) : 'در انتظار اولین بازدید'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Privacy & Real-time Notice */}
+                <div className="p-4 rounded-2xl bg-white border border-amber-200 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0 mt-0.5">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-950">
+                        شمارنده هوشمند و محرمانه بازدیدها
+                      </h4>
+                      <p className="text-[11px] text-stone-600 leading-relaxed mt-0.5">
+                        این آمار صرفاً برای مدیریت کارت قابل مشاهده است و مهمانان عادی به آن دسترسی ندارند. با هر بار باز شدن کارت توسط مهمانان، شمارنده به طور خودکار افزایش می‌یابد.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                    <button
+                      onClick={handleResetVisits}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 text-xs font-bold transition-colors cursor-pointer"
+                      title="صفر کردن آمار و شمارنده بازدیدها"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                      <span>صفر کردن شمارنده</span>
+                    </button>
+
+                    <button
+                      onClick={fetchVisits}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-stone-600" />
+                      <span>بروزرسانی آمار</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Daily Breakdown (if available) */}
+                {visitStats.dailyHistory && Object.keys(visitStats.dailyHistory).length > 0 && (
+                  <div className="bg-white rounded-2xl border border-amber-200 p-4 sm:p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-xs font-bold text-amber-950 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-amber-700" />
+                        <span>تاریخچه بازدیدهای روزانه</span>
+                      </h4>
+                      <span className="text-[11px] text-stone-500">
+                        {toPersianDigits(Object.keys(visitStats.dailyHistory).length)} روز اخیر
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {Object.entries(visitStats.dailyHistory)
+                        .sort((a, b) => b[0].localeCompare(a[0]))
+                        .map(([dateKey, count]) => (
+                          <div
+                            key={dateKey}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/40 hover:bg-amber-50 border border-amber-100 text-xs text-stone-800 transition-colors"
+                          >
+                            <span className="font-mono text-stone-700">{dateKey}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold font-cinzel text-amber-900 text-sm">
+                                {toPersianDigits(Number(count) || 0)}
+                              </span>
+                              <span className="text-[10px] text-stone-500 font-light">بازدید</span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Footer */}

@@ -7,7 +7,9 @@ export type LiveEventType =
   | 'GUESTBOOK_REACTION_UPDATED'
   | 'GUESTBOOK_ENTRY_DELETED'
   | 'GUESTBOOK_RESET'
-  | 'SETTINGS_UPDATED';
+  | 'SETTINGS_UPDATED'
+  | 'RSVP_UPDATED'
+  | 'VISITS_UPDATED';
 
 export interface LiveEvent<T = any> {
   type: LiveEventType;
@@ -17,6 +19,7 @@ export interface LiveEvent<T = any> {
 const SESSION_KEY = 'wedding_visitor_session_id';
 const LIKED_PHOTOS_KEY = 'wedding_visitor_liked_photos';
 const GUESTBOOK_REACTIONS_KEY = 'wedding_visitor_gb_reactions';
+const VISIT_TRACKED_KEY = 'wedding_visit_tracked_ts';
 
 /**
  * Returns a persistent unique session ID for the current browser/device
@@ -31,6 +34,29 @@ export function getSessionId(): string {
     return sess;
   } catch {
     return `sess_fallback_${Date.now()}`;
+  }
+}
+
+/**
+ * Automatically records a visit to the website (with session debouncing)
+ */
+export function trackSiteVisit(): void {
+  try {
+    const sessionId = getSessionId();
+    const now = Date.now();
+    const lastTracked = sessionStorage.getItem(VISIT_TRACKED_KEY);
+    
+    // Track once per session/tab load (or every 10 minutes per tab)
+    if (!lastTracked || now - Number(lastTracked) > 10 * 60 * 1000) {
+      sessionStorage.setItem(VISIT_TRACKED_KEY, String(now));
+      fetch('/api/visits/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId })
+      }).catch(() => {});
+    }
+  } catch {
+    // Ignore
   }
 }
 
