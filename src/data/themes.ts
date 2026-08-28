@@ -212,16 +212,16 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
     envelopeLining: 'bg-gradient-to-br from-[#FEF3C7] to-[#F472B6]/40',
     sealDefaultColor: 'gold',
     previewColor: '#FACC15',
-    lightPrimaryBg: 'from-[#FFFDF5] via-[#FFFDF5] to-[#FEF3C7]',
-    lightCardBg: 'bg-[#FFFDF5]/95',
-    lightInnerBg: 'bg-[#FEF3C7]/40',
-    lightAccentGold: '#EAB308',
-    lightTextPrimary: 'text-[#4D7C0F]',
-    lightTextSecondary: 'text-[#4D7C0F]',
-    lightTextMuted: 'text-[#4D7C0F]/70',
-    lightBorderOrnament: 'border-[#FACC15]/80',
-    lightEnvelopeColor: 'bg-[#FFFDF5] border-[#FACC15]/80',
-    lightEnvelopeLining: 'bg-gradient-to-br from-[#FEF3C7] to-[#F472B6]/40',
+    lightPrimaryBg: 'from-[#FFFFFF] via-[#FFFDF9] to-[#F6F4EB]',
+    lightCardBg: 'bg-[#FFFFFF]/95',
+    lightInnerBg: 'bg-[#FEF9E7]/50',
+    lightAccentGold: '#D97706',
+    lightTextPrimary: 'text-[#1C1917]',
+    lightTextSecondary: 'text-[#44403C]',
+    lightTextMuted: 'text-[#78716C]',
+    lightBorderOrnament: 'border-amber-400/80',
+    lightEnvelopeColor: 'bg-[#FFFFFF] border-amber-400/80',
+    lightEnvelopeLining: 'bg-gradient-to-br from-[#FFFDF5] to-[#FEF3C7]/40',
     lightSealColor: 'gold'
   }
 };
@@ -232,16 +232,16 @@ export function getTheme(_themeId?: string, _mode?: 'dark' | 'light'): ThemeConf
   const base = THEMES.sunlight_blossom;
   return {
     ...base,
-    primaryBg: base.lightPrimaryBg || 'from-[#FFFDF5] via-[#FFFDF5] to-[#FEF3C7]',
-    cardBg: base.lightCardBg || 'bg-[#FFFDF5]/95',
-    innerBg: base.lightInnerBg || 'bg-[#FEF3C7]/40',
-    accentGold: base.lightAccentGold || '#EAB308',
-    textPrimary: base.lightTextPrimary || 'text-[#4D7C0F]',
-    textSecondary: base.lightTextSecondary || 'text-[#4D7C0F]',
-    textMuted: base.lightTextMuted || 'text-[#4D7C0F]/70',
-    borderOrnament: base.lightBorderOrnament || 'border-[#FACC15]/80',
-    envelopeColor: base.lightEnvelopeColor || 'bg-[#FFFDF5] border-[#FACC15]/80',
-    envelopeLining: base.lightEnvelopeLining || 'bg-gradient-to-br from-[#FEF3C7] to-[#F472B6]/40',
+    primaryBg: base.lightPrimaryBg || 'from-[#FFFFFF] via-[#FFFDF9] to-[#F6F4EB]',
+    cardBg: base.lightCardBg || 'bg-[#FFFFFF]/95',
+    innerBg: base.lightInnerBg || 'bg-[#FEF9E7]/50',
+    accentGold: base.lightAccentGold || '#D97706',
+    textPrimary: base.lightTextPrimary || 'text-[#1C1917]',
+    textSecondary: base.lightTextSecondary || 'text-[#44403C]',
+    textMuted: base.lightTextMuted || 'text-[#78716C]',
+    borderOrnament: base.lightBorderOrnament || 'border-amber-400/80',
+    envelopeColor: base.lightEnvelopeColor || 'bg-[#FFFFFF] border-amber-400/80',
+    envelopeLining: base.lightEnvelopeLining || 'bg-gradient-to-br from-[#FFFDF5] to-[#FEF3C7]/40',
     sealDefaultColor: base.lightSealColor || 'gold'
   };
 }

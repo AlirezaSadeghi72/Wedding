@@ -172,25 +172,25 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
         id="permanent-music-footer"
         className="fixed bottom-0 inset-x-0 z-40 w-full bg-[#FFFDF7]/95 text-stone-900 border-t border-amber-300 shadow-[0_-8px_30px_rgba(217,119,6,0.14)] backdrop-blur-xl transition-all duration-300 select-none pb-[env(safe-area-inset-bottom,0px)]"
       >
-        <div className="max-w-6xl mx-auto px-2.5 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-4">
+        <div className="max-w-6xl mx-auto px-2.5 sm:px-6 py-1.5 sm:py-2.5 landscape:py-1 flex items-center justify-between gap-1.5 sm:gap-4">
           
           {/* Section 1 (Right in RTL): Track Info & Spinning Vinyl Disc */}
           <div
             onClick={() => setIsOpenModal(true)}
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0 max-w-[40%] sm:max-w-[35%]"
+            className="flex items-center gap-1.5 sm:gap-3 cursor-pointer group min-w-0 max-w-[40%] sm:max-w-[35%]"
             title="کلیک کنید برای تنظیمات و انتخاب لیست موسیقی"
           >
             {/* Spinning Vinyl Disc */}
             <div className="relative flex items-center justify-center shrink-0">
               <div
-                className={`w-8 h-8 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border transition-transform ${
+                className={`w-7 h-7 sm:w-11 sm:h-11 landscape:w-6 landscape:h-6 rounded-full flex items-center justify-center border transition-transform ${
                   isPlaying
                     ? 'bg-gradient-to-tr from-amber-600 via-amber-400 to-amber-200 border-amber-400 shadow-md animate-spin'
                     : 'bg-amber-100 text-amber-900 border-amber-300'
                 }`}
                 style={{ animationDuration: '3.5s' }}
               >
-                <Disc className={`w-4 h-4 sm:w-6 sm:h-6 ${isPlaying ? 'text-stone-950' : 'text-amber-800'}`} />
+                <Disc className={`w-3.5 h-3.5 sm:w-6 sm:h-6 landscape:w-3.5 landscape:h-3.5 ${isPlaying ? 'text-stone-950' : 'text-amber-800'}`} />
               </div>
               {isPlaying && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 animate-ping ring-2 ring-emerald-400" />
@@ -200,12 +200,12 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
             {/* Track Title and Subtitle */}
             <div className="flex flex-col min-w-0 text-right">
               <div className="flex items-center gap-1">
-                <span className="text-[11px] sm:text-sm font-bold font-amiri text-emerald-950 truncate group-hover:text-amber-700 transition-colors">
+                <span className="text-[10px] sm:text-sm landscape:text-[10px] font-bold font-amiri text-emerald-950 truncate group-hover:text-amber-700 transition-colors">
                   {currentTrack ? currentTrack.title : 'موزیک جشن عروسی'}
                 </span>
                 <Sparkles className="w-3 h-3 text-amber-500 shrink-0 hidden sm:inline" />
               </div>
-              <span className="text-[9px] sm:text-[11px] text-stone-500 truncate font-light">
+              <span className="text-[8px] sm:text-[11px] landscape:hidden text-stone-500 truncate font-light">
                 {currentTrack?.artist || 'ملودی عاشقانه و دلنشین'}
               </span>
             </div>
@@ -217,10 +217,10 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
             <button
               type="button"
               onClick={handlePrev}
-              className="p-1.5 sm:p-2.5 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
+              className="p-1 sm:p-2.5 landscape:p-1 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
               title="قطعه قبلی"
             >
-              <SkipBack className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+              <SkipBack className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
             </button>
 
             {/* Play / Pause Main Button */}
@@ -228,13 +228,13 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
               type="button"
               id="permanent-footer-play-btn"
               onClick={togglePlay}
-              className="p-2 sm:p-3.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-stone-950 font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center ring-2 ring-amber-300/60"
+              className="p-1.5 sm:p-3.5 landscape:p-1.5 rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 text-stone-950 font-bold shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center ring-2 ring-amber-300/60"
               title={isPlaying ? 'توقف موسیقی' : 'پخش موسیقی'}
             >
               {isPlaying ? (
-                <Pause className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-stone-950 text-stone-950" />
+                <Pause className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5 fill-stone-950 text-stone-950" />
               ) : (
-                <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-stone-950 text-stone-950 ml-0.5" />
+                <Play className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5 fill-stone-950 text-stone-950 ml-0.5" />
               )}
             </button>
 
@@ -242,10 +242,10 @@ export default function AudioPlayerFloating({ data, onOpenStudio, isAdminAuthent
             <button
               type="button"
               onClick={handleNext}
-              className="p-1.5 sm:p-2.5 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
+              className="p-1 sm:p-2.5 landscape:p-1 rounded-full hover:bg-amber-100 text-stone-700 hover:text-amber-950 transition-colors cursor-pointer"
               title="قطعه بعدی"
             >
-              <SkipForward className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+              <SkipForward className="w-3.5 h-3.5 sm:w-5 sm:h-5 landscape:w-3.5 landscape:h-3.5" />
             </button>
           </div>
 
