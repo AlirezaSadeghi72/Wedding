@@ -1,10 +1,17 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Gift, Copy, Check, Sparkles, CreditCard, HeartHandshake, ShieldCheck } from 'lucide-react';
+import { Gift, Copy, Check, Sparkles, CreditCard, HeartHandshake } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GiftRegistryData } from '../types';
 import { toPersianDigits } from '../utils/dateUtils';
 import { copyToClipboard } from '../utils/clipboard';
+import { 
+  getCardChunks, 
+  sanitizeCardNumber, 
+  detectBankName, 
+  formatIbanDisplay, 
+  sanitizeIban 
+} from '../utils/cardUtils';
 
 interface Props {
   registry?: GiftRegistryData;
@@ -17,15 +24,20 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
 
   if (!registry || !registry.enabled) return null;
 
-  // Format card number cleanly into 4-digit groups (e.g. ۶۰۳۷  ۹۹۷۵  ۱۲۳۴  ۵۶۷۸)
-  const rawDigits = (registry.cardNumber || '').replace(/\D/g, '');
-  const formattedCardNumber = rawDigits
-    ? rawDigits.match(/.{1,4}/g)?.join('   ') || registry.cardNumber
-    : registry.cardNumber;
+  const cardChunks = getCardChunks(registry.cardNumber);
+  const cleanCardDigits = sanitizeCardNumber(registry.cardNumber);
+  const bankName = registry.bankName || detectBankName(registry.cardNumber) || 'بانک پاسارگاد';
+  const cardHolder = registry.cardHolder || registry.holderName || 'عروس و داماد';
+
+  const rawIban = registry.ibanNumber || registry.iban || '';
+  const formattedIban = formatIbanDisplay(rawIban);
+  const cleanIban = sanitizeIban(rawIban);
 
   const handleCopyCard = () => {
-    const cleanNum = registry.cardNumber.replace(/[^0-9]/g, '') || registry.cardNumber.replace(/-/g, '');
-    copyToClipboard(cleanNum).then((success) => {
+    const textToCopy = cleanCardDigits || (registry.cardNumber || '').trim();
+    if (!textToCopy) return;
+
+    copyToClipboard(textToCopy).then((success) => {
       if (success) {
         setCopiedCard(true);
         confetti({
@@ -40,21 +52,21 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
   };
 
   const handleCopyIban = () => {
-    if (registry.ibanNumber) {
-      const cleanIban = registry.ibanNumber.replace(/\s+/g, '');
-      copyToClipboard(cleanIban).then((success) => {
-        if (success) {
-          setCopiedIban(true);
-          confetti({
-            particleCount: 30,
-            spread: 50,
-            origin: { y: 0.8 },
-            colors: ['#D4AF37', '#FFD700', '#10B981']
-          });
-          setTimeout(() => setCopiedIban(false), 2500);
-        }
-      });
-    }
+    const textToCopy = cleanIban || rawIban.trim();
+    if (!textToCopy) return;
+
+    copyToClipboard(textToCopy).then((success) => {
+      if (success) {
+        setCopiedIban(true);
+        confetti({
+          particleCount: 30,
+          spread: 50,
+          origin: { y: 0.8 },
+          colors: ['#D4AF37', '#FFD700', '#10B981']
+        });
+        setTimeout(() => setCopiedIban(false), 2500);
+      }
+    });
   };
 
   return (
@@ -115,17 +127,32 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
 
             {/* Bank Name */}
             <span className="font-extrabold text-sm sm:text-base font-amiri text-amber-950 text-left">
-              {registry.bankName || 'بانک پاسارگاد'}
+              {bankName}
             </span>
           </div>
 
-          {/* Card Number - Ultra Sharp High-Contrast Gold & Dark Wood Display */}
+          {/* Card Number - Guaranteed Correct LTR 4-Block Display */}
           <div className="my-3 sm:my-5 text-center relative z-10">
-            <span className="text-[11px] sm:text-xs font-semibold text-stone-600 block mb-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-stone-600 block mb-1.5">
               شماره کارت بانکی:
             </span>
-            <div className="font-vazir text-base xs:text-lg sm:text-2xl font-black tracking-widest text-stone-900 drop-shadow-xs select-all dir-ltr py-2 px-2.5 rounded-xl bg-white/90 border border-amber-300 shadow-inner">
-              {toPersianDigits(formattedCardNumber)}
+            <div 
+              dir="ltr" 
+              style={{ direction: 'ltr' }}
+              className="flex items-center justify-center gap-1.5 sm:gap-2.5 py-2.5 px-3 rounded-xl bg-white/95 border border-amber-300 shadow-inner select-all"
+            >
+              {cardChunks.map((chunk, idx) => (
+                <div key={idx} className="flex items-center">
+                  <span className="font-vazir text-base xs:text-lg sm:text-2xl font-black text-stone-900 tracking-wider">
+                    {toPersianDigits(chunk)}
+                  </span>
+                  {idx < cardChunks.length - 1 && (
+                    <span className="mx-1 sm:mx-1.5 text-amber-400 font-bold text-xs sm:text-sm select-none">
+                      -
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -134,7 +161,7 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
             <div className="text-right">
               <span className="text-[11px] font-medium text-stone-500 block mb-0.5">به نام:</span>
               <span className="font-bold font-amiri text-stone-900 text-sm sm:text-base tracking-wide">
-                {registry.cardHolder}
+                {cardHolder}
               </span>
             </div>
 
@@ -145,12 +172,16 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
           </div>
 
           {/* IBAN Display Box (if available) */}
-          {registry.ibanNumber && (
+          {rawIban && (
             <div className="mt-3 pt-2.5 border-t border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-right relative z-10 bg-white/80 p-2.5 rounded-xl border border-amber-200 shadow-xs">
               <div>
                 <span className="text-[10px] text-stone-500 font-medium block">شماره شبا (IBAN):</span>
-                <span className="text-[11px] sm:text-xs font-mono font-bold text-stone-900 tracking-wider dir-ltr block select-all">
-                  {registry.ibanNumber}
+                <span 
+                  dir="ltr" 
+                  style={{ direction: 'ltr' }}
+                  className="text-[11px] sm:text-xs font-mono font-bold text-stone-900 tracking-wider block select-all text-left"
+                >
+                  {formattedIban}
                 </span>
               </div>
               <button

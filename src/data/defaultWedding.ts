@@ -228,7 +228,7 @@ export const DEFAULT_WEDDING_DATA: WeddingCardData = {
     description: 'حضور گرم شما گرانبهاترین هدیه برای ماست. چنانچه تمایل به اهدای شادباش نقدی دارید، می‌توانید از مشخصات زیر استفاده فرمایید:',
     bankName: 'بانک پاسارگاد',
     cardHolder: 'ناهید و علیرضا',
-    cardNumber: '۵۰۲۲-۲۹۱۰-۸۴۷۲-۶۳۱۹',
+    cardNumber: '5022-2910-8472-6319',
     ibanNumber: 'IR640570029180012345678001'
   },
   faqs: [

@@ -92,6 +92,7 @@ import {
 import { SAMPLE_POEMS, DEFAULT_WEDDING_DATA } from '../data/defaultWedding';
 import ConfirmModal from './ConfirmModal';
 import { getAdminAuthHeaders } from '../utils/security';
+import { sanitizeCardNumber, detectBankName, formatCardWithDashes, sanitizeIban } from '../utils/cardUtils';
 
 const toPersianDigits = (num: number | string): string => {
   const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -2899,19 +2900,33 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                 {formData.giftRegistry?.enabled && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
-                      <label className="block text-[11px] text-stone-700 font-medium mb-1">شماره کارت بانکی (۱۶ رقمی):</label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[11px] text-stone-700 font-medium">شماره کارت بانکی (۱۶ رقمی):</label>
+                        {formData.giftRegistry.cardNumber && (
+                          <span className="text-[10px] text-amber-700 font-bold">
+                            {detectBankName(formData.giftRegistry.cardNumber) || ''}
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="text"
                         dir="ltr"
                         data-no-farsi-digits="true"
                         value={formData.giftRegistry.cardNumber || ''}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const clean = sanitizeCardNumber(val);
+                          const detectedBank = clean.length >= 6 ? detectBankName(clean) : null;
                           setFormData({
                             ...formData,
-                            giftRegistry: { ...formData.giftRegistry, cardNumber: e.target.value }
-                          })
-                        }
-                        placeholder="6037-9975-..."
+                            giftRegistry: {
+                              ...formData.giftRegistry,
+                              cardNumber: val,
+                              bankName: detectedBank && !formData.giftRegistry?.bankName ? detectedBank : (formData.giftRegistry?.bankName || '')
+                            }
+                          });
+                        }}
+                        placeholder="6037-9975-1234-5678"
                         className="w-full px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs text-amber-950 font-mono text-center font-bold"
                       />
                     </div>
@@ -2964,6 +2979,7 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
                             giftRegistry: { ...formData.giftRegistry, bankName: e.target.value }
                           })
                         }
+                        placeholder="مثال: بانک پاسارگاد یا بانک ملی"
                         className="w-full px-3 py-2 rounded-xl bg-white border border-stone-300 text-xs text-stone-900"
                       />
                     </div>
