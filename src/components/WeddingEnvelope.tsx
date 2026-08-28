@@ -311,7 +311,7 @@ export default function WeddingEnvelope({
         {/* LUXURY WEDDING ENVELOPE BOX (CAPPED WIDTH: max-w-[430px]) */}
         {/* ========================================================================= */}
         <div
-          className="relative w-full max-w-[315px] xs:max-w-[345px] sm:max-w-[390px] md:max-w-[430px] h-[205px] xs:h-[220px] sm:h-[245px] md:h-[265px] mx-auto flex items-end justify-center cursor-pointer select-none"
+          className="relative w-full max-w-[315px] xs:max-w-[345px] sm:max-w-[390px] md:max-w-[430px] h-[215px] xs:h-[230px] sm:h-[255px] md:h-[275px] mx-auto flex items-end justify-center cursor-pointer select-none"
           onClick={handleOpenCard}
         >
           {/* ========================================================================= */}
@@ -377,7 +377,7 @@ export default function WeddingEnvelope({
           </motion.div>
 
           {/* ========================================================================= */}
-          {/* 3. INVITATION CARD (کارت دعوت واقعی که بیرون زده و نام‌ها کاملاً دیده می‌شوند) */}
+          {/* 3. INVITATION CARD (کارت دعوت واقعی که داخل پاکت قرار دارد) */}
           {/* ========================================================================= */}
           <motion.div
             animate={
@@ -407,8 +407,8 @@ export default function WeddingEnvelope({
                     zIndex: 40,
                   }
                 : {
-                    // Elevated peeking position so Bride & Groom names are 100% clearly visible
-                    y: isDesktop ? -110 : isTablet ? -100 : -80,
+                    // 10px more inside envelope in idle state
+                    y: isDesktop ? -100 : isTablet ? -90 : -70,
                     scale: 0.97,
                     opacity: 1,
                     bottom: '10px',
@@ -501,7 +501,7 @@ export default function WeddingEnvelope({
                 : { opacity: 1, y: 0 }
             }
             transition={{ duration: 0.45 }}
-            className="absolute inset-x-0 bottom-0 h-[56%] rounded-b-2xl sm:rounded-b-3xl bg-gradient-to-br from-white via-[#FCFBF8] to-[#F3F0E8] border-2 border-amber-300/90 shadow-[0_20px_45px_rgba(0,0,0,0.1)] overflow-visible z-[20]"
+            className="absolute inset-x-0 bottom-0 h-[calc(56%+10px)] rounded-b-2xl sm:rounded-b-3xl bg-gradient-to-br from-white via-[#FCFBF8] to-[#F3F0E8] border-2 border-amber-300/90 shadow-[0_20px_45px_rgba(0,0,0,0.1)] overflow-visible z-[20]"
             style={{ willChange: 'transform, opacity' }}
           >
             {/* Elegant pearl white watermark texture on pocket */}

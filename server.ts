@@ -1484,11 +1484,14 @@ app.post('/api/backup', requireAdminAuth, (req, res) => {
     const filePath = path.join(backupsDir, fileName);
 
     const backupContent = {
+      version: '2.0',
       backupDate: new Date().toISOString(),
       reason: reason || 'Admin Backup',
-      weddingData: formData || null,
+      weddingData: formData || settingsData || null,
       rsvps: rsvpList,
-      guestbook: guestbookList
+      guestbook: guestbookList,
+      photoLikes: photoLikesData,
+      ...(formData || settingsData || {})
     };
 
     fs.writeFileSync(filePath, JSON.stringify(backupContent, null, 2), 'utf-8');
@@ -1499,11 +1502,115 @@ app.post('/api/backup', requireAdminAuth, (req, res) => {
     res.json({
       success: true,
       message: 'نسخه پشتیبان با موفقیت در سرور ذخیره شد',
-      fileName
+      fileName,
+      totalRsvps: rsvpList.length,
+      totalGuestbook: guestbookList.length
     });
   } catch (error) {
     console.error('Error creating server backup:', error);
     res.status(500).json({ success: false, error: 'خطا در ذخیره نسخه پشتیبان در سرور' });
+  }
+});
+
+// Full unified export endpoint
+app.get('/api/backup/full-export', requireAdminAuth, (req, res) => {
+  try {
+    const fullBackup = {
+      version: '2.0',
+      exportDate: new Date().toISOString(),
+      app: 'wedding-invitation-card',
+      weddingData: settingsData,
+      rsvps: rsvpList,
+      guestbook: guestbookList,
+      photoLikes: photoLikesData,
+      ...settingsData
+    };
+    res.json({ success: true, data: fullBackup });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'خطا در دریافت پشتیبان کامل' });
+  }
+});
+
+// Full restore endpoint for settings, RSVPs, and guestbook comments/notes
+app.post('/api/backup/restore', requireAdminAuth, (req, res) => {
+  try {
+    const { weddingData, rsvps, guestbook, photoLikes, restoreOptions } = req.body;
+    let restoredSettings = false;
+    let restoredRsvpsCount = 0;
+    let restoredGuestbookCount = 0;
+
+    // 1. Restore Wedding Settings if provided
+    if (weddingData && typeof weddingData === 'object' && restoreOptions?.weddingSettings !== false) {
+      settingsData = { ...settingsData, ...weddingData };
+      saveSettings();
+      broadcastSSE('SETTINGS_UPDATED', settingsData);
+      restoredSettings = true;
+    }
+
+    // 2. Restore RSVPs if provided
+    if (Array.isArray(rsvps) && restoreOptions?.rsvps !== false) {
+      const sanitizedList = rsvps.map((r: any, idx: number) => ({
+        id: r.id ? sanitize(String(r.id), 80) : `rsvp-restored-${Date.now()}-${idx}`,
+        guestName: sanitize(String(r.guestName || 'مهمان گرامی'), 100),
+        phone: r.phone ? sanitize(String(r.phone), 30) : '',
+        attending: r.attending === 'no' ? 'no' : 'yes',
+        guestCount: Math.min(Math.max(Number(r.guestCount) || 1, 1), 50),
+        dietaryNotes: r.dietaryNotes ? sanitize(String(r.dietaryNotes), 200) : '',
+        message: r.message ? sanitize(String(r.message), 500) : '',
+        songRequest: r.songRequest ? sanitize(String(r.songRequest), 200) : '',
+        submittedAt: r.submittedAt || new Date().toISOString()
+      }));
+      rsvpList = sanitizedList;
+      saveRSVPs();
+      restoredRsvpsCount = rsvpList.length;
+    }
+
+    // 3. Restore Guestbook comments & notes if provided
+    if (Array.isArray(guestbook) && restoreOptions?.guestbook !== false) {
+      const sanitizedList = guestbook.map((g: any, idx: number) => ({
+        id: g.id ? sanitize(String(g.id), 80) : `gb-restored-${Date.now()}-${idx}`,
+        author: sanitize(String(g.author || 'مهمان گرامی'), 80),
+        message: sanitize(String(g.message || ''), 600),
+        date: g.date ? sanitize(String(g.date), 50) : 'لحظاتی پیش',
+        createdAt: g.createdAt || new Date().toISOString(),
+        likes: Number(g.likes) || 0,
+        flowers: Number(g.flowers) || 0,
+        esfand: Number(g.esfand) || 0
+      })).filter((g) => g.message && g.author);
+
+      guestbookList = sanitizedList;
+      saveGuestbook();
+      broadcastSSE('GUESTBOOK_RESET', guestbookList);
+      restoredGuestbookCount = guestbookList.length;
+    }
+
+    // 4. Optionally restore photo likes if present
+    if (photoLikes && typeof photoLikes === 'object' && photoLikes.counts) {
+      photoLikesData = {
+        counts: photoLikes.counts || {},
+        likedBy: photoLikes.likedBy || {}
+      };
+      savePhotoLikes();
+      broadcastSSE('PHOTO_LIKES_UPDATED', { counts: photoLikesData.counts });
+    }
+
+    res.json({
+      success: true,
+      message: 'بازیابی اطلاعات با موفقیت انجام شد',
+      restoredSettings,
+      restoredRsvpsCount,
+      restoredGuestbookCount,
+      totalRsvps: rsvpList.length,
+      totalGuestbook: guestbookList.length,
+      data: {
+        settings: settingsData,
+        rsvps: rsvpList,
+        guestbook: guestbookList
+      }
+    });
+  } catch (error) {
+    console.error('Error during backup restore:', error);
+    res.status(500).json({ success: false, error: 'خطا در بازیابی نسخه پشتیبان روی سرور' });
   }
 });
 

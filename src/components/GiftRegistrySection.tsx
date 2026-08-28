@@ -79,7 +79,7 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
         </p>
       </div>
 
-      {/* Luxury Bank Card Container with 100% High Contrast & Mobile-First Fit */}
+      {/* Luxury Bank Card Container with High-Contrast Light Royal Gold Palette */}
       <motion.div
         initial={{ opacity: 0, y: 18 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -87,85 +87,85 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
         transition={{ duration: 0.5 }}
         className="max-w-md mx-auto px-1.5 sm:px-0"
       >
-        <div className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0A0F1D] border-2 border-amber-400/80 shadow-[0_15px_40px_rgba(0,0,0,0.25)] overflow-hidden group">
+        <div className="relative rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-7 bg-gradient-to-br from-[#FFFDF8] via-[#FAF6ED] to-[#F3ECE0] border-2 border-amber-300 shadow-[0_15px_40px_rgba(217,119,6,0.12)] overflow-hidden group">
           {/* Holographic gold foil watermark grid */}
-          <div className="absolute inset-0 opacity-12 bg-[radial-gradient(#ffd700_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#d97706_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
           
-          {/* Ambient luminous jewel lights */}
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-amber-500/25 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+          {/* Ambient luminous soft gold & emerald glow */}
+          <div className="absolute -top-12 -right-12 w-36 h-36 bg-amber-400/15 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-emerald-400/15 rounded-full blur-2xl pointer-events-none" />
 
           {/* Card Top: Smart Chip, Badge & Bank Name */}
           <div className="flex items-center justify-between mb-4 sm:mb-6 relative z-10">
             {/* Gold Chip Graphic */}
             <div className="flex items-center gap-2">
-              <div className="w-9 h-6 sm:w-11 sm:h-8 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 border border-amber-200 shadow-sm flex items-center justify-center p-0.5 shrink-0">
-                <div className="w-full h-full border border-amber-950/40 rounded-xs grid grid-cols-2 gap-0.5 opacity-70">
-                  <div className="border-r border-b border-amber-950/50" />
-                  <div className="border-b border-amber-950/50" />
-                  <div className="border-r border-amber-950/50" />
+              <div className="w-9 h-6 sm:w-11 sm:h-8 rounded-md bg-gradient-to-br from-amber-200 via-amber-400 to-amber-500 border border-amber-300 shadow-sm flex items-center justify-center p-0.5 shrink-0">
+                <div className="w-full h-full border border-amber-900/30 rounded-xs grid grid-cols-2 gap-0.5 opacity-80">
+                  <div className="border-r border-b border-amber-900/40" />
+                  <div className="border-b border-amber-900/40" />
+                  <div className="border-r border-amber-900/40" />
                   <div />
                 </div>
               </div>
-              <div className="flex items-center gap-1 bg-amber-500/20 border border-amber-400/40 px-2 py-0.5 rounded-full">
-                <Sparkles className="w-2.5 h-2.5 text-amber-300 shrink-0" />
-                <span className="text-[10px] sm:text-xs font-bold text-amber-200 whitespace-nowrap">کارت شادباش</span>
+              <div className="flex items-center gap-1 bg-amber-100/90 border border-amber-300 px-2.5 py-0.5 rounded-full shadow-xs">
+                <Sparkles className="w-2.5 h-2.5 text-amber-700 shrink-0" />
+                <span className="text-[10px] sm:text-xs font-bold text-amber-950 whitespace-nowrap">کارت شادباش</span>
               </div>
             </div>
 
             {/* Bank Name */}
-            <span className="font-extrabold text-sm sm:text-base font-amiri text-amber-300 drop-shadow-sm text-left">
+            <span className="font-extrabold text-sm sm:text-base font-amiri text-amber-950 text-left">
               {registry.bankName || 'بانک پاسارگاد'}
             </span>
           </div>
 
-          {/* Card Number - Ultra Sharp High-Contrast Gold Display */}
+          {/* Card Number - Ultra Sharp High-Contrast Gold & Dark Wood Display */}
           <div className="my-3 sm:my-5 text-center relative z-10">
-            <span className="text-[11px] sm:text-xs font-medium text-amber-200/90 block mb-1">
+            <span className="text-[11px] sm:text-xs font-semibold text-stone-600 block mb-1">
               شماره کارت بانکی:
             </span>
-            <div className="font-vazir text-base xs:text-lg sm:text-2xl font-black tracking-widest text-amber-200 drop-shadow-[0_2px_8px_rgba(245,158,11,0.5)] select-all dir-ltr py-1 px-2 rounded-lg bg-black/30 border border-amber-400/30">
+            <div className="font-vazir text-base xs:text-lg sm:text-2xl font-black tracking-widest text-stone-900 drop-shadow-xs select-all dir-ltr py-2 px-2.5 rounded-xl bg-white/90 border border-amber-300 shadow-inner">
               {toPersianDigits(formattedCardNumber)}
             </div>
           </div>
 
           {/* Cardholder Name & Heart Handshake */}
-          <div className="flex items-center justify-between pt-2.5 sm:pt-3.5 border-t border-amber-400/30 text-xs relative z-10">
+          <div className="flex items-center justify-between pt-2.5 sm:pt-3.5 border-t border-amber-200 text-xs relative z-10">
             <div className="text-right">
-              <span className="text-[11px] font-medium text-amber-200/80 block mb-0.5">به نام:</span>
-              <span className="font-bold font-amiri text-white text-sm sm:text-base tracking-wide">
+              <span className="text-[11px] font-medium text-stone-500 block mb-0.5">به نام:</span>
+              <span className="font-bold font-amiri text-stone-900 text-sm sm:text-base tracking-wide">
                 {registry.cardHolder}
               </span>
             </div>
 
-            <div className="flex items-center gap-1 text-amber-400/90 bg-amber-400/10 px-2.5 py-1 rounded-xl border border-amber-400/20">
-              <HeartHandshake className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-[10px] sm:text-xs font-medium text-amber-300">مهرتان ماندگار</span>
+            <div className="flex items-center gap-1 text-amber-900 bg-amber-100/80 px-2.5 py-1 rounded-xl border border-amber-300/80">
+              <HeartHandshake className="w-4 h-4 text-amber-700 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold text-amber-950">مهرتان ماندگار</span>
             </div>
           </div>
 
           {/* IBAN Display Box (if available) */}
           {registry.ibanNumber && (
-            <div className="mt-3 pt-2.5 border-t border-amber-400/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-right relative z-10 bg-black/25 p-2 rounded-xl border border-amber-400/15">
+            <div className="mt-3 pt-2.5 border-t border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-right relative z-10 bg-white/80 p-2.5 rounded-xl border border-amber-200 shadow-xs">
               <div>
-                <span className="text-[10px] text-amber-200/80 block">شماره شبا (IBAN):</span>
-                <span className="text-[11px] sm:text-xs font-mono font-bold text-white tracking-wider dir-ltr block select-all">
+                <span className="text-[10px] text-stone-500 font-medium block">شماره شبا (IBAN):</span>
+                <span className="text-[11px] sm:text-xs font-mono font-bold text-stone-900 tracking-wider dir-ltr block select-all">
                   {registry.ibanNumber}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleCopyIban}
-                className="self-end sm:self-center px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 hover:text-amber-200 border border-amber-400/40 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="self-end sm:self-center px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-950 border border-amber-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 {copiedIban ? (
                   <>
-                    <Check className="w-3 h-3 text-emerald-400" />
-                    <span>شبا کپی شد</span>
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    <span className="text-emerald-700">شبا کپی شد</span>
                   </>
                 ) : (
                   <>
-                    <CreditCard className="w-3 h-3 text-amber-400" />
+                    <CreditCard className="w-3 h-3 text-amber-700" />
                     <span>کپی شماره شبا</span>
                   </>
                 )}
@@ -178,7 +178,7 @@ export default function GiftRegistrySection({ registry, isLight = true }: Props)
             <button
               type="button"
               onClick={handleCopyCard}
-              className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-300 hover:to-amber-400 text-stone-950 font-black text-xs sm:text-sm shadow-[0_4px_15px_rgba(245,158,11,0.4)] hover:shadow-[0_6px_20px_rgba(245,158,11,0.6)] flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95 cursor-pointer ring-2 ring-amber-300"
+              className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-400 hover:from-amber-300 hover:to-amber-400 text-stone-950 font-black text-xs sm:text-sm shadow-[0_4px_15px_rgba(245,158,11,0.25)] hover:shadow-[0_6px_20px_rgba(245,158,11,0.4)] flex items-center justify-center gap-2 transition-all transform hover:scale-[1.01] active:scale-95 cursor-pointer ring-2 ring-amber-300"
             >
               {copiedCard ? (
                 <>

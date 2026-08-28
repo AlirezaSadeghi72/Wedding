@@ -402,11 +402,11 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
             style={{ animationDuration: '4s' }}
           />
 
-          {/* EQUALIZER SHAPES (Positioned above footer music player) */}
+          {/* EQUALIZER SHAPES (Positioned exactly 2px above footer music player) */}
 
           {/* 1. CLASSIC BARS */}
           {style === 'bars' && (
-            <div className="w-full flex justify-center pb-[58px] sm:pb-[66px] md:pb-[68px] px-2.5 sm:px-6 relative">
+            <div className="w-full flex flex-col items-center justify-end pb-[calc(49px+env(safe-area-inset-bottom,0px))] sm:pb-[calc(65px+env(safe-area-inset-bottom,0px))] md:pb-[calc(65px+env(safe-area-inset-bottom,0px))] landscape:pb-[calc(43px+env(safe-area-inset-bottom,0px))] px-2.5 sm:px-6 relative">
               <div className="w-full max-w-5xl flex items-end justify-center gap-1 sm:gap-1.5 md:gap-2.5 h-10 sm:h-14 md:h-16 px-1">
                 {barHeights.map((height, index) => {
                   const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
@@ -422,12 +422,14 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
                   );
                 })}
               </div>
+              {/* Subtle connecting hairline glowing 2px above the music footer */}
+              <div className={`w-full max-w-5xl h-[1.5px] bg-gradient-to-r from-transparent ${colorClasses.lineGlow} to-transparent rounded-full shadow-[0_0_6px_rgba(245,158,11,0.4)] opacity-75 mt-0.5`} />
             </div>
           )}
 
           {/* 2. MIRROR SPECTRUM */}
           {style === 'mirror_spectrum' && (
-            <div className="w-full flex justify-center pb-[54px] sm:pb-[62px] md:pb-[64px] px-2.5 sm:px-6 relative">
+            <div className="w-full flex flex-col items-center justify-end pb-[calc(49px+env(safe-area-inset-bottom,0px))] sm:pb-[calc(65px+env(safe-area-inset-bottom,0px))] md:pb-[calc(65px+env(safe-area-inset-bottom,0px))] landscape:pb-[calc(43px+env(safe-area-inset-bottom,0px))] px-2.5 sm:px-6 relative">
               <div className="w-full max-w-5xl flex items-center justify-center gap-1 sm:gap-1.5 md:gap-2 h-16 sm:h-20 md:h-24 px-1">
                 {barHeights.map((height, index) => {
                   const distanceFromCenter = Math.abs(index - barCount / 2) / (barCount / 2);
@@ -448,6 +450,8 @@ export default function BackgroundEqualizer({ data, isLight = true }: Props) {
                   );
                 })}
               </div>
+              {/* Subtle connecting hairline glowing 2px above the music footer */}
+              <div className={`w-full max-w-5xl h-[1.5px] bg-gradient-to-r from-transparent ${colorClasses.lineGlow} to-transparent rounded-full shadow-[0_0_6px_rgba(245,158,11,0.4)] opacity-75 mt-0.5`} />
             </div>
           )}
 

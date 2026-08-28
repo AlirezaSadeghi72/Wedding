@@ -55,7 +55,11 @@ import {
   ArrowDown,
   GripVertical,
   Waves,
-  Activity
+  Activity,
+  Database,
+  MessageSquare,
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { weddingAudio } from '../utils/audioSynth';
 import { normalizeDigits, verifyPasswordSecurely, saveAdminSession } from '../utils/security';
@@ -153,6 +157,47 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
   // Live audio player state inside settings modal
   const [isPlayingInSettings, setIsPlayingInSettings] = useState(false);
   const [activeTrackIdInSettings, setActiveTrackIdInSettings] = useState<string | null>(null);
+
+  // Backup & Restore comprehensive state
+  const [dbStats, setDbStats] = useState<{ rsvpsCount: number; guestbookCount: number } | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupNotice, setBackupNotice] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+
+  const fetchDbStats = async () => {
+    try {
+      const headers = getAdminAuthHeaders();
+      const [rsvpRes, gbRes] = await Promise.allSettled([
+        fetch('/api/rsvp', { headers }),
+        fetch('/api/guestbook')
+      ]);
+
+      let rCount = 0;
+      let gCount = 0;
+
+      if (rsvpRes.status === 'fulfilled' && rsvpRes.value.ok) {
+        const rData = await rsvpRes.value.json();
+        if (rData.success && Array.isArray(rData.data)) {
+          rCount = rData.data.length;
+        }
+      }
+      if (gbRes.status === 'fulfilled' && gbRes.value.ok) {
+        const gData = await gbRes.value.json();
+        if (gData.success && Array.isArray(gData.data)) {
+          gCount = gData.data.length;
+        }
+      }
+      setDbStats({ rsvpsCount: rCount, guestbookCount: gCount });
+    } catch {
+      // Ignore
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === 'backup') {
+      fetchDbStats();
+    }
+  }, [isOpen, activeTab]);
 
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
@@ -646,34 +691,208 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
     }));
   };
 
-  const handleExportJson = () => {
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(formData, null, 2)
-    )}`;
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', jsonString);
-    downloadAnchor.setAttribute('download', `wedding-config-${Date.now()}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  const handleExportJson = async () => {
+    setIsExporting(true);
+    setBackupNotice(null);
+    try {
+      // 1. Fetch latest RSVPs and Guestbook entries directly from database
+      const headers = getAdminAuthHeaders();
+      const [rsvpRes, gbRes] = await Promise.allSettled([
+        fetch('/api/rsvp', { headers }),
+        fetch('/api/guestbook')
+      ]);
+
+      let rsvpsList: any[] = [];
+      let guestbookList: any[] = [];
+
+      if (rsvpRes.status === 'fulfilled' && rsvpRes.value.ok) {
+        const rData = await rsvpRes.value.json();
+        if (rData.success && Array.isArray(rData.data)) {
+          rsvpsList = rData.data;
+        }
+      }
+      if (gbRes.status === 'fulfilled' && gbRes.value.ok) {
+        const gData = await gbRes.value.json();
+        if (gData.success && Array.isArray(gData.data)) {
+          guestbookList = gData.data;
+        }
+      }
+
+      // 2. Snapshot to server backup directory
+      try {
+        await fetch('/api/backup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...headers
+          },
+          body: JSON.stringify({
+            formData,
+            reason: 'User Downloaded Full Backup'
+          })
+        });
+      } catch (err) {
+        console.warn('Server backup error during export:', err);
+      }
+
+      // 3. Build unified JSON payload
+      const fullBackup = {
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        appName: 'wedding-card-studio',
+        weddingData: formData,
+        rsvps: rsvpsList,
+        guestbook: guestbookList,
+        // Spread formData at root for backwards-compatibility with old format
+        ...formData
+      };
+
+      const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(fullBackup, null, 2)
+      )}`;
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', jsonString);
+      const timeStamp = new Date().toISOString().slice(0, 10);
+      downloadAnchor.setAttribute('download', `wedding-full-backup-${timeStamp}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      setBackupNotice({
+        type: 'success',
+        message: `فایل پشتیبان کامل با موفقیت آماده و دانلود شد (شامل مشخصات کارت، ${toPersianDigits(rsvpsList.length)} تاییدیه حضور و ${toPersianDigits(guestbookList.length)} یادداشت و نظر دفترچه یادبود).`
+      });
+      fetchDbStats();
+    } catch (error) {
+      console.error('Error during JSON export:', error);
+      setBackupNotice({
+        type: 'error',
+        message: 'خطا در خروجی گرفتن از فایل پشتیبان. لطفاً مجدداً تلاش فرمایید.'
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleImportJson = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setBackupNotice(null);
+
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const parsed = JSON.parse(event.target?.result as string);
-        if (parsed && parsed.brideName) {
-          setFormData(parsed);
-          alert('تنظیمات با موفقیت بازیابی شد.');
+        if (!parsed || typeof parsed !== 'object') {
+          alert('فایل JSON معتبر نیست.');
+          return;
         }
-      } catch {
-        alert('فایل JSON معتبر نیست.');
+
+        // Detect extracted components
+        let extractedWedding: WeddingCardData | null = null;
+        if (parsed.weddingData && typeof parsed.weddingData === 'object' && parsed.weddingData.brideName) {
+          extractedWedding = parsed.weddingData;
+        } else if (parsed.brideName) {
+          // Legacy format or root-spread format
+          const { rsvps: _r, guestbook: _g, photoLikes: _pl, ...cleanWedding } = parsed;
+          extractedWedding = cleanWedding as WeddingCardData;
+        }
+
+        const extractedRsvps = Array.isArray(parsed.rsvps)
+          ? parsed.rsvps
+          : Array.isArray(parsed.rsvpList)
+          ? parsed.rsvpList
+          : [];
+
+        const extractedGuestbook = Array.isArray(parsed.guestbook)
+          ? parsed.guestbook
+          : Array.isArray(parsed.guestbookList)
+          ? parsed.guestbookList
+          : Array.isArray(parsed.comments)
+          ? parsed.comments
+          : Array.isArray(parsed.notes)
+          ? parsed.notes
+          : [];
+
+        if (!extractedWedding && extractedRsvps.length === 0 && extractedGuestbook.length === 0) {
+          alert('ساختار فایل پشتیبان شناسایی نشد یا فایل فاقد اطلاعات معتبر کارت دعوت است.');
+          return;
+        }
+
+        const brideName = extractedWedding?.brideName || formData.brideName || 'عروس';
+        const groomName = extractedWedding?.groomName || formData.groomName || 'داماد';
+
+        // Prompt confirmation dialog with full summary
+        setConfirmConfig({
+          isOpen: true,
+          title: 'بازگردانی و اعمال فایل پشتیبان',
+          message: `اطلاعات زیر در فایل پشتیبان شناسایی شد:\n` +
+            `• تنظیمات و تم کارت دعوت (${brideName} و ${groomName})\n` +
+            `• تاییده‌های حضور مهمانان (RSVP): ${toPersianDigits(extractedRsvps.length)} مورد\n` +
+            `• نظرات و یادداشت‌های دفترچه یادبود: ${toPersianDigits(extractedGuestbook.length)} مورد\n\n` +
+            `آیا از بازگردانی و جایگزینی این اطلاعات اطمینان دارید؟`,
+          onConfirm: async () => {
+            setIsRestoring(true);
+            try {
+              // 1. Update Wedding Settings in state & local storage
+              if (extractedWedding) {
+                setFormData(extractedWedding);
+                onSave(extractedWedding);
+                try {
+                  localStorage.setItem('wedding_card_data', JSON.stringify(extractedWedding));
+                } catch {
+                  // Ignore
+                }
+              }
+
+              // 2. Call server restore API to restore settings, RSVPs, and Guestbook notes
+              const headers = getAdminAuthHeaders();
+              const restorePayload = {
+                weddingData: extractedWedding || formData,
+                rsvps: extractedRsvps,
+                guestbook: extractedGuestbook
+              };
+
+              const res = await fetch('/api/backup/restore', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...headers
+                },
+                body: JSON.stringify(restorePayload)
+              });
+
+              const resData = await res.json();
+              if (!res.ok || !resData.success) {
+                throw new Error(resData?.error || 'خطا در بازیابی سرور');
+              }
+
+              // 3. Dispatch global reset event so all active components (RSVP Manager, Guestbook, etc.) refresh
+              window.dispatchEvent(new CustomEvent('wedding_data_reset'));
+              fetchDbStats();
+
+              setBackupNotice({
+                type: 'success',
+                message: `فایل پشتیبان با موفقیت بازگردانی شد: تنظیمات کارت، ${toPersianDigits(extractedRsvps.length)} تاییدیه حضور و ${toPersianDigits(extractedGuestbook.length)} یادداشت دفترچه یادبود اعمال گردیدند.`
+              });
+            } catch (err: any) {
+              console.error('Error during restore:', err);
+              setBackupNotice({
+                type: 'error',
+                message: `خطا در فرآیند بازیابی: ${err?.message || 'مشکلی رخ داده است'}`
+              });
+            } finally {
+              setIsRestoring(false);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('JSON parse error on import:', err);
+        alert('فایل بارگذاری شده یک فایل JSON معتبر نیست.');
       }
     };
     reader.readAsText(file);
+    e.target.value = '';
   };
 
   const handleResetToDefault = () => {
@@ -3612,31 +3831,128 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
           {/* TAB 11: BACKUP, RESTORE & FACTORY RESET */}
           {activeTab === 'backup' && (
             <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-amber-950 font-amiri flex items-center gap-2">
-                    <Download className="w-4 h-4 text-amber-600" />
-                    خروجی گرفتن و پشتیبان‌گیری از تنظیمات (JSON Export)
-                  </h3>
-                  <p className="text-xs text-stone-600 mt-1">
-                    شما می‌توانید تمام اطلاعات کارت، اشعار، تم، تصاویر و تنظیمات را به عنوان یک فایل پشتیبان دریافت نمایید.
-                  </p>
+              {/* Status Notice if any */}
+              {backupNotice && (
+                <div
+                  className={`p-4 rounded-2xl text-xs flex items-start gap-3 border transition-all ${
+                    backupNotice.type === 'success'
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                      : backupNotice.type === 'error'
+                      ? 'bg-rose-50 border-rose-300 text-rose-900'
+                      : 'bg-amber-50 border-amber-300 text-amber-900'
+                  }`}
+                >
+                  {backupNotice.type === 'success' ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : backupNotice.type === 'error' ? (
+                    <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <HelpCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 leading-relaxed font-semibold">
+                    {backupNotice.message}
+                  </div>
+                </div>
+              )}
+
+              {/* Data Overview Cards */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/60 border border-amber-300 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-amber-950 font-amiri flex items-center gap-2">
+                      <Database className="w-4 h-4 text-amber-600" />
+                      پشتیبان‌گیری جامع و بازیابی کامل اطلاعات (Full Backup & Restore)
+                    </h3>
+                    <p className="text-xs text-stone-600 mt-1 leading-relaxed">
+                      نسخه پشتیبان شامل تمام بخش‌های سامانه است: تنظیمات کارت دعوت، تاییده‌های حضور مهمانان (RSVP) و پیام‌ها و یادداشت‌های دفترچه یادبود.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchDbStats}
+                    title="به‌روزرسانی آمار اطلاعات"
+                    className="p-2 rounded-xl bg-white hover:bg-amber-100 border border-amber-200 text-stone-700 hover:text-stone-950 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-4 h-4 text-amber-700" />
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
+                {/* 3 Overview Stat Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-sm space-y-1">
+                    <div className="flex items-center justify-between text-stone-500 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-bold text-stone-700">
+                        <FileText className="w-3.5 h-3.5 text-amber-600" />
+                        تنظیمات و تم
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">فعال</span>
+                    </div>
+                    <p className="text-[11px] text-stone-600 truncate">
+                      عروس: {formData.brideName || 'ثبت نشده'} • داماد: {formData.groomName || 'ثبت نشده'}
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-sm space-y-1">
+                    <div className="flex items-center justify-between text-stone-500 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-bold text-stone-700">
+                        <Users className="w-3.5 h-3.5 text-emerald-600" />
+                        تاییده‌های حضور (RSVP)
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        {toPersianDigits(dbStats?.rsvpsCount ?? '...')} مورد
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600">
+                      ثبت شده در دیتابیس سامانه
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-amber-200 shadow-sm space-y-1">
+                    <div className="flex items-center justify-between text-stone-500 text-[11px]">
+                      <span className="flex items-center gap-1.5 font-bold text-stone-700">
+                        <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
+                        نظرات و پیام‌های یادبود
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 text-[10px] font-bold">
+                        {toPersianDigits(dbStats?.guestbookCount ?? '...')} یادداشت
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-600">
+                      ثبت شده در دفترچه یادبود
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions: Download & Import */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
                   <button
                     type="button"
                     onClick={handleExportJson}
-                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs cursor-pointer transition-colors shadow-sm"
+                    disabled={isExporting}
+                    className="flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-stone-950 font-bold text-xs cursor-pointer transition-all shadow-md active:scale-95"
                   >
-                    <Download className="w-4 h-4" />
-                    <span>دانلود فایل پشتیبان (JSON)</span>
+                    {isExporting ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-stone-950" />
+                    ) : (
+                      <Download className="w-4 h-4 text-stone-950" />
+                    )}
+                    <span>{isExporting ? 'در حال آماده‌سازی فایل...' : 'دانلود فایل پشتیبان کامل (JSON)'}</span>
                   </button>
 
-                  <label className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white hover:bg-stone-50 text-stone-800 text-xs cursor-pointer transition-colors border border-stone-300 font-semibold shadow-sm">
-                    <Upload className="w-4 h-4 text-amber-600" />
-                    <span>بارگذاری و بازیابی فایل تنظیمات</span>
-                    <input type="file" accept=".json" onChange={handleImportJson} className="hidden" />
+                  <label className="flex items-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-stone-50 text-stone-800 text-xs cursor-pointer transition-all border border-amber-300 font-bold shadow-sm active:scale-95">
+                    {isRestoring ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-amber-600" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-amber-600" />
+                    )}
+                    <span>{isRestoring ? 'در حال بازگردانی اطلاعات...' : 'بارگذاری و بازگردانی فایل پشتیبان'}</span>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImportJson}
+                      disabled={isRestoring}
+                      className="hidden"
+                    />
                   </label>
                 </div>
               </div>
@@ -3645,18 +3961,18 @@ export default function StudioEditorModal({ isOpen, onClose, data, onSave }: Pro
               <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-3">
                 <div className="flex items-center gap-2 text-rose-800 font-bold text-xs uppercase">
                   <RotateCcw className="w-4 h-4 text-rose-600" />
-                  <span>بازنشانی به تنظیمات پیش‌فرض کارخانه</span>
+                  <span>بازنشانی به تنظیمات پیش‌فرض کارخانه (Factory Reset)</span>
                 </div>
                 <p className="text-xs text-stone-600 leading-relaxed">
-                  با فشردن این دکمه، ابتدا یک فایل پشتیبان کامل (JSON) شامل تمامی تنظیمات، تاییده‌های حضور و پیام‌ها در پوشه بکاپ سرور (`/backups`) ذخیره و نسخه فایل آن روی مرورگر شما دانلود می‌گردد. سپس تمامی تاییده‌ها و پیام‌ها پاکسازی شده و کارت دعوت به حالت اولیه بازمی‌گردد.
+                  با فشردن این دکمه، ابتدا یک نسخه پشتیبان جامع (شامل تمامی تنظیمات، تاییده‌های حضور مهمانان و نظرات دفترچه یادبود) به صورت خودکار دانلود شده و یک کپی در سرور ذخیره می‌گردد؛ سپس تمامی فرم‌ها، پیام‌ها و تنظیمات به حالت اولیه کارخانه بازنشانی خواهند شد.
                 </p>
                 <button
                   type="button"
                   onClick={handleResetToDefault}
-                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs cursor-pointer transition-colors font-bold"
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm text-xs cursor-pointer transition-colors font-bold active:scale-95"
                 >
                   <RotateCcw className="w-3.5 h-3.5 text-white" />
-                  <span>پشتیبان‌گیری و بازنشانی کامل به تنظیمات اولیه</span>
+                  <span>پشتیبان‌گیری خودکار و بازنشانی کامل سامانه</span>
                 </button>
               </div>
             </div>
