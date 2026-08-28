@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Send, MessageCircleHeart, Trash2 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GuestbookEntry } from '../types';
-import { toPersianDigits } from '../utils/dateUtils';
+import { toPersianDigits, formatPersianRelativeTime, formatPersianFullDateTime } from '../utils/dateUtils';
 import { getIsAdminSessionValid, sanitizeString, getAdminAuthHeaders } from '../utils/security';
 import {
   getSessionId,
@@ -38,6 +38,15 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
     message: '',
     onConfirm: () => {}
   });
+
+  // Periodically refresh relative time labels (e.g. "لحظاتی پیش" -> "۱ دقیقه پیش")
+  const [, setTimeTicker] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeTicker((t) => t + 1);
+    }, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   const loadGuestbook = () => {
     fetch('/api/guestbook')
@@ -151,11 +160,13 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
       }
     } catch {
       // Local fallback
+      const nowIso = new Date().toISOString();
       const localEntry: GuestbookEntry = {
         id: `gb-local-${Date.now()}`,
         author: cleanAuthor,
         message: cleanMessage,
         date: 'لحظاتی پیش',
+        createdAt: nowIso,
         likes: 1,
         flowers: 1,
         esfand: 1
@@ -372,7 +383,12 @@ export default function GuestbookSection({ cardId, isLight }: Props) {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] ${isLight ? 'text-stone-500' : 'text-stone-500'}`}>{entry.date}</span>
+                      <span 
+                        className={`text-[10px] sm:text-xs font-vazir ${isLight ? 'text-stone-500 font-medium' : 'text-stone-400'}`}
+                        title={formatPersianFullDateTime(entry.createdAt || entry.date)}
+                      >
+                        {formatPersianRelativeTime(entry.createdAt, entry.date)}
+                      </span>
                       {isAdmin && (
                         <button
                           onClick={() => handleDeleteEntry(entry.id, entry.author)}

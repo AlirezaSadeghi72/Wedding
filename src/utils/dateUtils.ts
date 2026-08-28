@@ -8,6 +8,144 @@ export function toPersianDigits(num: number | string | undefined | null): string
     .replace(/[٠-٩]/g, (w) => persianDigits[arabicDigits.indexOf(w)]);
 }
 
+/**
+ * Format timestamp into comprehensive Persian Date & Time
+ * e.g. "۶ شهریور ۱۴۰۵ ساعت ۰۷:۱۳"
+ */
+export function formatPersianDateTime(dateInput: string | Date | number | undefined | null): string {
+  if (!dateInput) return '';
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return String(dateInput);
+    return new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(date);
+  } catch {
+    return String(dateInput);
+  }
+}
+
+/**
+ * Format timestamp into full Persian Date & Time with weekday
+ * e.g. "جمعه، ۶ شهریور ۱۴۰۵ - ساعت ۰۷:۱۳"
+ */
+export function formatPersianFullDateTime(dateInput: string | Date | number | undefined | null): string {
+  if (!dateInput) return '';
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return String(dateInput);
+    const datePart = new Intl.DateTimeFormat('fa-IR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+    const timePart = new Intl.DateTimeFormat('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(date);
+    return `${datePart} - ساعت ${timePart}`;
+  } catch {
+    return String(dateInput);
+  }
+}
+
+/**
+ * Short numerical Persian date & time (for tables & CSV exports)
+ * e.g. "۱۴۰۵/۰۶/۰۶ - ۰۷:۱۳"
+ */
+export function formatPersianShortDateTime(dateInput: string | Date | number | undefined | null): string {
+  if (!dateInput) return '';
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return String(dateInput);
+    const datePart = new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date);
+    const timePart = new Intl.DateTimeFormat('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(date);
+    return `${datePart} - ${timePart}`;
+  } catch {
+    return String(dateInput);
+  }
+}
+
+/**
+ * Dynamic Persian relative time calculator
+ * e.g. "لحظاتی پیش", "۲ دقیقه پیش", "۳ ساعت پیش", "دیروز، ساعت ۱۸:۳۰", "۳ روز پیش", "۶ شهریور ۱۴۰۵"
+ */
+export function formatPersianRelativeTime(
+  dateInput: string | Date | number | undefined | null,
+  fallbackText?: string
+): string {
+  if (!dateInput) return fallbackText || 'لحظاتی پیش';
+
+  // If it's not a standard ISO date and already a Persian string like "دیروز" or "۲ روز پیش"
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) {
+    return fallbackText || String(dateInput);
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+
+  // If time is slightly in the future (client/server skew) or < 45 seconds ago
+  if (diffMs < 45000) {
+    return 'لحظاتی پیش';
+  }
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMin < 60) {
+    return `${toPersianDigits(diffMin)} دقیقه پیش`;
+  }
+
+  if (diffHours < 24) {
+    return `${toPersianDigits(diffHours)} ساعت پیش`;
+  }
+
+  if (diffDays === 1) {
+    try {
+      const timeStr = new Intl.DateTimeFormat('fa-IR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }).format(date);
+      return `دیروز، ساعت ${timeStr}`;
+    } catch {
+      return 'دیروز';
+    }
+  }
+
+  if (diffDays < 7) {
+    return `${toPersianDigits(diffDays)} روز پیش`;
+  }
+
+  try {
+    return new Intl.DateTimeFormat('fa-IR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  } catch {
+    return fallbackText || String(dateInput);
+  }
+}
+
 export function formatGregorianToPersian(dateStr: string): string {
   if (!dateStr) return '';
   try {

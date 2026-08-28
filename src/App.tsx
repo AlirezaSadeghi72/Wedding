@@ -201,7 +201,7 @@ export default function App() {
   const showEnvelope = !isOpened && weddingData.sectionVisibility?.envelope !== false;
 
   return (
-    <div className={`relative min-h-screen bg-[#FFFDF7] text-stone-900 font-vazir selection:bg-amber-400 selection:text-stone-950 overflow-x-hidden w-full transition-colors duration-500 ${isAdminAuthenticated ? 'pt-12 sm:pt-14' : ''}`}>
+    <div className={`relative ${showEnvelope ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen'} bg-[#FFFDF7] text-stone-900 font-vazir selection:bg-amber-400 selection:text-stone-950 overflow-x-hidden w-full transition-colors duration-500 ${isAdminAuthenticated ? 'pt-12 sm:pt-14' : ''}`}>
       {/* Top Fixed Sticky Control Header ONLY for Authenticated Admin */}
       {isAdminAuthenticated && (
         <header className="fixed top-0 inset-x-0 z-50 w-full h-12 sm:h-14 bg-[#FFFDF7]/95 border-b border-amber-300/80 shadow-md backdrop-blur-xl px-2 sm:px-6 flex items-center justify-between text-xs text-stone-900 overflow-x-auto no-scrollbar gap-1.5 sm:gap-2">

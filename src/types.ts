@@ -294,6 +294,7 @@ export interface GuestbookEntry {
   author: string;
   message: string;
   date: string;
+  createdAt?: string;
   likes: number;
   flowers: number;
   esfand: number;

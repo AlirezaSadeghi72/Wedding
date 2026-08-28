@@ -25,15 +25,22 @@ export default function WeddingEnvelope({
 }: Props) {
   const [phase, setPhase] = useState<AnimationPhase>('idle_open');
   const [isOpening, setIsOpening] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 400
+  );
   const [isLandscape, setIsLandscape] = useState(() =>
     typeof window !== 'undefined'
       ? window.innerWidth > window.innerHeight && window.innerHeight < 650
       : false
   );
 
+  const isDesktop = windowWidth >= 1024;
+  const isTablet = windowWidth >= 640 && windowWidth < 1024;
+
   // Monitor orientation & window dimensions for perfect scaling across rotate & resize
   useEffect(() => {
     const handleResize = () => {
+      setWindowWidth(window.innerWidth);
       setIsLandscape(
         window.innerWidth > window.innerHeight && window.innerHeight < 650
       );
@@ -48,16 +55,20 @@ export default function WeddingEnvelope({
     };
   }, []);
 
-  // Lock body scroll on envelope screen for optimal touch feel
+  // Prevent scrollbar and scrolling in envelope view mode
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    const originalOverscroll = document.body.style.overscrollBehavior;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalBodyOverscroll = document.body.style.overscrollBehavior;
+
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overscrollBehavior = 'none';
 
     return () => {
-      document.body.style.overflow = originalOverflow;
-      document.body.style.overscrollBehavior = originalOverscroll;
+      document.body.style.overflow = originalBodyOverflow;
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.body.style.overscrollBehavior = originalBodyOverscroll;
     };
   }, []);
 
@@ -129,7 +140,7 @@ export default function WeddingEnvelope({
     const isFirstTimeOpenThisSession = !weddingAudio.getHasOpenedEnvelope();
     weddingAudio.markEnvelopeOpened();
 
-    // 1. Start ambient wedding soundtrack smoothly
+    // Start ambient wedding soundtrack smoothly
     if (data.music?.enabled) {
       if (isFirstTimeOpenThisSession) {
         weddingAudio.setUserMuted(false);
@@ -161,12 +172,12 @@ export default function WeddingEnvelope({
     triggerCelebration();
     setPhase('card_sliding_out');
 
-    // Step 2: Card expands to hero full screen while envelope gracefully fades away (750ms)
+    // Step 2: Card expands to hero full view while envelope gracefully fades away
     setTimeout(() => {
       setPhase('card_expanding');
     }, 750);
 
-    // Step 3: Complete transition to interactive wedding card (1350ms)
+    // Step 3: Complete transition to interactive wedding card
     setTimeout(() => {
       setPhase('completed');
       onOpen();
@@ -184,27 +195,27 @@ export default function WeddingEnvelope({
     switch (iconType) {
       case 'monogram':
         return (
-          <span className="font-cinzel text-[9px] xs:text-[10px] sm:text-xs font-bold tracking-wider text-current drop-shadow-sm leading-none select-none text-center">
+          <span className="font-cinzel text-[10px] sm:text-xs md:text-sm font-bold tracking-wider text-current drop-shadow-sm leading-none select-none text-center">
             {monogram}
           </span>
         );
       case 'heart':
-        return <Heart className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 fill-current text-current drop-shadow-sm" />;
+        return <Heart className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 fill-current text-current drop-shadow-sm" />;
       case 'crown':
-        return <Crown className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 fill-current text-current drop-shadow-sm" />;
+        return <Crown className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 fill-current text-current drop-shadow-sm" />;
       case 'floral':
-        return <Flower2 className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 text-current drop-shadow-sm stroke-[2]" />;
+        return <Flower2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-current drop-shadow-sm stroke-[2]" />;
       case 'bird':
-        return <Bird className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-5 sm:h-5 text-current drop-shadow-sm stroke-[2]" />;
+        return <Bird className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-current drop-shadow-sm stroke-[2]" />;
       case 'rings':
       default:
         return (
-          <div className="flex items-center -space-x-1.5 my-auto drop-shadow-sm">
-            <div className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 rounded-full border-[1.8px] border-current relative flex items-center justify-center shrink-0">
-              <div className="absolute -top-0.5 w-1 h-1 rounded-full bg-white shadow-xs ring-1 ring-amber-300" />
+          <div className="flex items-center -space-x-1.5 sm:-space-x-2 my-auto drop-shadow-sm">
+            <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-[2px] border-current relative flex items-center justify-center shrink-0">
+              <div className="absolute -top-0.5 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-white shadow-xs ring-1 ring-amber-300" />
             </div>
-            <div className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 rounded-full border-[1.8px] border-current relative flex items-center justify-center shrink-0">
-              <div className="absolute -top-0.5 w-1 h-1 rounded-full bg-white shadow-xs ring-1 ring-amber-300" />
+            <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 rounded-full border-[2px] border-current relative flex items-center justify-center shrink-0">
+              <div className="absolute -top-0.5 w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-white shadow-xs ring-1 ring-amber-300" />
             </div>
           </div>
         );
@@ -216,40 +227,43 @@ export default function WeddingEnvelope({
   return (
     <div
       id="envelope-container"
-      className={`fixed inset-0 w-full h-[100dvh] overflow-y-auto overflow-x-hidden select-none flex flex-col justify-between items-center px-2 sm:px-6 overscroll-none touch-pan-y bg-gradient-to-b from-[#FFFFFF] via-[#FAF9F5] to-[#F5F3EB] z-30 transition-all duration-300 ${
-        isAdminAuthenticated ? 'pt-13 sm:pt-16' : 'pt-1 sm:pt-2.5 landscape:pt-0.5'
-      } ${hasMusicFooter ? 'pb-14 sm:pb-20 landscape:pb-12' : 'pb-1 sm:pb-3 landscape:pb-1'}`}
-      style={{ willChange: 'transform, opacity' }}
+      className={`fixed inset-x-0 overflow-hidden select-none flex flex-col justify-between items-center px-3 sm:px-6 md:px-8 py-2 sm:py-3 bg-gradient-to-b from-[#FFFFFF] via-[#FAF9F5] to-[#F5F3EB] z-30 transition-all duration-300 ${
+        isAdminAuthenticated ? 'top-12 sm:top-14' : 'top-0'
+      } ${hasMusicFooter ? 'bottom-[54px] sm:bottom-[68px]' : 'bottom-0'}`}
     >
       {/* Ambient luxury pearl lighting & subtle golden aura */}
-      <div className="absolute inset-0 pointer-events-none opacity-50 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-100/40 via-white/60 to-transparent" />
+      <div className="absolute inset-0 pointer-events-none opacity-60 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-100/40 via-white/70 to-transparent" />
 
-      {/* Top Header Badge & Families Title */}
+      {/* ========================================================================= */}
+      {/* TOP HEADER: BADGE & FAMILY GREETING (COMPACT & BALANCED) */}
+      {/* ========================================================================= */}
       <motion.div
         animate={{
           opacity: isCardExpanded ? 0 : 1,
-          y: isCardExpanded ? -35 : 0,
+          y: isCardExpanded ? -30 : 0,
         }}
         transition={{ duration: 0.35 }}
-        className="w-full max-w-lg flex flex-col items-center justify-center text-center z-30 shrink-0 pt-0.5 px-2"
+        className="w-full max-w-md flex flex-col items-center justify-center text-center z-30 shrink-0 px-2 mb-1 sm:mb-2"
       >
-        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] sm:text-xs landscape:text-[9px] shadow-xs backdrop-blur-md border bg-white/95 border-amber-300 text-amber-950 mb-0.5">
-          <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600 animate-pulse shrink-0" />
-          <span className="font-bold font-vazir">کارت دعوت رسمی مراسم عروسی</span>
+        <div className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold shadow-xs backdrop-blur-md border bg-white/95 border-amber-300 text-amber-950 mb-1">
+          <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 animate-pulse shrink-0" />
+          <span className="font-vazir">کارت دعوت رسمی مراسم عروسی</span>
         </div>
 
         {/* Families greeting */}
-        <p className="text-[10px] sm:text-xs landscape:text-[10px] font-semibold text-stone-700 font-amiri leading-tight">
+        <p className="text-xs sm:text-sm font-semibold text-stone-700 font-amiri leading-normal">
           خانواده‌های محترم {data.brideFamily} و {data.groomFamily}
         </p>
-        <h1 className="text-xs xs:text-sm sm:text-lg md:text-xl landscape:text-xs font-black font-amiri tracking-wide text-stone-900 mt-0.5 leading-tight">
+        <h1 className="text-sm xs:text-base sm:text-lg md:text-xl font-black font-amiri tracking-wide text-stone-900 mt-0.5 leading-tight">
           جشن پیوند خجسته {data.brideName} و {data.groomName}
         </h1>
       </motion.div>
 
-      {/* Interactive 3D Stage Container with White Luxury Wedding Envelope */}
-      <div className="flex-1 w-full max-w-xl z-20 flex flex-col items-center justify-center shrink-0 min-h-0 py-0.5 sm:py-2 landscape:py-0">
-        {/* Floating Animated Call to Action Banner above the envelope (Portrait Only) */}
+      {/* ========================================================================= */}
+      {/* MAIN ENVELOPE 3D STAGE CONTAINER (CAPPED AT TABLET WIDTH MAX) */}
+      {/* ========================================================================= */}
+      <div className="w-full max-w-md flex-1 min-h-0 z-20 flex flex-col items-center justify-center my-auto py-1 sm:py-2">
+        {/* Floating Call to Action Badge above envelope */}
         <AnimatePresence>
           {phase === 'idle_open' && data.envelopeOpenBtnTop !== false && !isLandscape && (
             <motion.button
@@ -267,11 +281,11 @@ export default function WeddingEnvelope({
                 opacity: { duration: 0.2 },
               }}
               onClick={handleOpenCard}
-              className="z-30 mb-1 xs:mb-1.5 sm:mb-2.5 px-3 xs:px-4 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-white via-amber-50 to-white text-stone-900 font-bold text-[10px] xs:text-[11px] sm:text-xs shadow-[0_4px_15px_rgba(217,119,6,0.2)] border border-amber-300 flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105 active:scale-95"
+              className="z-30 mb-2 sm:mb-2.5 px-3.5 sm:px-5 py-1 sm:py-1.5 rounded-full bg-gradient-to-r from-white via-amber-50 to-white text-stone-900 font-bold text-[11px] sm:text-xs shadow-[0_4px_15px_rgba(217,119,6,0.18)] border border-amber-300 flex items-center gap-1.5 cursor-pointer transition-transform hover:scale-105 active:scale-95"
             >
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-600"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-600"></span>
               </span>
               <span className="font-vazir font-extrabold tracking-wide text-amber-950">
                 برای مشاهده و بیرون کشیدن کارت لمس کنید
@@ -294,14 +308,14 @@ export default function WeddingEnvelope({
         </AnimatePresence>
 
         {/* ========================================================================= */}
-        {/* LUXURY PURE WHITE WEDDING ENVELOPE (پاکت فوق‌العاده شکیل، سفید مرواریدی، طلاکوب) */}
+        {/* LUXURY WEDDING ENVELOPE BOX (CAPPED WIDTH: max-w-[430px]) */}
         {/* ========================================================================= */}
         <div
-          className="relative w-full max-w-[280px] xs:max-w-[325px] sm:max-w-[420px] md:max-w-[460px] landscape:max-w-[270px] landscape:sm:max-w-[330px] h-[190px] xs:h-[215px] sm:h-[275px] md:h-[305px] landscape:h-[135px] landscape:sm:h-[155px] mx-auto flex items-end justify-center cursor-pointer select-none"
+          className="relative w-full max-w-[315px] xs:max-w-[345px] sm:max-w-[390px] md:max-w-[430px] h-[205px] xs:h-[220px] sm:h-[245px] md:h-[265px] mx-auto flex items-end justify-center cursor-pointer select-none"
           onClick={handleOpenCard}
         >
           {/* ========================================================================= */}
-          {/* 1. OPEN TRIANGULAR TOP FLAP - PURE WHITE (درب باز بالایی پاکت به رنگ سفید با آستر طلایی) */}
+          {/* 1. OPEN TRIANGULAR TOP FLAP (درب باز شده مثلثی پاکت سفید با آستر طلایی) */}
           {/* ========================================================================= */}
           <motion.div
             animate={
@@ -312,7 +326,7 @@ export default function WeddingEnvelope({
                 : { opacity: 1, y: 0 }
             }
             transition={{ duration: 0.4 }}
-            className="absolute -top-10 xs:-top-12 sm:-top-18 landscape:-top-7 landscape:sm:-top-9 inset-x-0 h-20 xs:h-24 sm:h-34 landscape:h-14 landscape:sm:h-18 z-[5] pointer-events-none"
+            className="absolute -top-[36%] sm:-top-[38%] md:-top-[40%] inset-x-0 h-[64%] sm:h-[68%] md:h-[70%] z-[5] pointer-events-none"
           >
             {/* Triangular Flap Shape pointing UP */}
             <div
@@ -322,13 +336,13 @@ export default function WeddingEnvelope({
               }}
             >
               {/* Luxury interior damask lining on the flap */}
-              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#d4af37_1.2px,transparent_1.2px)] [background-size:10px_10px]" />
+              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#d4af37_1.2px,transparent_1.2px)] [background-size:12px_12px]" />
 
               {/* Gold foil border rim on the triangle */}
               <div
                 className="absolute inset-0 border-t-2 border-amber-300 pointer-events-none"
                 style={{
-                  clipPath: 'polygon(50% 6%, 4% 100%, 96% 100%)',
+                  clipPath: 'polygon(50% 5%, 3% 100%, 97% 100%)',
                 }}
               />
 
@@ -336,17 +350,17 @@ export default function WeddingEnvelope({
               <div
                 className="absolute inset-0 border-t border-amber-400/50 pointer-events-none"
                 style={{
-                  clipPath: 'polygon(50% 16%, 12% 100%, 88% 100%)',
+                  clipPath: 'polygon(50% 14%, 10% 100%, 90% 100%)',
                 }}
               />
 
               {/* Subtle top apex pearlescent glow */}
-              <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full bg-white blur-[2px]" />
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white blur-[3px]" />
             </div>
           </motion.div>
 
           {/* ========================================================================= */}
-          {/* 2. ENVELOPE BACK PANEL - PURE PEARL WHITE (دیواره پشتی پاکت سفید) */}
+          {/* 2. ENVELOPE BACK PANEL (دیواره پشتی پاکت سفید) */}
           {/* ========================================================================= */}
           <motion.div
             animate={
@@ -357,53 +371,50 @@ export default function WeddingEnvelope({
                 : { opacity: 1, y: 0 }
             }
             transition={{ duration: 0.45 }}
-            className="absolute inset-0 rounded-2xl sm:rounded-3xl landscape:rounded-xl bg-gradient-to-b from-white via-[#FAF8F5] to-[#EFECE5] border-2 border-amber-300/80 shadow-[0_15px_40px_rgba(0,0,0,0.08)] z-[6]"
+            className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white via-[#FAF8F5] to-[#EFECE5] border-2 border-amber-300/80 shadow-[0_20px_50px_rgba(0,0,0,0.08)] z-[6]"
           >
-            {/* Interior back lining texture */}
-            <div className="absolute inset-0 rounded-2xl sm:rounded-3xl opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:10px_10px]" />
+            <div className="absolute inset-0 rounded-2xl sm:rounded-3xl opacity-15 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:12px_12px]" />
           </motion.div>
 
           {/* ========================================================================= */}
-          {/* 3. INVITATION CARD (کارت دعوت واقعی که داخل پاکت قرار دارد و بالای آن بیرون آمده) */}
+          {/* 3. INVITATION CARD (کارت دعوت واقعی که بیرون زده و نام‌ها کاملاً دیده می‌شوند) */}
           {/* ========================================================================= */}
           <motion.div
             animate={
               phase === 'card_expanding' || phase === 'completed'
                 ? {
-                    y: isLandscape ? -5 : -15,
+                    y: -15,
                     scale: 1.02,
                     opacity: 1,
                     bottom: '8px',
-                    width: '100%',
-                    maxWidth: '640px',
+                    width: '98%',
                     height: 'auto',
-                    minHeight: isLandscape ? '240px' : '380px',
+                    minHeight: '380px',
                     boxShadow:
                       '0 25px 70px -10px rgba(217, 119, 6, 0.4), 0 0 40px rgba(250, 204, 21, 0.3)',
                     zIndex: 50,
                   }
                 : phase === 'card_sliding_out'
                 ? {
-                    y: isLandscape ? -85 : -145,
+                    y: isDesktop ? -190 : isTablet ? -170 : -135,
                     scale: 1.0,
                     opacity: 1,
-                    bottom: '15px',
-                    width: '92%',
-                    maxWidth: '400px',
+                    bottom: '14px',
+                    width: '94%',
                     height: '92%',
                     boxShadow:
-                      '0 15px 35px -8px rgba(217, 119, 6, 0.28), 0 0 25px rgba(250, 204, 21, 0.2)',
+                      '0 20px 45px -8px rgba(217, 119, 6, 0.3), 0 0 30px rgba(250, 204, 21, 0.25)',
                     zIndex: 40,
                   }
                 : {
-                    y: isLandscape ? -36 : -68, // Card peeking out proportionally
-                    scale: 0.96,
+                    // Elevated peeking position so Bride & Groom names are 100% clearly visible
+                    y: isDesktop ? -110 : isTablet ? -100 : -80,
+                    scale: 0.97,
                     opacity: 1,
-                    bottom: '12px',
-                    width: '90%',
-                    maxWidth: '390px',
+                    bottom: '10px',
+                    width: '94%',
                     height: '92%',
-                    boxShadow: '0 8px 25px -4px rgba(0, 0, 0, 0.12), 0 0 15px rgba(245, 158, 11, 0.15)',
+                    boxShadow: '0 10px 30px -4px rgba(0, 0, 0, 0.12), 0 0 20px rgba(245, 158, 11, 0.15)',
                     zIndex: 10,
                   }
             }
@@ -411,36 +422,36 @@ export default function WeddingEnvelope({
               duration: phase === 'card_expanding' ? 0.55 : phase === 'card_sliding_out' ? 0.6 : 0.4,
               ease: [0.22, 1, 0.36, 1],
             }}
-            className="absolute left-1/2 -translate-x-1/2 rounded-2xl sm:rounded-3xl landscape:rounded-xl bg-gradient-to-b from-[#FFFFFF] via-[#FFFDF9] to-[#FAF8F2] border-2 border-amber-400/90 p-2.5 xs:p-3 sm:p-5 landscape:p-2 flex flex-col justify-between items-center text-center select-none overflow-hidden group hover:border-amber-400"
+            className="absolute left-1/2 -translate-x-1/2 rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#FFFFFF] via-[#FFFDF9] to-[#FAF8F2] border-2 border-amber-400/90 p-2.5 sm:p-4 flex flex-col justify-between items-center text-center select-none overflow-hidden group hover:border-amber-400"
             style={{ willChange: 'transform, opacity' }}
           >
             {/* Card Filigree Corners & Inner Golden Frames */}
             <div className="absolute inset-1 sm:inset-2 border border-amber-300/60 rounded-xl sm:rounded-2xl pointer-events-none" />
-            <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 border-t-2 border-r-2 border-amber-500 rounded-tr-xs" />
-            <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 border-t-2 border-l-2 border-amber-500 rounded-tl-xs" />
-            <div className="absolute bottom-1.5 right-1.5 sm:bottom-2.5 sm:right-2.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 border-b-2 border-r-2 border-amber-500 rounded-br-xs" />
-            <div className="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 border-b-2 border-l-2 border-amber-500 rounded-bl-xs" />
+            <div className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-2.5 h-2.5 sm:w-4 sm:h-4 border-t-2 border-r-2 border-amber-500 rounded-tr-xs" />
+            <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 w-2.5 h-2.5 sm:w-4 sm:h-4 border-t-2 border-l-2 border-amber-500 rounded-tl-xs" />
+            <div className="absolute bottom-1.5 right-1.5 sm:bottom-2.5 sm:right-2.5 w-2.5 h-2.5 sm:w-4 sm:h-4 border-b-2 border-r-2 border-amber-500 rounded-br-xs" />
+            <div className="absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5 w-2.5 h-2.5 sm:w-4 sm:h-4 border-b-2 border-l-2 border-amber-500 rounded-bl-xs" />
 
             {/* Bismillah Header */}
-            <div className="w-full flex items-center justify-center gap-1 sm:gap-2 pt-0.5 shrink-0">
+            <div className="w-full flex items-center justify-center gap-1.5 sm:gap-2 pt-0.5 shrink-0">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent" />
-              <span className="font-scheherazade text-[11px] xs:text-xs sm:text-base landscape:text-[10px] font-bold text-amber-900 px-1.5 sm:px-3 leading-none">
+              <span className="font-scheherazade text-[11px] sm:text-sm md:text-base font-bold text-amber-900 px-1.5 sm:px-3 leading-none">
                 بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
               </span>
               <div className="h-px flex-1 bg-gradient-to-l from-transparent via-amber-400 to-transparent" />
             </div>
 
-            {/* Couple Calligraphy Centerpiece & Title */}
-            <div className="my-auto py-0.5 sm:py-1.5 flex flex-col items-center justify-center w-full">
-              <span className="font-scheherazade text-xl xs:text-2xl sm:text-4xl md:text-5xl landscape:text-lg sm:landscape:text-2xl font-black text-stone-900 block leading-tight tracking-wide drop-shadow-sm my-0.5">
+            {/* Couple Calligraphy Centerpiece & Title (Prominently displayed above pocket) */}
+            <div className="my-auto py-0.5 sm:py-1 flex flex-col items-center justify-center w-full">
+              <span className="font-scheherazade text-xl xs:text-2xl sm:text-3xl md:text-4xl font-black text-stone-900 block leading-tight tracking-wide drop-shadow-sm my-0.5 sm:my-1">
                 {data.brideName} & {data.groomName}
               </span>
-              <p className="text-[10px] xs:text-[11px] sm:text-xs landscape:text-[9px] text-amber-900 font-bold font-amiri leading-tight mt-0.5">
+              <p className="text-[10px] sm:text-xs text-amber-900 font-bold font-amiri leading-tight mt-0.5">
                 {data.invitationTitle || 'به نام پیوند دهنده جان‌ها و دل‌ها'}
               </p>
               {data.poem?.verse1 && isCardExpanded && (
-                <div className="mt-1 sm:mt-1.5 px-1">
-                  <p className="text-[10px] sm:text-xs text-stone-600 font-amiri italic max-w-[320px] sm:max-w-[380px] mx-auto leading-relaxed">
+                <div className="mt-1.5 sm:mt-2 px-1">
+                  <p className="text-[11px] sm:text-xs text-stone-600 font-amiri italic max-w-xs mx-auto leading-relaxed">
                     «{data.poem.verse1}
                     <br />
                     {data.poem.verse2}»
@@ -449,16 +460,16 @@ export default function WeddingEnvelope({
               )}
             </div>
 
-            {/* Date, Time & Venue Details Banner */}
-            <div className="w-full pt-1 sm:pt-2 landscape:pt-0.5 border-t border-amber-200/80 flex items-center justify-between gap-1.5 sm:gap-2 text-stone-900 shrink-0">
+            {/* Date, Time & Venue Details Banner (Hidden inside pocket when idle, revealed upon expand) */}
+            <div className="w-full pt-1 sm:pt-2 border-t border-amber-200/80 flex items-center justify-between gap-1.5 sm:gap-2 text-stone-900 shrink-0">
               {/* Right Side: Venue */}
               <div className="flex flex-col items-start text-right min-w-0 flex-1">
-                <span className="text-[9px] xs:text-[10px] sm:text-xs landscape:text-[8px] font-bold font-amiri text-stone-900 flex items-center gap-0.5 sm:gap-1 truncate max-w-full">
-                  <MapPin className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 landscape:w-2 landscape:h-2 text-amber-600 shrink-0" />
+                <span className="text-[9px] sm:text-[11px] font-bold font-amiri text-stone-900 flex items-center gap-1 truncate max-w-full">
+                  <MapPin className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-600 shrink-0" />
                   <span className="truncate">{data.venue.name}</span>
                 </span>
                 {data.venue.city && (
-                  <span className="text-[8px] xs:text-[9px] sm:text-[11px] landscape:text-[7px] font-bold font-amiri text-stone-600 pr-3 sm:pr-4 truncate max-w-full">
+                  <span className="text-[8px] sm:text-[10px] font-bold font-amiri text-stone-600 pr-3 sm:pr-4 truncate max-w-full">
                     {data.venue.city}
                   </span>
                 )}
@@ -466,12 +477,12 @@ export default function WeddingEnvelope({
 
               {/* Left Side: Date & Time */}
               <div className="flex flex-col items-end text-left shrink-0">
-                <span className="text-[9px] xs:text-[10px] sm:text-xs landscape:text-[8px] font-bold font-vazir text-stone-900 flex items-center gap-0.5 sm:gap-1">
-                  <Calendar className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 landscape:w-2 landscape:h-2 text-amber-600 shrink-0" />
+                <span className="text-[9px] sm:text-[11px] font-bold font-vazir text-stone-900 flex items-center gap-1">
+                  <Calendar className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-600 shrink-0" />
                   <span>{data.solarDate.day} {data.solarDate.month} {data.solarDate.year}</span>
                 </span>
-                <span className="text-[8px] xs:text-[9px] sm:text-[11px] landscape:text-[7px] font-bold font-cinzel text-amber-900 flex items-center gap-0.5 sm:gap-1 pl-3 sm:pl-4">
-                  <Clock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 landscape:w-2 landscape:h-2 text-amber-600 shrink-0" />
+                <span className="text-[8px] sm:text-[10px] font-bold font-cinzel text-amber-900 flex items-center gap-1 pl-3 sm:pl-4">
+                  <Clock className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-600 shrink-0" />
                   <span>{data.eventTime}</span>
                 </span>
               </div>
@@ -479,7 +490,7 @@ export default function WeddingEnvelope({
           </motion.div>
 
           {/* ========================================================================= */}
-          {/* 4. ENVELOPE FRONT POCKET - PURE WHITE (جیب جلویی پاکت کاملاً سفید و طلاکوب) */}
+          {/* 4. ENVELOPE FRONT POCKET (جیب جلویی پاکت کاملاً سفید و طلاکوب) */}
           {/* ========================================================================= */}
           <motion.div
             animate={
@@ -490,7 +501,7 @@ export default function WeddingEnvelope({
                 : { opacity: 1, y: 0 }
             }
             transition={{ duration: 0.45 }}
-            className="absolute inset-x-0 bottom-0 h-[65%] rounded-b-2xl sm:rounded-b-3xl landscape:rounded-b-xl bg-gradient-to-br from-white via-[#FCFBF8] to-[#F3F0E8] border-2 border-amber-300/90 shadow-[0_15px_40px_rgba(0,0,0,0.1)] overflow-visible z-[20]"
+            className="absolute inset-x-0 bottom-0 h-[56%] rounded-b-2xl sm:rounded-b-3xl bg-gradient-to-br from-white via-[#FCFBF8] to-[#F3F0E8] border-2 border-amber-300/90 shadow-[0_20px_45px_rgba(0,0,0,0.1)] overflow-visible z-[20]"
             style={{ willChange: 'transform, opacity' }}
           >
             {/* Elegant pearl white watermark texture on pocket */}
@@ -498,7 +509,7 @@ export default function WeddingEnvelope({
 
             {/* Deep V-Neck Cutout at the top of the pocket (دهانه باز پاکت سفید) */}
             <div
-              className="absolute -top-5 xs:-top-6 sm:-top-8 landscape:-top-4 inset-x-0 h-6 xs:h-7 sm:h-10 landscape:h-5 bg-gradient-to-b from-transparent via-[#FAF9F5] to-white pointer-events-none"
+              className="absolute -top-5 sm:-top-7 md:-top-8 inset-x-0 h-6 sm:h-8 md:h-9 bg-gradient-to-b from-transparent via-[#FAF9F5] to-white pointer-events-none"
               style={{
                 clipPath: 'polygon(0% 100%, 50% 10%, 100% 100%)',
               }}
@@ -506,28 +517,18 @@ export default function WeddingEnvelope({
 
             {/* Gold trim along pocket top rim */}
             <div
-              className="absolute -top-4 xs:-top-5 sm:-top-7 landscape:-top-3 inset-x-0 h-5 xs:h-6 sm:h-8 landscape:h-4 border-t-2 border-amber-300/90 pointer-events-none"
+              className="absolute -top-4 sm:-top-6 md:-top-7 inset-x-0 h-5 sm:h-7 md:h-8 border-t-2 border-amber-300/90 pointer-events-none"
               style={{
                 clipPath: 'polygon(0% 100%, 50% 20%, 100% 100%)',
               }}
             />
 
-            {/* Side Triangular Folds subtle shading */}
-            <div
-              className="absolute inset-0 bg-gradient-to-tr from-stone-200/30 to-transparent pointer-events-none rounded-bl-2xl"
-              style={{ clipPath: 'polygon(0% 0%, 0% 100%, 50% 100%)' }}
-            />
-            <div
-              className="absolute inset-0 bg-gradient-to-tl from-stone-200/30 to-transparent pointer-events-none rounded-br-2xl"
-              style={{ clipPath: 'polygon(100% 0%, 100% 100%, 50% 100%)' }}
-            />
-
             {/* Inner Gold Foil Frame on Pocket */}
-            <div className="absolute inset-1.5 xs:inset-2 sm:inset-3 border border-amber-300/50 rounded-xl sm:rounded-2xl pointer-events-none" />
+            <div className="absolute inset-1.5 sm:inset-2.5 md:inset-3 border border-amber-300/50 rounded-xl sm:rounded-2xl pointer-events-none" />
 
             {/* Royal Gold Filigree Crest / Watermark on white pocket */}
-            <div className="absolute inset-x-0 bottom-1.5 sm:bottom-3 text-center pointer-events-none opacity-40">
-              <span className="font-amiri text-[9px] xs:text-[11px] sm:text-xs font-bold text-amber-900 tracking-widest">
+            <div className="absolute inset-x-0 bottom-1.5 sm:bottom-2.5 text-center pointer-events-none opacity-40">
+              <span className="font-amiri text-[10px] sm:text-xs font-bold text-amber-900 tracking-widest">
                 کارت دعوت اختصاصی
               </span>
             </div>
@@ -536,7 +537,7 @@ export default function WeddingEnvelope({
             {ribbonStyle !== 'none' && (
               <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 z-[25] pointer-events-none flex items-center justify-center">
                 <div
-                  className={`w-full h-5 sm:h-8 shadow-xs flex items-center justify-center ${
+                  className={`w-full h-5 sm:h-7 shadow-xs flex items-center justify-center ${
                     ribbonStyle === 'satin_red'
                       ? 'bg-gradient-to-r from-red-800 via-rose-600 to-red-800 border-y border-rose-400/60'
                       : ribbonStyle === 'emerald_velvet'
@@ -549,7 +550,7 @@ export default function WeddingEnvelope({
                   <div className="w-full h-0.5 border-t border-dashed border-white/50" />
                 </div>
                 {ribbonStyle === 'gold_cross' && (
-                  <div className="absolute inset-y-0 w-5 sm:w-8 bg-gradient-to-b from-amber-600 via-amber-400 to-amber-600 border-x border-amber-200/70 shadow-xs flex items-center justify-center">
+                  <div className="absolute inset-y-0 w-5 sm:w-7 bg-gradient-to-b from-amber-600 via-amber-400 to-amber-600 border-x border-amber-200/70 shadow-xs flex items-center justify-center">
                     <div className="h-full w-0.5 border-r border-dashed border-white/50" />
                   </div>
                 )}
@@ -571,7 +572,7 @@ export default function WeddingEnvelope({
                     filter: 'blur(4px)',
                     transition: { duration: 0.2, ease: 'easeOut' },
                   }}
-                  className="absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 z-[30] cursor-pointer group"
+                  className="absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 z-[30] cursor-pointer group"
                   onClick={handleOpenCard}
                 >
                   {/* Pulsing ambient halo around wax seal */}
@@ -579,7 +580,7 @@ export default function WeddingEnvelope({
 
                   {/* 3D Wax Seal Body */}
                   <div
-                    className={`relative w-11 h-11 xs:w-13 xs:h-13 sm:w-16 sm:h-16 landscape:w-10 landscape:h-10 rounded-full border-2 border-white/95 p-0.5 flex items-center justify-center shadow-[0_6px_25px_rgba(217,119,6,0.5)] transition-transform group-hover:scale-110 group-hover:rotate-6 active:scale-95 ${getSealColorClasses(
+                    className={`relative w-12 h-12 sm:w-15 sm:h-15 md:w-16 md:h-16 rounded-full border-2 border-white/95 p-0.5 flex items-center justify-center shadow-[0_8px_30px_rgba(217,119,6,0.5)] transition-transform group-hover:scale-110 group-hover:rotate-6 active:scale-95 ${getSealColorClasses(
                       sealColor
                     )}`}
                   >
@@ -590,11 +591,11 @@ export default function WeddingEnvelope({
                     </div>
                   </div>
 
-                  {/* Gentle Touch Indicator Badge (Hidden on short landscape) */}
+                  {/* Gentle Touch Indicator Badge */}
                   {!isLandscape && (
-                    <div className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded-full bg-stone-900/90 text-amber-200 text-[8px] xs:text-[9px] sm:text-[10px] font-vazir shadow-xs backdrop-blur-xs flex items-center gap-1 border border-amber-400/30">
+                    <div className="absolute -bottom-5 sm:-bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 sm:px-2.5 py-0.5 rounded-full bg-stone-900/90 text-amber-200 text-[8px] sm:text-[10px] font-vazir shadow-xs backdrop-blur-xs flex items-center gap-1 border border-amber-400/30">
                       <span>لمس کنید</span>
-                      <ArrowUp className="w-2.5 h-2.5 animate-bounce text-amber-300" />
+                      <ArrowUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-bounce text-amber-300" />
                     </div>
                   )}
                 </motion.div>
@@ -605,9 +606,9 @@ export default function WeddingEnvelope({
       </div>
 
       {/* ========================================================================= */}
-      {/* 6. GRAND OPEN ACTION BAR AT THE BOTTOM */}
+      {/* 6. GRAND OPEN ACTION BAR AT THE BOTTOM (CAPPED AT TABLET WIDTH) */}
       {/* ========================================================================= */}
-      <div className="w-full max-w-lg flex flex-col items-center justify-center shrink-0 pb-1 sm:pb-2 z-30 min-h-[44px] sm:min-h-[56px] landscape:min-h-[40px]">
+      <div className="w-full max-w-md flex flex-col items-center justify-center shrink-0 z-30 min-h-[46px] sm:min-h-[58px] mt-1 sm:mt-2">
         <AnimatePresence>
           {phase === 'idle_open' && data.envelopeOpenBtnBottom !== false && (
             <motion.div
@@ -627,18 +628,18 @@ export default function WeddingEnvelope({
                 whileHover={{ scale: 1.02, y: -1 }}
                 whileTap={{ scale: 0.96 }}
                 onClick={handleOpenCard}
-                className="group relative w-full max-w-[300px] xs:max-w-[330px] sm:max-w-md landscape:max-w-[270px] flex items-center justify-between gap-1.5 sm:gap-3 px-2.5 sm:px-4 py-1 sm:py-2.5 landscape:py-1 rounded-xl sm:rounded-full bg-white hover:bg-white text-stone-900 border-2 border-amber-300 shadow-[0_6px_25px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_35px_rgba(217,119,6,0.22)] ring-2 ring-amber-300/40 cursor-pointer transition-all overflow-hidden gold-sheen"
+                className="group relative w-full flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-xl sm:rounded-full bg-white hover:bg-white text-stone-900 border-2 border-amber-300 shadow-[0_6px_25px_rgba(0,0,0,0.06)] hover:shadow-[0_10px_35px_rgba(217,119,6,0.22)] ring-2 ring-amber-300/40 cursor-pointer transition-all overflow-hidden gold-sheen"
                 title="برای بیرون کشیدن و مشاهده کارت دعوت لمس کنید"
               >
                 {/* Subtle Background Sheen */}
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-50/50 via-white to-amber-50/50 pointer-events-none" />
 
                 {/* Right Side (RTL): 3D Wax Seal Badge */}
-                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 z-10">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 z-10">
                   <div className="relative shrink-0">
                     <div className="absolute -inset-1 rounded-full bg-amber-400/25 blur-xs animate-pulse pointer-events-none" />
                     <div
-                      className={`relative w-7 h-7 xs:w-8 xs:h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/95 p-0.5 flex items-center justify-center shadow-xs transition-transform group-hover:rotate-6 ${getSealColorClasses(
+                      className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white/95 p-0.5 flex items-center justify-center shadow-xs transition-transform group-hover:rotate-6 ${getSealColorClasses(
                         sealColor
                       )}`}
                     >
@@ -652,10 +653,10 @@ export default function WeddingEnvelope({
                   {/* Text Details */}
                   <div className="text-right min-w-0">
                     <div className="flex items-center gap-1 sm:gap-1.5">
-                      <span className="text-[10px] xs:text-xs sm:text-sm font-bold font-vazir text-stone-900 truncate group-hover:text-amber-700 transition-colors">
+                      <span className="text-xs sm:text-sm font-bold font-vazir text-stone-900 truncate group-hover:text-amber-700 transition-colors">
                         {data.waxSeal?.sealText || 'مشاهده کارت دعوت'}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-stone-950 font-black text-[8px] xs:text-[9px] sm:text-[11px] shrink-0 flex items-center gap-0.5 shadow-2xs">
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-stone-950 font-black text-[9px] sm:text-[10px] shrink-0 flex items-center gap-0.5 shadow-2xs">
                         <span>لمس کنید</span>
                         <motion.span
                           animate={{ y: [0, -2, 0] }}
@@ -665,7 +666,7 @@ export default function WeddingEnvelope({
                         </motion.span>
                       </span>
                     </div>
-                    <span className="text-[8px] xs:text-[9px] sm:text-[11px] font-medium text-stone-600 truncate block font-vazir mt-0.5">
+                    <span className="text-[10px] sm:text-xs font-medium text-stone-600 truncate block font-vazir mt-0.5">
                       {guideText}
                     </span>
                   </div>
@@ -673,8 +674,8 @@ export default function WeddingEnvelope({
 
                 {/* Left Side (RTL): Action Cue Heart */}
                 <div className="flex items-center gap-1 shrink-0 z-10 pr-1 pl-0.5">
-                  <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-amber-50 group-hover:bg-rose-50 flex items-center justify-center transition-colors shadow-2xs border border-amber-200">
-                    <Heart className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 text-amber-800 group-hover:text-rose-600 group-hover:scale-110 transition-all" />
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-amber-50 group-hover:bg-rose-50 flex items-center justify-center transition-colors shadow-2xs border border-amber-200">
+                    <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-800 group-hover:text-rose-600 group-hover:scale-110 transition-all" />
                   </div>
                 </div>
               </motion.button>
@@ -685,3 +686,4 @@ export default function WeddingEnvelope({
     </div>
   );
 }
+

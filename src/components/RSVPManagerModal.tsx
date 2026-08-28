@@ -5,7 +5,13 @@ import {
   X, Users, CheckCircle, XCircle, Search, Download, RefreshCw, MessageSquare, Phone, Trash2, Heart
 } from 'lucide-react';
 import { RSVPResponse, GuestbookEntry } from '../types';
-import { toPersianDigits } from '../utils/dateUtils';
+import { 
+  toPersianDigits, 
+  formatPersianDateTime, 
+  formatPersianFullDateTime, 
+  formatPersianShortDateTime, 
+  formatPersianRelativeTime 
+} from '../utils/dateUtils';
 import { getAdminAuthHeaders } from '../utils/security';
 import ConfirmModal from './ConfirmModal';
 
@@ -243,7 +249,7 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
       `"${r.phone || ''}"`,
       `"${r.dietaryNotes || ''}"`,
       `"${(r.message || '').replace(/"/g, '""')}"`,
-      `"${new Date(r.submittedAt).toLocaleDateString('fa-IR')}"`
+      `"${formatPersianShortDateTime(r.submittedAt)}"`
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
@@ -466,7 +472,12 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                                   {item.phone}
                                 </span>
                               )}
-                              <span>{new Date(item.submittedAt).toLocaleDateString('fa-IR')}</span>
+                              <span 
+                                className="font-vazir text-stone-600 font-medium"
+                                title={formatPersianFullDateTime(item.submittedAt)}
+                              >
+                                {formatPersianDateTime(item.submittedAt)}
+                              </span>
 
                               <button
                                 onClick={() => handleDeleteRSVP(item.id, item.guestName)}
@@ -553,8 +564,11 @@ export default function RSVPManagerModal({ isOpen, onClose }: Props) {
                                 <span className="font-bold text-sm text-stone-900 font-amiri block">
                                   {entry.author}
                                 </span>
-                                <span className="text-[10px] text-stone-500 block">
-                                  {entry.date}
+                                <span
+                                  className="text-[10px] text-stone-500 block font-vazir"
+                                  title={formatPersianFullDateTime(entry.createdAt || entry.date)}
+                                >
+                                  {entry.createdAt ? formatPersianDateTime(entry.createdAt) : entry.date} ({formatPersianRelativeTime(entry.createdAt, entry.date)})
                                 </span>
                               </div>
                             </div>

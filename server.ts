@@ -327,6 +327,7 @@ const initialGuestbookSeed = [
     author: 'خانواده محترم اکبری',
     message: 'نگار و پارسای عزیز، پیوند آسمانی‌تان مبارک! آرزومندیم خوشبختی و سلامتی همواره قرین لحظه‌های زیبایتان باشد.',
     date: '۲ روز پیش',
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
     likes: 14,
     flowers: 10,
     esfand: 18
@@ -336,6 +337,7 @@ const initialGuestbookSeed = [
     author: 'دکتر محمدرضا شایان و بانو',
     message: 'با آرزوی بهترین‌ها در آغاز این فصل شکوهمند از زندگی مشترک. مشتاقانه در کنارتان خواهیم بود.',
     date: 'دیروز',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
     likes: 9,
     flowers: 15,
     esfand: 8
@@ -345,6 +347,7 @@ const initialGuestbookSeed = [
     author: 'مریم و سامان (دوستان صمیمی)',
     message: 'چقدر این کارت قشنگ و رویاییه! مبارک باشه رفقای نازنین، حسابی منتظر جشن و پایکوبی هستیم!',
     date: 'امروز',
+    createdAt: new Date(Date.now() - 3 * 3600000).toISOString(),
     likes: 21,
     flowers: 24,
     esfand: 29
@@ -1352,11 +1355,13 @@ app.post('/api/guestbook', (req, res) => {
     return res.status(400).json({ success: false, error: 'نام و پیام یادبود الزامی است' });
   }
 
+  const now = new Date();
   const newEntry = {
     id: `gb-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
     author,
     message,
     date: 'لحظاتی پیش',
+    createdAt: now.toISOString(),
     likes: 1,
     flowers: 1,
     esfand: 1
